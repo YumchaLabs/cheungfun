@@ -1,0 +1,171 @@
+[workspace]
+resolver = "2"
+members = [
+    "cheungfun",
+    "cheungfun-core",
+    "cheungfun-indexing",
+    "cheungfun-query",
+    "cheungfun-agents",
+    "cheungfun-integrations",
+    "examples",
+]
+# "cheungfun-evaluation",
+# "cheungfun-multimodal",
+# "cheungfun-workflow",
+# "cheungfun-training",
+default-members = ["cheungfun", "cheungfun-*"]
+
+[workspace.package]
+version = "0.1.0"
+authors = ["Mingzhen Zhuang"]
+edition = "2021"
+license = "MIT OR Apache-2.0"
+repository = "https://github.com/YumchaLabs/cheungfun"
+homepage = "https://github.com/YumchaLabs/cheungfun"
+documentation = "https://docs.rs/cheungfun"
+keywords = ["llm", "rag", "ai", "data", "rust"]
+description = "Fast, streaming indexing, query, and agentic LLM applications in Rust"
+categories = ["asynchronous", "science"]
+
+[workspace.metadata]
+# Project Metadata
+name = "cheungfun"
+keywords = ["ai", "llm", "rag"]
+
+[workspace.dependencies]
+# Core dependencies
+siumai = "0.3.0"
+tokio = { version = "1.45", features = ["rt-multi-thread", "time", "macros"] }
+serde = { version = "1.0", features = ["derive"] }
+serde_json = "1.0"
+anyhow = "1.0"
+thiserror = "2.0"
+async-trait = "0.1"
+uuid = { version = "1.17", features = ["v4", "serde"] }
+tracing = "0.1"
+tracing-subscriber = { version = "0.3", features = ["env-filter"] }
+
+# Async and streaming
+futures = "0.3"
+futures-util = "0.3"
+tokio-stream = "0.1"
+pin-project = "1.1"
+
+# Data processing
+text-splitter = "0.27"
+tiktoken-rs = "0.7"
+regex = "1.11"
+itertools = "0.14"
+
+# Serialization and config
+toml = "0.8"
+config = "0.15"
+
+# Document processing
+pdf-extract = "0.9"
+docx-rs = "0.4"
+csv = "1.3"
+scraper = "0.23"
+
+# HTTP and networking
+reqwest = { version = "0.12", features = ["json", "stream"] }
+url = "2.5"
+axum = "0.8"
+tower = "0.5"
+
+# Database and storage
+sqlx = { version = "0.8", features = ["postgres", "mysql", "sqlite", "runtime-tokio-rustls"] }
+redis = { version = "0.32", features = ["tokio-comp"] }
+sled = "0.34"
+redb = "2.6"
+
+# Candle ML Framework (Core) - CPU only for now
+candle-core = "0.9"
+candle-nn = "0.9"
+candle-transformers = "0.9"
+
+# HuggingFace Integration
+hf-hub = "0.3"
+tokenizers = "0.20"
+
+# Alternative ML (optional)
+ort = "2.0"
+faiss = "0.12"
+
+# Search and indexing
+tantivy = "0.24"
+
+# Vector stores
+qdrant-client = { version = "1.14", features = ["serde"] }
+
+# MCP (Model Context Protocol)
+rmcp = "0.1"
+schemars = "0.8"
+
+# Multimodal processing
+image = "0.25"
+rodio = "0.19"
+opencv = "0.92"
+whisper-rs = "0.10"
+
+# Workflow and training
+petgraph = "0.6"
+
+# Cloud storage
+aws-sdk-s3 = "1.0"
+google-cloud-storage = "0.20"
+azure_storage = "0.20"
+azure_storage_blobs = "0.20"
+
+# Streaming and messaging
+rdkafka = "0.37"
+tungstenite = "0.24"
+
+# Utilities
+derive_builder = "0.20"
+strum = { version = "0.27", features = ["derive"] }
+chrono = { version = "0.4", features = ["serde"] }
+lazy_static = "1.5"
+once_cell = "1.20"
+
+# Testing
+mockall = "0.13"
+test-case = "3.3"
+pretty_assertions = "1.4"
+temp-dir = "0.1"
+tempfile = "3.8"
+criterion = "0.6"
+
+[workspace.lints.rust]
+unsafe_code = "forbid"
+missing_docs = "warn"
+
+[workspace.lints.clippy]
+cargo = { level = "warn", priority = -1 }
+pedantic = { level = "warn", priority = -1 }
+# Allow some pedantic lints that are too strict
+module_name_repetitions = "allow"
+must_use_candidate = "allow"
+missing_errors_doc = "allow"
+missing_panics_doc = "allow"
+
+[profile.dev]
+opt-level = 0
+debug = true
+
+[profile.release]
+opt-level = 3
+lto = true
+codegen-units = 1
+panic = "abort"
+
+[profile.bench]
+opt-level = 3
+debug = false
+lto = true
+
+# Development profile for faster compilation
+[profile.dev.package]
+text-splitter.opt-level = 3
+tiktoken-rs.opt-level = 3
+candle-core.opt-level = 3

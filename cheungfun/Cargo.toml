@@ -1,0 +1,23 @@
+[package]
+name = "cheungfun"
+version.workspace = true
+authors.workspace = true
+edition.workspace = true
+license.workspace = true
+repository.workspace = true
+homepage.workspace = true
+documentation.workspace = true
+keywords.workspace = true
+description = "Fast, streaming indexing, query, and agentic LLM applications in Rust"
+categories.workspace = true
+
+[dependencies]
+# Re-export all core modules
+cheungfun-core = { path = "../cheungfun-core" }
+cheungfun-indexing = { path = "../cheungfun-indexing" }
+cheungfun-query = { path = "../cheungfun-query" }
+cheungfun-agents = { path = "../cheungfun-agents" }
+cheungfun-integrations = { path = "../cheungfun-integrations" }
+
+[features]
+default = []

@@ -1,0 +1,50 @@
+[package]
+name = "cheungfun-core"
+version.workspace = true
+authors.workspace = true
+edition.workspace = true
+license.workspace = true
+repository.workspace = true
+homepage.workspace = true
+documentation.workspace = true
+keywords.workspace = true
+description = "Core traits, types, and interfaces for the Cheungfun RAG framework"
+categories.workspace = true
+
+[dependencies]
+# Core async and error handling
+tokio = { workspace = true }
+async-trait = { workspace = true }
+anyhow = { workspace = true }
+thiserror = { workspace = true }
+
+# Serialization
+serde = { workspace = true }
+serde_json = { workspace = true }
+uuid = { workspace = true }
+
+# Streaming and futures
+futures = { workspace = true }
+futures-util = { workspace = true }
+tokio-stream = { workspace = true }
+
+# Time handling
+chrono = { workspace = true }
+
+# Utilities
+derive_builder = { workspace = true }
+strum = { workspace = true }
+
+# Logging
+tracing = { workspace = true }
+
+[dev-dependencies]
+# Testing utilities
+tokio-test = "0.4"
+mockall = { workspace = true }
+test-case = { workspace = true }
+pretty_assertions = { workspace = true }
+temp-dir = { workspace = true }
+
+[features]
+default = []

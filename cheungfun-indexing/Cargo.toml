@@ -1,0 +1,58 @@
+[package]
+name = "cheungfun-indexing"
+version.workspace = true
+authors.workspace = true
+edition.workspace = true
+license.workspace = true
+repository.workspace = true
+homepage.workspace = true
+documentation.workspace = true
+keywords.workspace = true
+description = "Document loading and indexing for the Cheungfun RAG framework"
+categories.workspace = true
+
+[dependencies]
+cheungfun-core = { path = "../cheungfun-core" }
+
+# Core async and error handling
+tokio = { workspace = true }
+async-trait = { workspace = true }
+anyhow = { workspace = true }
+thiserror = { workspace = true }
+
+# Serialization
+serde = { workspace = true }
+serde_json = { workspace = true }
+uuid = { workspace = true }
+
+# Streaming and futures
+futures = { workspace = true }
+futures-util = { workspace = true }
+tokio-stream = { workspace = true }
+
+# Text processing
+text-splitter = { workspace = true }
+tiktoken-rs = { workspace = true }
+regex = { workspace = true }
+
+# Document processing
+pdf-extract = { workspace = true }
+docx-rs = { workspace = true }
+csv = { workspace = true }
+scraper = { workspace = true }
+
+# File system and HTTP
+reqwest = { workspace = true }
+url = { workspace = true }
+
+# Logging
+tracing = { workspace = true }
+
+[dev-dependencies]
+tokio-test = "0.4"
+temp-dir = { workspace = true }
+test-case = { workspace = true }
+tempfile = { workspace = true }
+
+[features]
+default = []

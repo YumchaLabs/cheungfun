@@ -1,0 +1,48 @@
+[package]
+name = "cheungfun-integrations"
+version.workspace = true
+authors.workspace = true
+edition.workspace = true
+license.workspace = true
+repository.workspace = true
+homepage.workspace = true
+documentation.workspace = true
+keywords.workspace = true
+description = "External service integrations for Cheungfun"
+categories.workspace = true
+
+[dependencies]
+cheungfun-core = { path = "../cheungfun-core" }
+
+# Core async and error handling
+tokio = { workspace = true }
+async-trait = { workspace = true }
+anyhow = { workspace = true }
+thiserror = { workspace = true }
+
+# Serialization
+serde = { workspace = true }
+serde_json = { workspace = true }
+uuid = { workspace = true }
+
+# Vector stores
+qdrant-client = { workspace = true }
+
+# Candle ML Framework
+candle-core = { workspace = true }
+candle-nn = { workspace = true }
+candle-transformers = { workspace = true }
+
+# HuggingFace Integration
+hf-hub = { workspace = true }
+tokenizers = { workspace = true }
+
+# Logging
+tracing = { workspace = true }
+
+[dev-dependencies]
+tokio-test = "0.4"
+test-case = { workspace = true }
+
+[features]
+default = []
