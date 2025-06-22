@@ -10,9 +10,9 @@ use std::pin::Pin;
 use tracing::{debug, info, instrument};
 
 use cheungfun_core::{
+    Result,
     traits::ResponseGenerator,
     types::{GeneratedResponse, GenerationOptions, ScoredNode, TokenUsage},
-    Result,
 };
 
 use siumai::prelude::*;
@@ -69,22 +69,22 @@ impl std::fmt::Debug for SiumaiGenerator {
 pub struct SiumaiGeneratorConfig {
     /// Default model to use for generation.
     pub default_model: Option<String>,
-    
+
     /// Default temperature for generation.
     pub default_temperature: f32,
-    
+
     /// Default maximum tokens for responses.
     pub default_max_tokens: usize,
-    
+
     /// Default system prompt.
     pub default_system_prompt: String,
-    
+
     /// Whether to include source citations by default.
     pub include_citations: bool,
-    
+
     /// Maximum context length to use.
     pub max_context_length: usize,
-    
+
     /// Timeout for generation operations.
     pub timeout_seconds: u64,
 }
@@ -123,7 +123,12 @@ impl SiumaiGenerator {
     }
 
     /// Build the prompt from query and context nodes.
-    fn build_prompt(&self, query: &str, context_nodes: &[ScoredNode], options: &GenerationOptions) -> String {
+    fn build_prompt(
+        &self,
+        query: &str,
+        context_nodes: &[ScoredNode],
+        options: &GenerationOptions,
+    ) -> String {
         let system_prompt = options
             .system_prompt
             .as_ref()
@@ -135,7 +140,7 @@ impl SiumaiGenerator {
             prompt.push_str("Context:\n");
             for (i, scored_node) in context_nodes.iter().enumerate() {
                 prompt.push_str(&format!("{}. {}\n", i + 1, scored_node.node.content));
-                
+
                 if self.config.include_citations || options.include_citations {
                     if let Some(source) = scored_node.node.metadata.get("source") {
                         prompt.push_str(&format!("   Source: {}\n", source));
@@ -160,9 +165,7 @@ impl SiumaiGenerator {
 
     /// Build Siumai chat messages.
     fn build_chat_messages(&self, prompt: &str, _options: &GenerationOptions) -> Vec<ChatMessage> {
-        vec![
-            ChatMessage::user(prompt).build()
-        ]
+        vec![ChatMessage::user(prompt).build()]
     }
 }
 
@@ -175,7 +178,10 @@ impl ResponseGenerator for SiumaiGenerator {
         context_nodes: Vec<ScoredNode>,
         options: &GenerationOptions,
     ) -> Result<GeneratedResponse> {
-        info!("Generating response for query with {} context nodes", context_nodes.len());
+        info!(
+            "Generating response for query with {} context nodes",
+            context_nodes.len()
+        );
 
         // Build prompt
         let prompt = self.build_prompt(query, &context_nodes, options);
@@ -185,18 +191,22 @@ impl ResponseGenerator for SiumaiGenerator {
         let messages = self.build_chat_messages(&prompt, options);
 
         // Generate response
-        let response = self.client.chat(messages).await.map_err(|e| {
-            cheungfun_core::CheungfunError::Llm {
-                message: format!("Siumai generation failed: {}", e),
-            }
-        })?;
+        let response =
+            self.client
+                .chat(messages)
+                .await
+                .map_err(|e| cheungfun_core::CheungfunError::Llm {
+                    message: format!("Siumai generation failed: {}", e),
+                })?;
 
         // Extract content
         let content = match &response.content {
             siumai::MessageContent::Text(text) => text.clone(),
-            _ => return Err(cheungfun_core::CheungfunError::Llm {
-                message: "Unsupported content type in LLM response".to_string(),
-            }),
+            _ => {
+                return Err(cheungfun_core::CheungfunError::Llm {
+                    message: "Unsupported content type in LLM response".to_string(),
+                });
+            }
         };
 
         // Extract source node IDs
@@ -204,21 +214,29 @@ impl ResponseGenerator for SiumaiGenerator {
 
         // Build metadata
         let mut metadata = HashMap::new();
-        metadata.insert("model".to_string(), serde_json::Value::String(
-            response.model.clone().unwrap_or_else(|| "unknown".to_string())
-        ));
-        metadata.insert("prompt_length".to_string(), serde_json::Value::Number(
-            prompt.len().into()
-        ));
-        metadata.insert("context_nodes_count".to_string(), serde_json::Value::Number(
-            context_nodes.len().into()
-        ));
+        metadata.insert(
+            "model".to_string(),
+            serde_json::Value::String(
+                response
+                    .model
+                    .clone()
+                    .unwrap_or_else(|| "unknown".to_string()),
+            ),
+        );
+        metadata.insert(
+            "prompt_length".to_string(),
+            serde_json::Value::Number(prompt.len().into()),
+        );
+        metadata.insert(
+            "context_nodes_count".to_string(),
+            serde_json::Value::Number(context_nodes.len().into()),
+        );
 
         // Extract token usage
         let usage = self.extract_token_usage(&response);
 
         info!("Generated response with {} characters", content.len());
-        
+
         Ok(GeneratedResponse {
             content,
             source_nodes,
@@ -234,7 +252,10 @@ impl ResponseGenerator for SiumaiGenerator {
         context_nodes: Vec<ScoredNode>,
         options: &GenerationOptions,
     ) -> Result<Pin<Box<dyn Stream<Item = Result<String>> + Send>>> {
-        info!("Generating streaming response for query with {} context nodes", context_nodes.len());
+        info!(
+            "Generating streaming response for query with {} context nodes",
+            context_nodes.len()
+        );
 
         // Build prompt
         let prompt = self.build_prompt(query, &context_nodes, options);
@@ -276,22 +297,38 @@ impl ResponseGenerator for SiumaiGenerator {
         // Try a simple generation to check if the client is working
         let test_messages = vec![ChatMessage::user("Hello").build()];
 
-        self.client.chat(test_messages).await.map_err(|e| {
-            cheungfun_core::CheungfunError::Llm {
+        self.client
+            .chat(test_messages)
+            .await
+            .map_err(|e| cheungfun_core::CheungfunError::Llm {
                 message: format!("Health check failed: {}", e),
-            }
-        })?;
+            })?;
 
         Ok(())
     }
 
     fn config(&self) -> HashMap<String, serde_json::Value> {
         let mut config = HashMap::new();
-        config.insert("default_temperature".to_string(), self.config.default_temperature.into());
-        config.insert("default_max_tokens".to_string(), self.config.default_max_tokens.into());
-        config.insert("include_citations".to_string(), self.config.include_citations.into());
-        config.insert("max_context_length".to_string(), self.config.max_context_length.into());
-        config.insert("timeout_seconds".to_string(), self.config.timeout_seconds.into());
+        config.insert(
+            "default_temperature".to_string(),
+            self.config.default_temperature.into(),
+        );
+        config.insert(
+            "default_max_tokens".to_string(),
+            self.config.default_max_tokens.into(),
+        );
+        config.insert(
+            "include_citations".to_string(),
+            self.config.include_citations.into(),
+        );
+        config.insert(
+            "max_context_length".to_string(),
+            self.config.max_context_length.into(),
+        );
+        config.insert(
+            "timeout_seconds".to_string(),
+            self.config.timeout_seconds.into(),
+        );
         config
     }
 }
@@ -331,11 +368,11 @@ impl SiumaiGeneratorBuilder {
 
     /// Build the Siumai generator.
     pub fn build(self) -> Result<SiumaiGenerator> {
-        let client = self.client.ok_or_else(|| {
-            cheungfun_core::CheungfunError::Configuration {
+        let client = self
+            .client
+            .ok_or_else(|| cheungfun_core::CheungfunError::Configuration {
                 message: "Siumai client is required".to_string(),
-            }
-        })?;
+            })?;
 
         let config = self.config.unwrap_or_default();
 

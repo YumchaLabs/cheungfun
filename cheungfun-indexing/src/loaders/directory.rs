@@ -8,7 +8,7 @@ use std::path::{Path, PathBuf};
 use tokio::fs;
 use tracing::{debug, error, info, warn};
 
-use super::{file::FileLoader, LoaderConfig};
+use super::{LoaderConfig, file::FileLoader};
 use crate::error::{IndexingError, Result};
 
 /// Loads documents from all files in a directory.

@@ -6,10 +6,10 @@
 use std::sync::Arc;
 
 use crate::{
+    Result,
     config::{EmbedderConfig, IndexingPipelineConfig, VectorStoreConfig},
     factory::{EmbedderFactoryRegistry, VectorStoreFactoryRegistry},
     traits::{Embedder, IndexingPipeline, Loader, Transformer, VectorStore},
-    Result,
 };
 
 /// Builder for creating indexing pipelines.
@@ -266,7 +266,7 @@ impl IndexingPipelineBuilder {
         // This would be implemented in the cheungfun-indexing crate
         // For now, we'll return an error indicating this needs to be implemented
         Err(crate::CheungfunError::internal(
-            "IndexingPipeline implementation not yet available. This will be implemented in cheungfun-indexing crate."
+            "IndexingPipeline implementation not yet available. This will be implemented in cheungfun-indexing crate.",
         ))
     }
 

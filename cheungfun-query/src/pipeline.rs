@@ -12,12 +12,9 @@ use std::sync::Arc;
 use tracing::{debug, info, instrument};
 
 use cheungfun_core::{
-    traits::{QueryPipeline, ResponseGenerator, Retriever},
-    types::{
-        ChatMessage, GenerationOptions, Query, QueryResponse, RetrievalContext,
-        SearchMode
-    },
     Result,
+    traits::{QueryPipeline, ResponseGenerator, Retriever},
+    types::{ChatMessage, GenerationOptions, Query, QueryResponse, RetrievalContext, SearchMode},
 };
 
 use crate::engine::{QueryEngine, QueryEngineConfig, QueryEngineOptions};
@@ -51,7 +48,7 @@ use crate::engine::{QueryEngine, QueryEngineConfig, QueryEngineOptions};
 pub struct DefaultQueryPipeline {
     /// Underlying query engine.
     engine: QueryEngine,
-    
+
     /// Configuration for pipeline operations.
     config: QueryPipelineConfig,
 }
@@ -61,22 +58,22 @@ pub struct DefaultQueryPipeline {
 pub struct QueryPipelineConfig {
     /// Whether to enable conversation history tracking.
     pub enable_conversation_history: bool,
-    
+
     /// Maximum number of conversation turns to keep in context.
     pub max_conversation_turns: usize,
-    
+
     /// Whether to enable query rewriting based on conversation history.
     pub enable_query_rewriting: bool,
-    
+
     /// Whether to enable context compression for long conversations.
     pub enable_context_compression: bool,
-    
+
     /// Maximum total context length (in characters).
     pub max_total_context_length: usize,
-    
+
     /// Whether to enable response caching.
     pub enable_response_caching: bool,
-    
+
     /// Cache TTL in seconds.
     pub cache_ttl_seconds: u64,
 }
@@ -97,10 +94,7 @@ impl Default for QueryPipelineConfig {
 
 impl DefaultQueryPipeline {
     /// Create a new query pipeline.
-    pub fn new(
-        retriever: Arc<dyn Retriever>,
-        generator: Arc<dyn ResponseGenerator>,
-    ) -> Self {
+    pub fn new(retriever: Arc<dyn Retriever>, generator: Arc<dyn ResponseGenerator>) -> Self {
         let engine = QueryEngine::new(retriever, generator);
         Self {
             engine,
@@ -184,11 +178,11 @@ impl DefaultQueryPipeline {
         // Simple compression: take first and last parts
         let target_length = self.config.max_total_context_length;
         let half_length = target_length / 2;
-        
+
         let start = &context[..half_length.min(context.len())];
         let end_start = context.len().saturating_sub(half_length);
         let end = &context[end_start..];
-        
+
         format!("{}...[content truncated]...{}", start, end)
     }
 }
@@ -196,13 +190,20 @@ impl DefaultQueryPipeline {
 #[async_trait]
 impl QueryPipeline for DefaultQueryPipeline {
     #[instrument(skip(self), fields(pipeline = "DefaultQueryPipeline"))]
-    async fn query(&self, query: &str, _options: &cheungfun_core::QueryOptions) -> Result<QueryResponse> {
+    async fn query(
+        &self,
+        query: &str,
+        _options: &cheungfun_core::QueryOptions,
+    ) -> Result<QueryResponse> {
         info!("Processing query through pipeline: {}", query);
 
         // For now, use default options since core QueryOptions is a placeholder
         let default_context = RetrievalContext::default();
         let conversation_context = self.process_conversation_history(&default_context.chat_history);
-        debug!("Processed conversation context: {} characters", conversation_context.len());
+        debug!(
+            "Processed conversation context: {} characters",
+            conversation_context.len()
+        );
 
         // Rewrite query if needed
         let processed_query = self.rewrite_query_with_context(query, &default_context);
@@ -212,7 +213,10 @@ impl QueryPipeline for DefaultQueryPipeline {
         let engine_options = QueryEngineOptions::new();
 
         // Execute query through engine
-        let response = self.engine.query_with_options(&processed_query, &engine_options).await?;
+        let response = self
+            .engine
+            .query_with_options(&processed_query, &engine_options)
+            .await?;
 
         info!("Pipeline query processing completed");
         Ok(response)
@@ -229,7 +233,10 @@ impl QueryPipeline for DefaultQueryPipeline {
         // For now, use default options since core QueryOptions is a placeholder
         let default_context = RetrievalContext::default();
         let conversation_context = self.process_conversation_history(&default_context.chat_history);
-        debug!("Processed conversation context: {} characters", conversation_context.len());
+        debug!(
+            "Processed conversation context: {} characters",
+            conversation_context.len()
+        );
 
         // Rewrite query if needed
         let processed_query = self.rewrite_query_with_context(query, &default_context);
@@ -240,14 +247,21 @@ impl QueryPipeline for DefaultQueryPipeline {
 
         // Retrieve context
         let retrieved_nodes = self.engine.retriever().retrieve(&retrieval_query).await?;
-        debug!("Retrieved {} context nodes for streaming", retrieved_nodes.len());
+        debug!(
+            "Retrieved {} context nodes for streaming",
+            retrieved_nodes.len()
+        );
 
         // Generate streaming response with default options
         let default_generation_options = GenerationOptions::default();
         let stream = self
             .engine
             .generator()
-            .generate_response_stream(&processed_query, retrieved_nodes, &default_generation_options)
+            .generate_response_stream(
+                &processed_query,
+                retrieved_nodes,
+                &default_generation_options,
+            )
             .await?;
 
         info!("Pipeline streaming query processing initiated");
@@ -266,12 +280,30 @@ impl QueryPipeline for DefaultQueryPipeline {
 
     fn config(&self) -> HashMap<String, serde_json::Value> {
         let mut config = HashMap::new();
-        config.insert("enable_conversation_history".to_string(), self.config.enable_conversation_history.into());
-        config.insert("max_conversation_turns".to_string(), self.config.max_conversation_turns.into());
-        config.insert("enable_query_rewriting".to_string(), self.config.enable_query_rewriting.into());
-        config.insert("enable_context_compression".to_string(), self.config.enable_context_compression.into());
-        config.insert("max_total_context_length".to_string(), self.config.max_total_context_length.into());
-        config.insert("enable_response_caching".to_string(), self.config.enable_response_caching.into());
+        config.insert(
+            "enable_conversation_history".to_string(),
+            self.config.enable_conversation_history.into(),
+        );
+        config.insert(
+            "max_conversation_turns".to_string(),
+            self.config.max_conversation_turns.into(),
+        );
+        config.insert(
+            "enable_query_rewriting".to_string(),
+            self.config.enable_query_rewriting.into(),
+        );
+        config.insert(
+            "enable_context_compression".to_string(),
+            self.config.enable_context_compression.into(),
+        );
+        config.insert(
+            "max_total_context_length".to_string(),
+            self.config.max_total_context_length.into(),
+        );
+        config.insert(
+            "enable_response_caching".to_string(),
+            self.config.enable_response_caching.into(),
+        );
         config
     }
 
@@ -285,10 +317,10 @@ impl QueryPipeline for DefaultQueryPipeline {
 pub struct QueryOptions {
     /// Retrieval options.
     pub retrieval_options: RetrievalOptions,
-    
+
     /// Generation options.
     pub generation_options: GenerationOptions,
-    
+
     /// Context for the query.
     pub context: RetrievalContext,
 }
@@ -308,13 +340,13 @@ impl Default for QueryOptions {
 pub struct RetrievalOptions {
     /// Number of results to retrieve.
     pub top_k: Option<usize>,
-    
+
     /// Search mode to use.
     pub search_mode: SearchMode,
-    
+
     /// Metadata filters.
     pub filters: HashMap<String, serde_json::Value>,
-    
+
     /// Similarity threshold.
     pub similarity_threshold: Option<f32>,
 }
@@ -371,17 +403,17 @@ impl QueryPipelineBuilder {
 
     /// Build the query pipeline.
     pub fn build(self) -> Result<DefaultQueryPipeline> {
-        let retriever = self.retriever.ok_or_else(|| {
-            cheungfun_core::CheungfunError::Configuration {
-                message: "Retriever is required".to_string(),
-            }
-        })?;
+        let retriever =
+            self.retriever
+                .ok_or_else(|| cheungfun_core::CheungfunError::Configuration {
+                    message: "Retriever is required".to_string(),
+                })?;
 
-        let generator = self.generator.ok_or_else(|| {
-            cheungfun_core::CheungfunError::Configuration {
-                message: "Generator is required".to_string(),
-            }
-        })?;
+        let generator =
+            self.generator
+                .ok_or_else(|| cheungfun_core::CheungfunError::Configuration {
+                    message: "Generator is required".to_string(),
+                })?;
 
         let engine_config = self.engine_config.unwrap_or_default();
         let pipeline_config = self.pipeline_config.unwrap_or_default();

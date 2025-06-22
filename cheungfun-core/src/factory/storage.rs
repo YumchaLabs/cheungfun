@@ -6,7 +6,7 @@
 use async_trait::async_trait;
 use std::sync::Arc;
 
-use crate::{config::VectorStoreConfig, traits::VectorStore, Result};
+use crate::{Result, config::VectorStoreConfig, traits::VectorStore};
 
 /// Factory for creating vector stores from configuration.
 ///
@@ -54,7 +54,7 @@ pub trait VectorStoreFactory: Send + Sync + std::fmt::Debug {
     /// Returns an error if the vector store cannot be created due to invalid
     /// configuration, missing dependencies, or initialization failures.
     async fn create_vector_store(&self, config: &VectorStoreConfig)
-        -> Result<Arc<dyn VectorStore>>;
+    -> Result<Arc<dyn VectorStore>>;
 
     /// Check if this factory can create a vector store for the given configuration.
     ///

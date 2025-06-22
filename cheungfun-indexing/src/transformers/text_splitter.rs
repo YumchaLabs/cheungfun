@@ -7,7 +7,7 @@ use std::collections::HashMap;
 use tracing::{debug, warn};
 use uuid::Uuid;
 
-use super::{utils, SplitterConfig};
+use super::{SplitterConfig, utils};
 use crate::error::Result;
 
 /// Text splitter that divides documents into smaller chunks.

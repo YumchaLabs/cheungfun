@@ -7,7 +7,7 @@
 use async_trait::async_trait;
 use std::sync::Arc;
 
-use crate::{config::LlmConfig, traits::ResponseGenerator, Result};
+use crate::{Result, config::LlmConfig, traits::ResponseGenerator};
 
 /// Factory for creating LLM clients from configuration.
 ///
@@ -457,9 +457,11 @@ mod tests {
 
         assert!(!registry.is_empty());
         assert_eq!(registry.len(), 1);
-        assert!(registry
-            .registered_providers()
-            .contains(&"openai".to_string()));
+        assert!(
+            registry
+                .registered_providers()
+                .contains(&"openai".to_string())
+        );
     }
 
     #[test]

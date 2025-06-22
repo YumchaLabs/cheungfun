@@ -3,18 +3,8 @@
 //! These tests verify that the siumai integration works correctly with
 //! different LLM providers and configurations.
 
-use cheungfun_core::{
-    config::LlmConfig,
-    factory::LlmFactory,
-};
-use cheungfun_query::{
-    factory::SiumaiLlmFactory,
-    generator::SiumaiGeneratorConfig,
-};
-
-
-
-
+use cheungfun_core::{config::LlmConfig, factory::LlmFactory};
+use cheungfun_query::{factory::SiumaiLlmFactory, generator::SiumaiGeneratorConfig};
 
 #[tokio::test]
 async fn test_siumai_generator_config_creation() {
@@ -50,7 +40,7 @@ async fn test_siumai_generator_config_default() {
 async fn test_siumai_llm_factory_supported_providers() {
     let factory = SiumaiLlmFactory::new();
     let providers = factory.supported_providers();
-    
+
     assert!(providers.contains(&"openai"));
     assert!(providers.contains(&"anthropic"));
     assert!(providers.contains(&"ollama"));
@@ -60,13 +50,13 @@ async fn test_siumai_llm_factory_supported_providers() {
 #[tokio::test]
 async fn test_siumai_llm_factory_can_create() {
     let factory = SiumaiLlmFactory::new();
-    
+
     let openai_config = LlmConfig::openai("gpt-4", "test-key");
     assert!(factory.can_create(&openai_config));
-    
+
     let anthropic_config = LlmConfig::anthropic("claude-3", "test-key");
     assert!(factory.can_create(&anthropic_config));
-    
+
     let unsupported_config = LlmConfig::new("unsupported", "model");
     assert!(!factory.can_create(&unsupported_config));
 }
@@ -74,15 +64,15 @@ async fn test_siumai_llm_factory_can_create() {
 #[tokio::test]
 async fn test_siumai_llm_factory_validation() {
     let factory = SiumaiLlmFactory::new();
-    
+
     // Valid OpenAI config
     let valid_config = LlmConfig::openai("gpt-4", "test-key");
     assert!(factory.validate_config(&valid_config).await.is_ok());
-    
+
     // Invalid config - missing API key
     let invalid_config = LlmConfig::new("openai", "gpt-4");
     assert!(factory.validate_config(&invalid_config).await.is_err());
-    
+
     // Invalid config - unsupported provider
     let unsupported_config = LlmConfig::new("unsupported", "model");
     assert!(factory.validate_config(&unsupported_config).await.is_err());
@@ -92,7 +82,7 @@ async fn test_siumai_llm_factory_validation() {
 async fn test_siumai_llm_factory_metadata() {
     let factory = SiumaiLlmFactory::new();
     let metadata = factory.metadata();
-    
+
     assert_eq!(metadata.get("name").unwrap(), "SiumaiLlmFactory");
     assert!(metadata.contains_key("description"));
     assert!(metadata.contains_key("supported_providers"));

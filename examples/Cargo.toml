@@ -26,9 +26,25 @@ anyhow = { workspace = true }
 tracing = { workspace = true }
 tracing-subscriber = { workspace = true }
 
+# Additional dependencies
+uuid = { workspace = true }
+siumai = { workspace = true }
+
 [features]
 default = []
 
 [[bin]]
 name = "basic_usage"
 path = "src/basic_usage.rs"
+
+[[bin]]
+name = "end_to_end_indexing"
+path = "end_to_end_indexing.rs"
+
+[[bin]]
+name = "end_to_end_query"
+path = "end_to_end_query.rs"
+
+[[bin]]
+name = "end_to_end_retrieval_demo"
+path = "end_to_end_retrieval_demo.rs"

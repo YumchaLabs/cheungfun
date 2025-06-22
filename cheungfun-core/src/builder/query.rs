@@ -6,10 +6,10 @@
 use std::sync::Arc;
 
 use crate::{
+    Result,
     config::{EmbedderConfig, LlmConfig, QueryPipelineConfig, VectorStoreConfig},
     factory::{EmbedderFactoryRegistry, LlmFactoryRegistry, VectorStoreFactoryRegistry},
     traits::{Embedder, QueryPipeline, ResponseGenerator, Retriever, VectorStore},
-    Result,
 };
 
 /// Builder for creating query pipelines.
@@ -325,7 +325,7 @@ impl QueryPipelineBuilder {
         // This would be implemented in the cheungfun-query crate
         // For now, we'll return an error indicating this needs to be implemented
         Err(crate::CheungfunError::internal(
-            "QueryPipeline implementation not yet available. This will be implemented in cheungfun-query crate."
+            "QueryPipeline implementation not yet available. This will be implemented in cheungfun-query crate.",
         ))
     }
 

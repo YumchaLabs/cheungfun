@@ -6,12 +6,7 @@
 use async_trait::async_trait;
 use std::sync::Arc;
 
-use cheungfun_core::{
-    config::LlmConfig,
-    factory::LlmFactory,
-    traits::ResponseGenerator,
-    Result,
-};
+use cheungfun_core::{Result, config::LlmConfig, factory::LlmFactory, traits::ResponseGenerator};
 use siumai::prelude::*;
 
 use crate::generator::{SiumaiGenerator, SiumaiGeneratorConfig};
@@ -31,7 +26,7 @@ use crate::generator::{SiumaiGenerator, SiumaiGeneratorConfig};
 ///
 /// # async fn example() -> Result<(), Box<dyn std::error::Error>> {
 /// let factory = SiumaiLlmFactory::new();
-/// 
+///
 /// // Create OpenAI client
 /// let openai_config = LlmConfig::openai("gpt-4", "your-api-key");
 /// let openai_client = factory.create_llm(&openai_config).await?;
@@ -239,7 +234,7 @@ mod tests {
     #[test]
     fn test_can_create() {
         let factory = SiumaiLlmFactory::new();
-        
+
         let openai_config = LlmConfig::openai("gpt-4", "test-key");
         assert!(factory.can_create(&openai_config));
 

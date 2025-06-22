@@ -7,4 +7,9 @@
 #![warn(clippy::all, clippy::pedantic)]
 #![allow(clippy::module_name_repetitions)]
 
-// Placeholder - will be implemented later
+pub mod embedders;
+pub mod vector_stores;
+
+// Re-export commonly used types
+pub use embedders::CandleEmbedder;
+pub use vector_stores::InMemoryVectorStore;

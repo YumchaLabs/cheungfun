@@ -59,12 +59,20 @@ pub mod utils;
 
 /// Re-export commonly used types and traits.
 pub mod prelude {
-    pub use crate::engine::{QueryEngine, QueryEngineBuilder, QueryEngineConfig, QueryEngineOptions};
+    pub use crate::engine::{
+        QueryEngine, QueryEngineBuilder, QueryEngineConfig, QueryEngineOptions,
+    };
     pub use crate::factory::SiumaiLlmFactory;
     pub use crate::generator::{SiumaiGenerator, SiumaiGeneratorBuilder, SiumaiGeneratorConfig};
-    pub use crate::pipeline::{DefaultQueryPipeline, QueryPipelineBuilder, QueryPipelineConfig, QueryOptions, RetrievalOptions};
+    pub use crate::pipeline::{
+        DefaultQueryPipeline, QueryOptions, QueryPipelineBuilder, QueryPipelineConfig,
+        RetrievalOptions,
+    };
     pub use crate::retriever::{VectorRetriever, VectorRetrieverBuilder, VectorRetrieverConfig};
-    pub use crate::utils::{QueryOptimizer, QueryOptimizerConfig, ResponsePostProcessor, ResponsePostProcessorConfig, QueryCache, CacheStats};
+    pub use crate::utils::{
+        CacheStats, QueryCache, QueryOptimizer, QueryOptimizerConfig, ResponsePostProcessor,
+        ResponsePostProcessorConfig,
+    };
 
     // Re-export core types
     pub use cheungfun_core::prelude::*;

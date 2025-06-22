@@ -6,7 +6,7 @@ use cheungfun_core::{Document, Result as CoreResult};
 use std::path::{Path, PathBuf};
 use tracing::{debug, error, info, warn};
 
-use super::{utils, LoaderConfig};
+use super::{LoaderConfig, utils};
 use crate::error::{IndexingError, Result};
 
 /// Loads documents from individual files.

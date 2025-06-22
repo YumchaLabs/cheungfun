@@ -2,8 +2,8 @@
 
 use async_trait::async_trait;
 use cheungfun_core::{
-    traits::{Embedder, IndexingPipeline, Loader, NodeTransformer, Transformer, VectorStore},
     Document, IndexingProgress, IndexingStats, Node, Result as CoreResult,
+    traits::{Embedder, IndexingPipeline, Loader, NodeTransformer, Transformer, VectorStore},
 };
 use futures::future::join_all;
 use std::sync::Arc;

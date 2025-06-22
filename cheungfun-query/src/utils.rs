@@ -8,8 +8,8 @@ use std::time::{Duration, Instant};
 use tracing::{debug, info};
 
 use cheungfun_core::{
-    types::{GeneratedResponse, Query, ScoredNode},
     Result,
+    types::{GeneratedResponse, Query, ScoredNode},
 };
 
 /// Query optimizer for improving query performance and relevance.
@@ -27,16 +27,16 @@ pub struct QueryOptimizer {
 pub struct QueryOptimizerConfig {
     /// Whether to enable spell correction.
     pub enable_spell_correction: bool,
-    
+
     /// Whether to enable query expansion.
     pub enable_query_expansion: bool,
-    
+
     /// Whether to enable stop word removal.
     pub enable_stop_word_removal: bool,
-    
+
     /// Whether to enable stemming.
     pub enable_stemming: bool,
-    
+
     /// Maximum number of expanded terms to add.
     pub max_expanded_terms: usize,
 }
@@ -67,24 +67,27 @@ impl QueryOptimizer {
     /// Optimize a query for better retrieval performance.
     pub fn optimize_query(&self, query: &Query) -> Result<Query> {
         let mut optimized_query = query.clone();
-        
+
         if self.config.enable_spell_correction {
             optimized_query.text = self.correct_spelling(&optimized_query.text)?;
         }
-        
+
         if self.config.enable_query_expansion {
             optimized_query.text = self.expand_query(&optimized_query.text)?;
         }
-        
+
         if self.config.enable_stop_word_removal {
             optimized_query.text = self.remove_stop_words(&optimized_query.text)?;
         }
-        
+
         if self.config.enable_stemming {
             optimized_query.text = self.apply_stemming(&optimized_query.text)?;
         }
-        
-        debug!("Optimized query: '{}' -> '{}'", query.text, optimized_query.text);
+
+        debug!(
+            "Optimized query: '{}' -> '{}'",
+            query.text, optimized_query.text
+        );
         Ok(optimized_query)
     }
 
@@ -132,16 +135,16 @@ pub struct ResponsePostProcessor {
 pub struct ResponsePostProcessorConfig {
     /// Whether to enable citation formatting.
     pub enable_citation_formatting: bool,
-    
+
     /// Whether to enable fact checking.
     pub enable_fact_checking: bool,
-    
+
     /// Whether to enable response formatting.
     pub enable_response_formatting: bool,
-    
+
     /// Whether to enable confidence scoring.
     pub enable_confidence_scoring: bool,
-    
+
     /// Citation format to use.
     pub citation_format: CitationFormat,
 }
@@ -151,13 +154,13 @@ pub struct ResponsePostProcessorConfig {
 pub enum CitationFormat {
     /// Simple numbered citations [1], [2], etc.
     Numbered,
-    
+
     /// Author-year format (Smith, 2023)
     AuthorYear,
-    
+
     /// Footnote style
     Footnote,
-    
+
     /// Custom format
     Custom(String),
 }
@@ -192,20 +195,21 @@ impl ResponsePostProcessor {
         source_nodes: &[ScoredNode],
     ) -> Result<GeneratedResponse> {
         let mut processed_response = response.clone();
-        
+
         if self.config.enable_citation_formatting {
-            processed_response.content = self.format_citations(&processed_response.content, source_nodes)?;
+            processed_response.content =
+                self.format_citations(&processed_response.content, source_nodes)?;
         }
-        
+
         if self.config.enable_response_formatting {
             processed_response.content = self.format_response(&processed_response.content)?;
         }
-        
+
         if self.config.enable_fact_checking {
             // TODO: Implement fact checking
             debug!("Fact checking enabled but not yet implemented");
         }
-        
+
         if self.config.enable_confidence_scoring {
             let confidence = self.calculate_confidence_score(response, source_nodes)?;
             processed_response.metadata.insert(
@@ -213,8 +217,11 @@ impl ResponsePostProcessor {
                 serde_json::json!(confidence),
             );
         }
-        
-        info!("Post-processed response with {} characters", processed_response.content.len());
+
+        info!(
+            "Post-processed response with {} characters",
+            processed_response.content.len()
+        );
         Ok(processed_response)
     }
 
@@ -225,7 +232,7 @@ impl ResponsePostProcessor {
         }
 
         let mut formatted_content = content.to_string();
-        
+
         match &self.config.citation_format {
             CitationFormat::Numbered => {
                 // Add numbered citations at the end
@@ -249,7 +256,7 @@ impl ResponsePostProcessor {
                 debug!("Custom citation format not yet implemented");
             }
         }
-        
+
         Ok(formatted_content)
     }
 
@@ -262,7 +269,7 @@ impl ResponsePostProcessor {
             .filter(|line| !line.is_empty())
             .collect::<Vec<_>>()
             .join("\n\n");
-        
+
         Ok(formatted)
     }
 
@@ -275,13 +282,17 @@ impl ResponsePostProcessor {
         if source_nodes.is_empty() {
             return Ok(0.0);
         }
-        
+
         // Simple confidence calculation based on average source scores
-        let avg_score = source_nodes.iter().map(|node| node.score as f64).sum::<f64>() / source_nodes.len() as f64;
-        
+        let avg_score = source_nodes
+            .iter()
+            .map(|node| node.score as f64)
+            .sum::<f64>()
+            / source_nodes.len() as f64;
+
         // Normalize to 0-1 range (assuming scores are typically 0-1)
         let confidence = avg_score.min(1.0).max(0.0);
-        
+
         Ok(confidence)
     }
 }
@@ -308,14 +319,14 @@ pub mod query_utils {
         // Simple Jaccard similarity based on word overlap
         let words1: std::collections::HashSet<_> = extract_keywords(text1).into_iter().collect();
         let words2: std::collections::HashSet<_> = extract_keywords(text2).into_iter().collect();
-        
+
         if words1.is_empty() && words2.is_empty() {
             return 1.0;
         }
-        
+
         let intersection = words1.intersection(&words2).count();
         let union = words1.union(&words2).count();
-        
+
         if union == 0 {
             0.0
         } else {
@@ -328,7 +339,7 @@ pub mod query_utils {
         if text.len() <= max_length {
             return text.to_string();
         }
-        
+
         let truncated = &text[..max_length];
         if let Some(last_space) = truncated.rfind(' ') {
             format!("{}...", &truncated[..last_space])
@@ -359,7 +370,7 @@ pub mod response_utils {
     ) -> f32 {
         let mut score = 0.0;
         let mut factors = 0;
-        
+
         // Factor 1: Response length (optimal range: 100-1000 characters)
         let length_score = if response.content.len() < 50 {
             0.2
@@ -370,7 +381,7 @@ pub mod response_utils {
         };
         score += length_score;
         factors += 1;
-        
+
         // Factor 2: Number of source nodes used
         let source_score = if source_nodes.is_empty() {
             0.0
@@ -381,14 +392,15 @@ pub mod response_utils {
         };
         score += source_score;
         factors += 1;
-        
+
         // Factor 3: Average source relevance
         if !source_nodes.is_empty() {
-            let avg_relevance = source_nodes.iter().map(|node| node.score).sum::<f32>() / source_nodes.len() as f32;
+            let avg_relevance =
+                source_nodes.iter().map(|node| node.score).sum::<f32>() / source_nodes.len() as f32;
             score += avg_relevance;
             factors += 1;
         }
-        
+
         if factors > 0 {
             score / factors as f32
         } else {
@@ -530,7 +542,7 @@ mod tests {
     fn test_text_similarity() {
         let similarity = query_utils::calculate_text_similarity(
             "machine learning algorithms",
-            "learning machine algorithms"
+            "learning machine algorithms",
         );
         assert!(similarity > 0.8); // Should be high similarity
     }

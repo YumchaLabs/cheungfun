@@ -7,7 +7,7 @@ use regex::Regex;
 use std::collections::HashMap;
 use tracing::{debug, warn};
 
-use super::{utils, MetadataConfig};
+use super::{MetadataConfig, utils};
 
 /// Metadata extractor that enriches nodes with additional metadata.
 ///

@@ -8,9 +8,9 @@ use std::sync::Arc;
 use tracing::{debug, info, instrument};
 
 use cheungfun_core::{
+    Result,
     traits::{ResponseGenerator, Retriever},
     types::{GenerationOptions, Query, QueryResponse, ScoredNode},
-    Result,
 };
 
 /// A high-level query engine that combines retrieval and generation.
@@ -41,10 +41,10 @@ use cheungfun_core::{
 pub struct QueryEngine {
     /// Retriever for finding relevant context.
     retriever: Arc<dyn Retriever>,
-    
+
     /// Generator for creating responses.
     generator: Arc<dyn ResponseGenerator>,
-    
+
     /// Configuration for query processing.
     config: QueryEngineConfig,
 }
@@ -54,22 +54,22 @@ pub struct QueryEngine {
 pub struct QueryEngineConfig {
     /// Default number of context nodes to retrieve.
     pub default_top_k: usize,
-    
+
     /// Default generation options.
     pub default_generation_options: GenerationOptions,
-    
+
     /// Whether to validate retrieved context before generation.
     pub validate_context: bool,
-    
+
     /// Minimum number of context nodes required for generation.
     pub min_context_nodes: usize,
-    
+
     /// Maximum number of context nodes to use for generation.
     pub max_context_nodes: usize,
-    
+
     /// Whether to enable query preprocessing.
     pub enable_query_preprocessing: bool,
-    
+
     /// Whether to enable response postprocessing.
     pub enable_response_postprocessing: bool,
 }
@@ -90,10 +90,7 @@ impl Default for QueryEngineConfig {
 
 impl QueryEngine {
     /// Create a new query engine.
-    pub fn new(
-        retriever: Arc<dyn Retriever>,
-        generator: Arc<dyn ResponseGenerator>,
-    ) -> Self {
+    pub fn new(retriever: Arc<dyn Retriever>, generator: Arc<dyn ResponseGenerator>) -> Self {
         Self {
             retriever,
             generator,
@@ -124,7 +121,8 @@ impl QueryEngine {
     /// This is the main method that orchestrates the complete RAG process.
     #[instrument(skip(self), fields(engine = "QueryEngine"))]
     pub async fn query(&self, query_text: &str) -> Result<QueryResponse> {
-        self.query_with_options(query_text, &QueryEngineOptions::default()).await
+        self.query_with_options(query_text, &QueryEngineOptions::default())
+            .await
     }
 
     /// Execute a query with custom options.
@@ -139,12 +137,12 @@ impl QueryEngine {
         // Build query object
         let mut query = Query::new(query_text);
         query.top_k = options.top_k.unwrap_or(self.config.default_top_k);
-        
+
         // Apply any additional query options
         if let Some(search_mode) = &options.search_mode {
             query.search_mode = search_mode.clone();
         }
-        
+
         for (key, value) in &options.filters {
             query.filters.insert(key.clone(), value.clone());
         }
@@ -168,7 +166,10 @@ impl QueryEngine {
         // Limit context nodes
         if retrieved_nodes.len() > self.config.max_context_nodes {
             retrieved_nodes.truncate(self.config.max_context_nodes);
-            debug!("Truncated context to {} nodes", self.config.max_context_nodes);
+            debug!(
+                "Truncated context to {} nodes",
+                self.config.max_context_nodes
+            );
         }
 
         // Prepare generation options
@@ -195,9 +196,18 @@ impl QueryEngine {
 
         // Build query metadata
         let mut query_metadata = HashMap::new();
-        query_metadata.insert("retriever".to_string(), serde_json::Value::String(self.retriever.name().to_string()));
-        query_metadata.insert("generator".to_string(), serde_json::Value::String(self.generator.name().to_string()));
-        query_metadata.insert("context_nodes_used".to_string(), serde_json::Value::Number(retrieved_nodes.len().into()));
+        query_metadata.insert(
+            "retriever".to_string(),
+            serde_json::Value::String(self.retriever.name().to_string()),
+        );
+        query_metadata.insert(
+            "generator".to_string(),
+            serde_json::Value::String(self.generator.name().to_string()),
+        );
+        query_metadata.insert(
+            "context_nodes_used".to_string(),
+            serde_json::Value::Number(retrieved_nodes.len().into()),
+        );
 
         info!("Query processing completed successfully");
 
@@ -250,13 +260,13 @@ impl QueryEngine {
 pub struct QueryEngineOptions {
     /// Number of context nodes to retrieve.
     pub top_k: Option<usize>,
-    
+
     /// Search mode to use.
     pub search_mode: Option<cheungfun_core::types::SearchMode>,
-    
+
     /// Metadata filters to apply.
     pub filters: HashMap<String, serde_json::Value>,
-    
+
     /// Generation options.
     pub generation_options: Option<GenerationOptions>,
 }
@@ -330,17 +340,17 @@ impl QueryEngineBuilder {
 
     /// Build the query engine.
     pub fn build(self) -> Result<QueryEngine> {
-        let retriever = self.retriever.ok_or_else(|| {
-            cheungfun_core::CheungfunError::Configuration {
-                message: "Retriever is required".to_string(),
-            }
-        })?;
+        let retriever =
+            self.retriever
+                .ok_or_else(|| cheungfun_core::CheungfunError::Configuration {
+                    message: "Retriever is required".to_string(),
+                })?;
 
-        let generator = self.generator.ok_or_else(|| {
-            cheungfun_core::CheungfunError::Configuration {
-                message: "Generator is required".to_string(),
-            }
-        })?;
+        let generator =
+            self.generator
+                .ok_or_else(|| cheungfun_core::CheungfunError::Configuration {
+                    message: "Generator is required".to_string(),
+                })?;
 
         let config = self.config.unwrap_or_default();
 

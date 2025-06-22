@@ -16,9 +16,9 @@ use std::collections::HashMap;
 use std::sync::Arc;
 
 use cheungfun_core::{
-    types::{Node, Query, ScoredNode},
-    traits::{Embedder, VectorStore},
     Result,
+    traits::{Embedder, VectorStore},
+    types::{Node, Query, ScoredNode},
 };
 use cheungfun_query::prelude::*;
 use siumai::prelude::*;
@@ -188,7 +188,11 @@ async fn create_siumai_client() -> Result<Siumai> {
             .max_tokens(1000)
             .build()
             .await
-            .map_err(|e| cheungfun_core::CheungfunError::configuration(format!("Failed to create OpenAI client: {e}")))
+            .map_err(|e| {
+                cheungfun_core::CheungfunError::configuration(format!(
+                    "Failed to create OpenAI client: {e}"
+                ))
+            })
     } else if let Ok(api_key) = std::env::var("ANTHROPIC_API_KEY") {
         println!("🔑 Using Anthropic with API key");
         Siumai::builder()
@@ -199,10 +203,15 @@ async fn create_siumai_client() -> Result<Siumai> {
             .max_tokens(1000)
             .build()
             .await
-            .map_err(|e| cheungfun_core::CheungfunError::configuration(format!("Failed to create Anthropic client: {e}")))
+            .map_err(|e| {
+                cheungfun_core::CheungfunError::configuration(format!(
+                    "Failed to create Anthropic client: {e}"
+                ))
+            })
     } else {
         // Try Ollama as fallback
-        let base_url = std::env::var("OLLAMA_BASE_URL").unwrap_or_else(|_| "http://localhost:11434".to_string());
+        let base_url = std::env::var("OLLAMA_BASE_URL")
+            .unwrap_or_else(|_| "http://localhost:11434".to_string());
         println!("🦙 Using Ollama at {}", base_url);
         Siumai::builder()
             .ollama()
@@ -212,7 +221,11 @@ async fn create_siumai_client() -> Result<Siumai> {
             .max_tokens(1000)
             .build()
             .await
-            .map_err(|e| cheungfun_core::CheungfunError::configuration(format!("Failed to create Ollama client: {e}")))
+            .map_err(|e| {
+                cheungfun_core::CheungfunError::configuration(format!(
+                    "Failed to create Ollama client: {e}"
+                ))
+            })
     }
 }
 
@@ -234,7 +247,9 @@ async fn main() -> Result<()> {
         }
         Err(e) => {
             eprintln!("❌ Failed to create siumai client: {}", e);
-            eprintln!("💡 Make sure to set OPENAI_API_KEY, ANTHROPIC_API_KEY, or run Ollama locally");
+            eprintln!(
+                "💡 Make sure to set OPENAI_API_KEY, ANTHROPIC_API_KEY, or run Ollama locally"
+            );
             return Err(e);
         }
     }
@@ -251,10 +266,16 @@ async fn main() -> Result<()> {
     let llm_config = if std::env::var("OPENAI_API_KEY").is_ok() {
         LlmConfig::openai("gpt-3.5-turbo", &std::env::var("OPENAI_API_KEY").unwrap())
     } else if std::env::var("ANTHROPIC_API_KEY").is_ok() {
-        LlmConfig::anthropic("claude-3-haiku-20240307", &std::env::var("ANTHROPIC_API_KEY").unwrap())
+        LlmConfig::anthropic(
+            "claude-3-haiku-20240307",
+            &std::env::var("ANTHROPIC_API_KEY").unwrap(),
+        )
     } else {
         let mut config = LlmConfig::new("ollama", "llama2");
-        config.base_url = Some(std::env::var("OLLAMA_BASE_URL").unwrap_or_else(|_| "http://localhost:11434".to_string()));
+        config.base_url = Some(
+            std::env::var("OLLAMA_BASE_URL")
+                .unwrap_or_else(|_| "http://localhost:11434".to_string()),
+        );
         config
     };
 
@@ -277,15 +298,19 @@ async fn main() -> Result<()> {
     println!("Source nodes: {}", response.retrieved_nodes.len());
 
     if let Some(usage) = &response.response.usage {
-        println!("Token usage: {} prompt + {} completion = {} total",
-                 usage.prompt_tokens, usage.completion_tokens, usage.total_tokens);
+        println!(
+            "Token usage: {} prompt + {} completion = {} total",
+            usage.prompt_tokens, usage.completion_tokens, usage.total_tokens
+        );
     }
 
     for (i, scored_node) in response.retrieved_nodes.iter().enumerate() {
-        println!("  {}. Score: {:.3} - {}",
-                 i + 1,
-                 scored_node.score,
-                 &scored_node.node.content[..100.min(scored_node.node.content.len())]);
+        println!(
+            "  {}. Score: {:.3} - {}",
+            i + 1,
+            scored_node.score,
+            &scored_node.node.content[..100.min(scored_node.node.content.len())]
+        );
     }
 
     println!("\n🎉 Example completed successfully!");
