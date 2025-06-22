@@ -256,10 +256,12 @@ impl ResponseGenerator for SiumaiGenerator {
                 .map_err(|e| cheungfun_core::CheungfunError::Llm {
                     message: format!("Stream error: {}", e),
                 })
-                .and_then(|_chunk| {
-                    // For now, return empty string for each chunk
-                    // TODO: Implement proper streaming content extraction based on siumai API
-                    Ok(String::new())
+                .map(|chunk| {
+                    // Extract content from stream chunk based on siumai API
+                    match chunk {
+                        siumai::ChatStreamEvent::ContentDelta { delta, .. } => delta,
+                        _ => String::new(), // For other event types, return empty string
+                    }
                 })
         });
 

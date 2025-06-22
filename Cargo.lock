@@ -468,6 +468,7 @@ dependencies = [
  "pretty_assertions",
  "serde",
  "serde_json",
+ "siumai",
  "strum",
  "temp-dir",
  "test-case",

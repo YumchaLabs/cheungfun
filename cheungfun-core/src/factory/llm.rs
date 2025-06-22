@@ -282,6 +282,128 @@ impl LlmFactoryRegistry {
     }
 }
 
+/// Siumai-based LLM factory implementation.
+///
+/// This factory creates LLM clients using the siumai crate, which provides
+/// a unified interface for multiple LLM providers including OpenAI, Anthropic,
+/// Google Gemini, Ollama, and others.
+///
+/// # Examples
+///
+/// ```rust,no_run
+/// use cheungfun_core::factory::{SiumaiLlmFactory, LlmFactory};
+/// use cheungfun_core::config::LlmConfig;
+/// use std::sync::Arc;
+///
+/// # async fn example() -> Result<(), Box<dyn std::error::Error>> {
+/// let factory = SiumaiLlmFactory::new();
+///
+/// // Create OpenAI client
+/// let openai_config = LlmConfig::openai("gpt-4", "your-api-key");
+/// let openai_client = factory.create_llm(&openai_config).await?;
+///
+/// // Create Anthropic client
+/// let anthropic_config = LlmConfig::anthropic("claude-3-sonnet", "your-api-key");
+/// let anthropic_client = factory.create_llm(&anthropic_config).await?;
+///
+/// // Create Ollama client
+/// let ollama_config = LlmConfig::ollama("llama2");
+/// let ollama_client = factory.create_llm(&ollama_config).await?;
+/// # Ok(())
+/// # }
+/// ```
+#[derive(Debug, Default)]
+pub struct SiumaiLlmFactory;
+
+impl SiumaiLlmFactory {
+    /// Create a new Siumai LLM factory.
+    #[must_use]
+    pub fn new() -> Self {
+        Self
+    }
+}
+
+#[async_trait]
+impl LlmFactory for SiumaiLlmFactory {
+    async fn create_llm(&self, _config: &LlmConfig) -> Result<Arc<dyn ResponseGenerator>> {
+        // This is a placeholder implementation. The actual implementation
+        // should be done in higher-level crates that have access to
+        // concrete ResponseGenerator implementations.
+        Err(crate::CheungfunError::configuration(
+            "SiumaiLlmFactory is a base factory. Use concrete implementations in higher-level crates like cheungfun-query.".to_string()
+        ))
+    }
+
+    fn can_create(&self, config: &LlmConfig) -> bool {
+        matches!(
+            config.provider.as_str(),
+            "openai" | "anthropic" | "google" | "gemini" | "ollama" | "local"
+        )
+    }
+
+    fn supported_providers(&self) -> Vec<&'static str> {
+        vec!["openai", "anthropic", "google", "gemini", "ollama", "local"]
+    }
+
+    async fn validate_config(&self, config: &LlmConfig) -> Result<()> {
+        // First, use the config's built-in validation
+        config.validate()?;
+
+        // Additional siumai-specific validation
+        if !self.can_create(config) {
+            return Err(crate::CheungfunError::configuration(format!(
+                "Unsupported provider for SiumaiLlmFactory: {}",
+                config.provider
+            )));
+        }
+
+        // Check provider-specific requirements
+        match config.provider.as_str() {
+            "openai" | "anthropic" | "google" | "gemini" => {
+                if config.api_key.is_none() {
+                    return Err(crate::CheungfunError::configuration(format!(
+                        "API key is required for provider: {}",
+                        config.provider
+                    )));
+                }
+            }
+            "local" => {
+                if config.base_url.is_none() {
+                    return Err(crate::CheungfunError::configuration(
+                        "base_url is required for local provider".to_string(),
+                    ));
+                }
+            }
+            "ollama" => {
+                // Ollama is optional for base_url, defaults to localhost:11434
+            }
+            _ => {
+                return Err(crate::CheungfunError::configuration(format!(
+                    "Unknown provider: {}",
+                    config.provider
+                )));
+            }
+        }
+
+        Ok(())
+    }
+
+    fn metadata(&self) -> std::collections::HashMap<String, serde_json::Value> {
+        let mut metadata = std::collections::HashMap::new();
+        metadata.insert("name".to_string(), "SiumaiLlmFactory".into());
+        metadata.insert(
+            "description".to_string(),
+            "Factory for creating LLM clients using the siumai crate".into(),
+        );
+        metadata.insert(
+            "supported_providers".to_string(),
+            self.supported_providers().into(),
+        );
+        metadata.insert("version".to_string(), env!("CARGO_PKG_VERSION").into());
+        metadata
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;

@@ -35,7 +35,7 @@ cheungfun/
 ```toml
 [dependencies]
 cheungfun = "0.1.0"
-siumai = "0.3.0"
+siumai = "0.4.0"
 tokio = { version = "1.0", features = ["full"] }
 ```
 

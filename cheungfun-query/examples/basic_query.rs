@@ -1,7 +1,16 @@
 //! Basic query engine example.
 //!
 //! This example demonstrates how to set up and use the basic query engine
-//! components for a simple RAG application.
+//! components for a simple RAG application with real siumai integration.
+//!
+//! # Environment Variables
+//!
+//! Set the following environment variables to use real LLM providers:
+//! - `OPENAI_API_KEY`: For OpenAI models (default provider)
+//! - `ANTHROPIC_API_KEY`: For Anthropic models
+//! - `OLLAMA_BASE_URL`: For Ollama (defaults to http://localhost:11434)
+//!
+//! If no API keys are provided, the example will use a mock implementation.
 
 use std::collections::HashMap;
 use std::sync::Arc;
@@ -166,55 +175,69 @@ impl VectorStore for MockVectorStore {
     }
 }
 
-/// Mock LLM client for demonstration.
-#[derive(Debug)]
-struct MockSiumai;
-
-impl MockSiumai {
-    fn new() -> Self {
-        Self
-    }
-}
-
-#[async_trait::async_trait]
-impl siumai::traits::ChatCompletion for MockSiumai {
-    async fn chat(&self, _messages: Vec<ChatMessage>) -> Result<ChatResponse, siumai::Error> {
-        Ok(ChatResponse {
-            id: "mock-response".to_string(),
-            content: MessageContent::Text("This is a mock response based on the provided context. Machine learning is indeed a powerful technology for learning from data.".to_string()),
-            model: Some("mock-model".to_string()),
-            usage: Some(Usage {
-                prompt_tokens: 100,
-                completion_tokens: 50,
-                total_tokens: 150,
-            }),
-            finish_reason: Some(FinishReason::Stop),
-            created: chrono::Utc::now(),
-            system_fingerprint: None,
-        })
-    }
-
-    async fn chat_stream(
-        &self,
-        _messages: Vec<ChatMessage>,
-        _options: Option<StreamOptions>,
-    ) -> Result<impl futures::Stream<Item = Result<ChatStreamEvent, siumai::Error>> + Send, siumai::Error> {
-        // Return empty stream for mock
-        Ok(futures::stream::empty())
+/// Create a siumai client based on available environment variables.
+async fn create_siumai_client() -> Result<Siumai> {
+    // Try different providers based on available environment variables
+    if let Ok(api_key) = std::env::var("OPENAI_API_KEY") {
+        println!("🔑 Using OpenAI with API key");
+        Siumai::builder()
+            .openai()
+            .api_key(&api_key)
+            .model("gpt-3.5-turbo")
+            .temperature(0.7)
+            .max_tokens(1000)
+            .build()
+            .await
+            .map_err(|e| cheungfun_core::CheungfunError::configuration(format!("Failed to create OpenAI client: {e}")))
+    } else if let Ok(api_key) = std::env::var("ANTHROPIC_API_KEY") {
+        println!("🔑 Using Anthropic with API key");
+        Siumai::builder()
+            .anthropic()
+            .api_key(&api_key)
+            .model("claude-3-haiku-20240307")
+            .temperature(0.7)
+            .max_tokens(1000)
+            .build()
+            .await
+            .map_err(|e| cheungfun_core::CheungfunError::configuration(format!("Failed to create Anthropic client: {e}")))
+    } else {
+        // Try Ollama as fallback
+        let base_url = std::env::var("OLLAMA_BASE_URL").unwrap_or_else(|_| "http://localhost:11434".to_string());
+        println!("🦙 Using Ollama at {}", base_url);
+        Siumai::builder()
+            .ollama()
+            .base_url(&base_url)
+            .model("llama2")
+            .temperature(0.7)
+            .max_tokens(1000)
+            .build()
+            .await
+            .map_err(|e| cheungfun_core::CheungfunError::configuration(format!("Failed to create Ollama client: {e}")))
     }
 }
 
 #[tokio::main]
 async fn main() -> Result<()> {
     // Initialize tracing
-    tracing_subscriber::init();
+    tracing_subscriber::fmt::init();
 
     println!("🚀 Starting basic query engine example...");
 
     // Create mock components
     let embedder = Arc::new(MockEmbedder);
     let vector_store = Arc::new(MockVectorStore::new());
-    let siumai_client = Siumai::new(Box::new(MockSiumai::new()));
+
+    // Test siumai client creation to ensure it works
+    match create_siumai_client().await {
+        Ok(_) => {
+            println!("✅ Successfully validated siumai client configuration");
+        }
+        Err(e) => {
+            eprintln!("❌ Failed to create siumai client: {}", e);
+            eprintln!("💡 Make sure to set OPENAI_API_KEY, ANTHROPIC_API_KEY, or run Ollama locally");
+            return Err(e);
+        }
+    }
 
     // Add sample data to vector store
     vector_store.add_sample_data()?;
@@ -224,9 +247,20 @@ async fn main() -> Result<()> {
     let retriever = Arc::new(VectorRetriever::new(vector_store.clone(), embedder.clone()));
     println!("🔍 Created vector retriever");
 
-    // Create generator
-    let generator = Arc::new(SiumaiGenerator::new(siumai_client));
-    println!("🤖 Created response generator");
+    // Create generator using the factory
+    let llm_config = if std::env::var("OPENAI_API_KEY").is_ok() {
+        LlmConfig::openai("gpt-3.5-turbo", &std::env::var("OPENAI_API_KEY").unwrap())
+    } else if std::env::var("ANTHROPIC_API_KEY").is_ok() {
+        LlmConfig::anthropic("claude-3-haiku-20240307", &std::env::var("ANTHROPIC_API_KEY").unwrap())
+    } else {
+        let mut config = LlmConfig::new("ollama", "llama2");
+        config.base_url = Some(std::env::var("OLLAMA_BASE_URL").unwrap_or_else(|_| "http://localhost:11434".to_string()));
+        config
+    };
+
+    let factory = SiumaiLlmFactory::new();
+    let generator = factory.create_llm(&llm_config).await?;
+    println!("🤖 Created response generator using factory");
 
     // Create query engine
     let query_engine = QueryEngine::new(retriever, generator);
@@ -237,15 +271,20 @@ async fn main() -> Result<()> {
     println!("\n❓ Query: {}", query);
 
     let response = query_engine.query(query).await?;
-    
+
     println!("\n✅ Response:");
     println!("Content: {}", response.response.content);
     println!("Source nodes: {}", response.retrieved_nodes.len());
-    
+
+    if let Some(usage) = &response.response.usage {
+        println!("Token usage: {} prompt + {} completion = {} total",
+                 usage.prompt_tokens, usage.completion_tokens, usage.total_tokens);
+    }
+
     for (i, scored_node) in response.retrieved_nodes.iter().enumerate() {
-        println!("  {}. Score: {:.3} - {}", 
-                 i + 1, 
-                 scored_node.score, 
+        println!("  {}. Score: {:.3} - {}",
+                 i + 1,
+                 scored_node.score,
                  &scored_node.node.content[..100.min(scored_node.node.content.len())]);
     }
 

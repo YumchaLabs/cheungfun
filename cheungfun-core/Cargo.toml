@@ -35,6 +35,9 @@ chrono = { workspace = true }
 derive_builder = { workspace = true }
 strum = { workspace = true }
 
+# LLM integration
+siumai = { workspace = true }
+
 # Logging
 tracing = { workspace = true }
 

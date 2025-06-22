@@ -51,6 +51,7 @@
 #![allow(clippy::module_name_repetitions)]
 
 pub mod engine;
+pub mod factory;
 pub mod generator;
 pub mod pipeline;
 pub mod retriever;
@@ -59,6 +60,7 @@ pub mod utils;
 /// Re-export commonly used types and traits.
 pub mod prelude {
     pub use crate::engine::{QueryEngine, QueryEngineBuilder, QueryEngineConfig, QueryEngineOptions};
+    pub use crate::factory::SiumaiLlmFactory;
     pub use crate::generator::{SiumaiGenerator, SiumaiGeneratorBuilder, SiumaiGeneratorConfig};
     pub use crate::pipeline::{DefaultQueryPipeline, QueryPipelineBuilder, QueryPipelineConfig, QueryOptions, RetrievalOptions};
     pub use crate::retriever::{VectorRetriever, VectorRetrieverBuilder, VectorRetrieverConfig};
