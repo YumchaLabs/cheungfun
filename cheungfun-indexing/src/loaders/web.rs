@@ -94,7 +94,7 @@ impl WebLoader {
     ///
     /// Returns an error if the URL is invalid.
     pub fn new<S: Into<String>>(url: S) -> Result<Self> {
-        let url = url.into();
+        let url: String = url.into();
 
         // Validate URL
         if url::Url::parse(&url).is_err() {
@@ -127,7 +127,7 @@ impl WebLoader {
 
     /// Create a new web loader with custom configuration.
     pub fn with_config<S: Into<String>>(url: S, config: WebLoaderConfig) -> Result<Self> {
-        let url = url.into();
+        let url: String = url.into();
 
         // Validate URL
         if url::Url::parse(&url).is_err() {

@@ -555,6 +555,7 @@ dependencies = [
  "anyhow",
  "async-trait",
  "cheungfun-core",
+ "chrono",
  "futures",
  "futures-util",
  "serde",
@@ -566,6 +567,7 @@ dependencies = [
  "tokio-stream",
  "tokio-test",
  "tracing",
+ "tracing-subscriber",
  "uuid",
 ]
 
@@ -3647,11 +3649,12 @@ checksum = "56199f7ddabf13fe5074ce809e7d3f42b42ae711800501b5b16ea82ad029c39d"
 
 [[package]]
 name = "siumai"
-version = "0.3.0"
+version = "0.4.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "78999860387ab470ac943a11a70acac053f5be4e748b69e2b97a885493f2eec9"
+checksum = "ecccccc57d24b9a878ae5a3bda9892d2439e59996cf6ad117f7a8bb301eaeb74"
 dependencies = [
  "async-trait",
+ "bytes",
  "chrono",
  "futures",
  "futures-util",

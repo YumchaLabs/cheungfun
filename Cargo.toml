@@ -18,7 +18,7 @@ default-members = ["cheungfun", "cheungfun-*"]
 [workspace.package]
 version = "0.1.0"
 authors = ["Mingzhen Zhuang"]
-edition = "2021"
+edition = "2024"
 license = "MIT OR Apache-2.0"
 repository = "https://github.com/YumchaLabs/cheungfun"
 homepage = "https://github.com/YumchaLabs/cheungfun"
@@ -34,7 +34,7 @@ keywords = ["ai", "llm", "rag"]
 
 [workspace.dependencies]
 # Core dependencies
-siumai = "0.3.0"
+siumai = "0.4.0"
 tokio = { version = "1.45", features = ["rt-multi-thread", "time", "macros"] }
 serde = { version = "1.0", features = ["derive"] }
 serde_json = "1.0"
