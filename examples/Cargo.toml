@@ -67,3 +67,7 @@ path = "complete_rag_demo.rs"
 name = "candle_embedder_demo"
 path = "candle_embedder_demo.rs"
 required-features = ["candle"]
+
+[[bin]]
+name = "qdrant_vector_store_demo"
+path = "src/qdrant_vector_store_demo.rs"
