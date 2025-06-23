@@ -715,6 +715,7 @@ dependencies = [
  "serde",
  "serde_json",
  "sha2",
+ "simsimd",
  "siumai",
  "test-case",
  "thiserror 2.0.12",
@@ -4709,6 +4710,15 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "95890f873bec569a0362c235787f3aca6e1e887302ba4840839bcc6459c42da6"
 dependencies = [
  "quote",
+]
+
+[[package]]
+name = "simsimd"
+version = "6.4.9"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "3501b539f34e88ae7b7fb2b4c5c2dd87415f52817b1fd17fbc0622c555678193"
+dependencies = [
+ "cc",
 ]
 
 [[package]]

@@ -10,6 +10,10 @@
 pub mod embedders;
 pub mod vector_stores;
 
+// High-performance SIMD operations
+#[cfg(feature = "simd")]
+pub mod simd;
+
 // Re-export commonly used types
 pub use vector_stores::InMemoryVectorStore;
 

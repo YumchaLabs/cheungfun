@@ -16,7 +16,7 @@ cheungfun = { path = "../cheungfun" }
 cheungfun-core = { path = "../cheungfun-core" }
 cheungfun-indexing = { path = "../cheungfun-indexing" }
 cheungfun-query = { path = "../cheungfun-query" }
-cheungfun-integrations = { path = "../cheungfun-integrations" }
+cheungfun-integrations = { path = "../cheungfun-integrations", features = ["simd"] }
 cheungfun-agents = { path = "../cheungfun-agents" }
 
 # Core async
@@ -54,6 +54,9 @@ fastembed = ["cheungfun-integrations/fastembed"]
 
 # All embedding features
 all-embedders = ["candle", "fastembed"]
+
+# SIMD performance features
+simd = ["cheungfun-integrations/simd"]
 
 # Getting Started Examples
 [[bin]]
@@ -94,7 +97,11 @@ path = "04_integrations/mcp_integration_example.rs"
 # Performance Examples
 [[bin]]
 name = "performance_benchmark"
-path = "05_performance/benchmarks/performance_benchmark.rs"
+path = "src/performance_benchmark.rs"
+
+[[bin]]
+name = "simple_performance_test"
+path = "src/simple_performance_test.rs"
 
 [[bin]]
 name = "embedder_benchmark"
