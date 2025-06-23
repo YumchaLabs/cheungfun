@@ -10,14 +10,14 @@
 //! 1. Start the HTTP MCP server: `cargo run --example http_mcp_server`
 //! 2. Run this integration example: `cargo run --example mcp_integration`
 
-use cheungfun_agents::prelude::*;
+use cheungfun_agents::{prelude::*, tool::ToolContext};
 use std::sync::Arc;
 use tokio;
 
 #[tokio::main]
 async fn main() -> Result<()> {
     // Initialize logging
-    tracing_subscriber::init();
+    tracing_subscriber::fmt::init();
 
     println!("🔌 Cheungfun Agents - MCP Integration Example");
     println!("==============================================");
