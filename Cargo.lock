@@ -979,6 +979,7 @@ dependencies = [
  "indexmap 2.9.0",
  "infer",
  "path-absolutize",
+ "png",
  "reqwest 0.12.20",
  "rodio",
  "serde",

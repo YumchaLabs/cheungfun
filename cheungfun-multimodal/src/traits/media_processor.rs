@@ -323,7 +323,7 @@ pub struct ContentCategory {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::types::MediaFormat;
+
 
     #[test]
     fn test_processing_options_default() {

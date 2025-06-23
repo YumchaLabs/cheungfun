@@ -4,7 +4,7 @@
 //! and modalities from file content, extensions, and MIME types.
 
 use crate::types::{MediaFormat, ModalityType};
-use crate::error::Result;
+
 use std::path::Path;
 
 /// Detect media format from file content (magic bytes).

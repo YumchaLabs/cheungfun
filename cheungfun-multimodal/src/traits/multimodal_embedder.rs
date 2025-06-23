@@ -88,7 +88,7 @@ pub trait MultimodalEmbedder: Send + Sync + std::fmt::Debug {
     }
 
     /// Get the maximum content size this embedder can handle for a modality.
-    fn max_content_size(&self, modality: ModalityType) -> Option<u64> {
+    fn max_content_size(&self, _modality: ModalityType) -> Option<u64> {
         None
     }
 

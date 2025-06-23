@@ -6,7 +6,7 @@
 use crate::types::{MediaContent, ModalityType, MultimodalNode};
 use crate::error::Result;
 use async_trait::async_trait;
-use cheungfun_core::types::{Query, ScoredNode};
+use cheungfun_core::types::ScoredNode;
 use std::collections::HashMap;
 use uuid::Uuid;
 

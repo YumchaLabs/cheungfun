@@ -59,7 +59,7 @@ pub trait Configurable {
     fn get_config(&self) -> Self::Config;
 
     /// Validate a configuration before applying it.
-    fn validate_config(config: &Self::Config) -> crate::error::Result<()> {
+    fn validate_config(_config: &Self::Config) -> crate::error::Result<()> {
         // Default implementation does no validation
         Ok(())
     }

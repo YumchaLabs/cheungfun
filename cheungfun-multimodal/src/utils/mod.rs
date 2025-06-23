@@ -12,9 +12,8 @@ pub use format_detection::{detect_format, detect_modality_from_path};
 pub use format_detection::detect_format_from_bytes;
 pub use conversion::{convert_to_base64, convert_from_base64, normalize_path};
 
-use crate::types::{MediaContent, MediaFormat, ModalityType};
+use crate::types::{MediaContent, ModalityType};
 use crate::error::Result;
-use std::path::Path;
 
 /// Validate media content for processing.
 pub fn validate_media_content(content: &MediaContent) -> Result<()> {
@@ -334,7 +333,7 @@ mod tests {
     fn test_sanitize_filename() {
         assert_eq!(sanitize_filename("normal_file.txt"), "normal_file.txt");
         assert_eq!(sanitize_filename("file/with\\bad:chars"), "file_with_bad_chars");
-        assert_eq!(sanitize_filename("file<>|*?.txt"), "file______.txt");
+        assert_eq!(sanitize_filename("file<>|*?.txt"), "file_____.txt");
     }
 
     #[test]

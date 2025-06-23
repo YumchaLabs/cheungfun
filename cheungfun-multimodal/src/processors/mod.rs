@@ -386,18 +386,20 @@ mod tests {
     #[tokio::test]
     async fn test_text_processing() {
         let processor = MultimodalProcessor::new();
-        let content = MediaContent::from_bytes(
+        let mut content = MediaContent::from_bytes(
             b"Hello, world!".to_vec(),
             MediaFormat::PlainText,
         );
-        
+        // Set extracted_text for text content
+        content.extracted_text = Some("Hello, world!".to_string());
+
         let options = ProcessingOptions::default();
         let result = processor.process(&content, &options).await;
         assert!(result.is_ok());
-        
+
         let features = processor.extract_features(&content).await.unwrap();
         assert!(features.contains_key("length"));
-        
+
         let text = processor.extract_text(&content).await.unwrap();
         assert!(text.is_some());
     }

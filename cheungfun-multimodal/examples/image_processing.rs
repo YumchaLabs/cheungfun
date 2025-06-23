@@ -4,7 +4,6 @@
 //! images, extract features, and perform basic image operations.
 
 use cheungfun_multimodal::prelude::*;
-use std::path::Path;
 
 #[tokio::main]
 async fn main() -> Result<()> {
@@ -149,20 +148,40 @@ async fn main() -> Result<()> {
     Ok(())
 }
 
-/// Create sample image data (a simple PNG).
+/// Create sample image data using PNG crate to generate a valid PNG.
 fn create_sample_image_data() -> Vec<u8> {
-    // This is a minimal 1x1 pixel PNG image (red pixel)
-    vec![
-        0x89, 0x50, 0x4E, 0x47, 0x0D, 0x0A, 0x1A, 0x0A, // PNG signature
-        0x00, 0x00, 0x00, 0x0D, 0x49, 0x48, 0x44, 0x52, // IHDR chunk header
-        0x00, 0x00, 0x00, 0x01, 0x00, 0x00, 0x00, 0x01, // 1x1 dimensions
-        0x08, 0x02, 0x00, 0x00, 0x00, 0x90, 0x77, 0x53, 0xDE, // IHDR data + CRC
-        0x00, 0x00, 0x00, 0x0C, 0x49, 0x44, 0x41, 0x54, // IDAT chunk header
-        0x08, 0x99, 0x01, 0x01, 0x00, 0x00, 0xFF, 0xFF, // IDAT data (compressed)
-        0x00, 0x00, 0x00, 0x02, 0x00, 0x01, 0xE2, 0x21, 0xBC, 0x33, // IDAT data + CRC
-        0x00, 0x00, 0x00, 0x00, 0x49, 0x45, 0x4E, 0x44, // IEND chunk header
-        0xAE, 0x42, 0x60, 0x82, // IEND CRC
-    ]
+    use std::io::Cursor;
+
+    // Create a 4x4 pixel RGB image with a simple pattern
+    let width = 4u32;
+    let height = 4u32;
+
+    // Create RGB data: red, green, blue, white pattern
+    let mut rgb_data = Vec::new();
+    for y in 0..height {
+        for x in 0..width {
+            match (x + y) % 4 {
+                0 => rgb_data.extend_from_slice(&[255, 0, 0]),   // Red
+                1 => rgb_data.extend_from_slice(&[0, 255, 0]),   // Green
+                2 => rgb_data.extend_from_slice(&[0, 0, 255]),   // Blue
+                _ => rgb_data.extend_from_slice(&[255, 255, 255]), // White
+            }
+        }
+    }
+
+    // Encode as PNG
+    let mut png_data = Vec::new();
+    {
+        let mut cursor = Cursor::new(&mut png_data);
+        let mut encoder = png::Encoder::new(&mut cursor, width, height);
+        encoder.set_color(png::ColorType::Rgb);
+        encoder.set_depth(png::BitDepth::Eight);
+
+        let mut writer = encoder.write_header().expect("Failed to write PNG header");
+        writer.write_image_data(&rgb_data).expect("Failed to write PNG data");
+    }
+
+    png_data
 }
 
 /// Demonstrate advanced image operations (when image support is enabled).

@@ -408,7 +408,11 @@ mod tests {
             CoordinateSystem::Normalized,
             CoordinateSystem::Pixel { width: 100, height: 200 },
         );
-        assert_eq!((x, y, w, h), (50.0, 100.0, 20.0, 60.0));
+        // Use approximate equality for floating point comparison
+        assert!((x - 50.0).abs() < 0.001);
+        assert!((y - 100.0).abs() < 0.001);
+        assert!((w - 20.0).abs() < 0.001);
+        assert!((h - 60.0).abs() < 0.001);
     }
 
     #[test]
