@@ -44,95 +44,188 @@ rayon = "1.10"
 futures = "0.3"
 
 [features]
-default = []
+# Default features - minimal, stable features that work everywhere
+default = ["basic-examples"]
 
-# Feature for Candle embedder examples
+# Basic examples that don't require special features
+basic-examples = []
+
+# === ML Framework Features ===
+# Candle ML framework (CPU only)
 candle = ["cheungfun-integrations/candle"]
 
-# Feature for FastEmbed examples
+# Candle with CUDA GPU acceleration
+candle-cuda = ["candle", "cheungfun-integrations/gpu-cuda"]
+
+# Candle with Metal GPU acceleration (macOS)
+candle-metal = ["candle", "cheungfun-integrations/gpu-metal"]
+
+# FastEmbed embeddings
 fastembed = ["cheungfun-integrations/fastembed"]
 
-# All embedding features
+# All embedding providers
 all-embedders = ["candle", "fastembed"]
 
-# Performance features
+# === Performance Features ===
+# SIMD acceleration for vector operations
 simd = ["cheungfun-integrations/simd"]
+
+# Optimized memory management
 optimized-memory = ["cheungfun-integrations/optimized-memory"]
+
+# HNSW approximate nearest neighbor search
 hnsw = ["cheungfun-integrations/hnsw"]
 
-# Performance bundle
+# === Integration Features ===
+# Qdrant vector database
+qdrant = ["cheungfun-integrations/qdrant"]
+
+# MCP (Model Context Protocol) tools - TODO: implement in integrations crate
+# mcp = ["cheungfun-integrations/mcp"]
+
+# === Feature Bundles ===
+# Performance bundle - all CPU performance optimizations
 performance = ["simd", "optimized-memory", "hnsw"]
 
-# Getting Started Examples
+# GPU bundle - GPU acceleration features
+gpu = ["candle-cuda", "candle-metal"]
+
+# Production bundle - recommended for production use
+production = ["performance", "candle", "qdrant"]
+
+# Full feature set - everything enabled
+full = ["performance", "gpu", "all-embedders", "qdrant"]
+
+# === Example-specific Features ===
+# Features for performance benchmarking examples
+benchmarks = ["performance", "candle"]
+
+# Features for production examples
+production-examples = ["production"]
+
+# Features for GPU examples
+gpu-examples = ["gpu"]
+
+# === Getting Started Examples ===
+# Basic examples that work with default features
 [[bin]]
 name = "hello_world"
 path = "01_getting_started/hello_world.rs"
+required-features = ["basic-examples"]
 
 [[bin]]
 name = "basic_indexing"
 path = "01_getting_started/basic_indexing.rs"
+required-features = ["basic-examples"]
 
 [[bin]]
 name = "basic_querying"
 path = "01_getting_started/basic_querying.rs"
+required-features = ["basic-examples"]
 
-# Core Components Examples
+# === Core Components Examples ===
+# Candle embedder examples
 [[bin]]
 name = "candle_embedder_demo"
 path = "02_core_components/embedders/candle_embedder_demo.rs"
+required-features = ["candle"]
 
 [[bin]]
 name = "candle_embedder_performance"
 path = "02_core_components/embedders/candle_embedder_performance.rs"
+required-features = ["candle", "benchmarks"]
 
+# Vector store examples
 [[bin]]
 name = "qdrant_store_demo"
 path = "02_core_components/vector_stores/qdrant_vector_store_demo.rs"
+required-features = ["qdrant"]
 
-# Advanced Features Examples
+# === Advanced Features Examples ===
 [[bin]]
 name = "advanced_retrieval_demo"
 path = "03_advanced_features/advanced_retrieval_demo.rs"
+required-features = ["performance", "candle"]
 
-# Integration Examples
-[[bin]]
-name = "mcp_integration_example"
-path = "04_integrations/mcp_integration_example.rs"
+# === Integration Examples ===
+# MCP integration example - TODO: implement MCP feature
+# [[bin]]
+# name = "mcp_integration_example"
+# path = "04_integrations/mcp_integration_example.rs"
+# required-features = ["mcp"]
 
-# Performance Examples
+# === Performance Examples ===
+# Performance testing and benchmarking
 [[bin]]
 name = "run_performance_tests"
 path = "run_performance_tests.rs"
+required-features = ["benchmarks"]
 
 [[bin]]
 name = "performance_benchmark"
 path = "src/performance_benchmark.rs"
+required-features = ["benchmarks"]
 
+# Specific component benchmarks
 [[bin]]
 name = "embedder_benchmark"
 path = "05_performance/benchmarks/embedder_benchmark.rs"
+required-features = ["benchmarks", "all-embedders"]
 
 [[bin]]
 name = "vector_store_benchmark"
 path = "05_performance/benchmarks/vector_store_benchmark.rs"
+required-features = ["benchmarks", "qdrant"]
 
 [[bin]]
 name = "end_to_end_benchmark"
 path = "05_performance/benchmarks/end_to_end_benchmark.rs"
+required-features = ["benchmarks", "production"]
 
-# Production Examples
+# Feature performance comparison
+[[bin]]
+name = "feature_comparison"
+path = "05_performance/feature_comparison.rs"
+required-features = ["benchmarks", "candle"]
+
+# === Production Examples ===
+# Complete production-ready examples
 [[bin]]
 name = "complete_rag_system"
 path = "06_production/complete_rag_demo.rs"
+required-features = ["production-examples"]
 
 [[bin]]
 name = "end_to_end_indexing"
 path = "06_production/end_to_end_indexing.rs"
+required-features = ["production-examples"]
 
 [[bin]]
 name = "end_to_end_query"
 path = "06_production/end_to_end_query.rs"
+required-features = ["production-examples"]
 
 [[bin]]
 name = "end_to_end_retrieval"
 path = "06_production/end_to_end_retrieval_demo.rs"
+required-features = ["production-examples"]
+
+# === GPU Acceleration Examples ===
+# CUDA GPU examples (Linux/Windows with NVIDIA GPU)
+[[bin]]
+name = "cuda_embedder_demo"
+path = "07_gpu_acceleration/cuda_embedder_demo.rs"
+required-features = ["candle-cuda"]
+
+# Metal GPU examples (macOS with Apple Silicon/AMD GPU)
+[[bin]]
+name = "metal_embedder_demo"
+path = "07_gpu_acceleration/metal_embedder_demo.rs"
+required-features = ["candle-metal"]
+
+# === Utility Examples ===
+# List all available examples and their features
+[[bin]]
+name = "list_examples"
+path = "list_examples.rs"
+required-features = ["basic-examples"]

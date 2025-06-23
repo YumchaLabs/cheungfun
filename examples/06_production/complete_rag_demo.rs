@@ -9,6 +9,39 @@
 //! 6. Response Generation - Generate responses using LLM with retrieved context
 //!
 //! This demo showcases the complete integration of all Cheungfun components.
+//!
+//! ## Required Features
+//!
+//! This example requires the `production-examples` feature bundle, which includes:
+//! - `candle` - Candle ML framework for embeddings
+//! - `performance` - CPU performance optimizations (SIMD, optimized memory, HNSW)
+//! - `qdrant` - Qdrant vector database integration
+//!
+//! ## Usage
+//!
+//! ```bash
+//! # Run with production features
+//! cargo run --bin complete_rag_system --features production-examples
+//!
+//! # Or run with specific features
+//! cargo run --bin complete_rag_system --features "candle,performance"
+//!
+//! # For GPU acceleration (if available)
+//! cargo run --bin complete_rag_system --features "production-examples,candle-cuda"
+//! ```
+//!
+//! ## Environment Setup
+//!
+//! Set up your LLM API key (optional - will fall back to Ollama):
+//! ```bash
+//! export OPENAI_API_KEY="your-api-key"
+//! ```
+//!
+//! Or ensure Ollama is running for local LLM:
+//! ```bash
+//! ollama serve
+//! ollama pull llama2
+//! ```
 
 use cheungfun_core::{
     Result,
