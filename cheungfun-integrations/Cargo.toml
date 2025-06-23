@@ -25,8 +25,8 @@ serde = { workspace = true }
 serde_json = { workspace = true }
 uuid = { workspace = true }
 
-# Vector stores
-qdrant-client = { workspace = true }
+# Vector stores (optional)
+# qdrant-client moved to optional dependencies section
 
 # Candle ML Framework (optional)
 candle-core = { workspace = true, optional = true }
@@ -47,6 +47,15 @@ sha2 = { version = "0.10", optional = true }
 
 # High-performance SIMD vector operations
 simsimd = { version = "6.4", optional = true }
+
+# Parallel processing
+rayon = { version = "1.8", optional = true }
+
+# HNSW approximate nearest neighbor search
+hnsw_rs = { version = "0.3", optional = true }
+
+# Qdrant vector database client
+qdrant-client = { workspace = true, optional = true }
 
 # Logging
 tracing = { workspace = true }
@@ -72,6 +81,11 @@ candle = [
     "dep:tokenizers"
 ]
 
+# GPU acceleration features
+gpu-cuda = ["candle", "candle-core/cuda"]
+gpu-metal = ["candle", "candle-core/metal"]
+gpu = ["gpu-cuda"]  # Default to CUDA for broader compatibility
+
 # API embedders integration (cloud services)
 api = [
     "dep:siumai",
@@ -80,13 +94,28 @@ api = [
 ]
 
 # High-performance SIMD vector operations
-simd = ["dep:simsimd"]
+simd = ["dep:simsimd", "dep:rayon"]
+
+# HNSW approximate nearest neighbor search
+hnsw = ["dep:hnsw_rs"]
+
+# Qdrant vector database integration
+qdrant = ["dep:qdrant-client"]
 
 # Enable all embedding backends
 all-embedders = ["fastembed", "candle", "api"]
 
+# Enable all vector stores
+all-stores = ["qdrant", "hnsw"]
+
+# Memory-optimized vector store (always recommended)
+optimized-memory = []
+
 # Enable all performance optimizations
-performance = ["simd"]
+performance = ["simd", "hnsw", "optimized-memory"]
+
+# GPU performance (separate from core performance)
+gpu-performance = ["gpu", "performance"]
 
 [[example]]
 name = "feature_demo"

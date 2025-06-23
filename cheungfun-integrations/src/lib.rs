@@ -14,6 +14,9 @@ pub mod vector_stores;
 #[cfg(feature = "simd")]
 pub mod simd;
 
+#[cfg(any(feature = "gpu-cuda", feature = "gpu-metal"))]
+pub mod gpu;
+
 // Re-export commonly used types
 pub use vector_stores::InMemoryVectorStore;
 

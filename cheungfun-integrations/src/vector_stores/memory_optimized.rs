@@ -118,6 +118,7 @@ impl OptimizedInMemoryVectorStore {
     }
 
     #[cfg(not(feature = "simd"))]
+    /// Check if SIMD operations are available
     pub fn is_simd_available(&self) -> bool {
         false
     }
@@ -129,6 +130,7 @@ impl OptimizedInMemoryVectorStore {
     }
 
     #[cfg(not(feature = "simd"))]
+    /// Get SIMD capabilities information
     pub fn get_simd_capabilities(&self) -> String {
         "SIMD not available".to_string()
     }

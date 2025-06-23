@@ -80,8 +80,8 @@ redis = { version = "0.32", features = ["tokio-comp"] }
 sled = "0.34"
 redb = "2.6"
 
-# Candle ML Framework (Core) - CPU only for now
-candle-core = "0.9"
+# Candle ML Framework (Core)
+candle-core = { version = "0.9", features = [] }
 candle-nn = "0.9"
 candle-transformers = "0.9"
 

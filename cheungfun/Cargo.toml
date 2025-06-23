@@ -20,4 +20,25 @@ cheungfun-agents = { path = "../cheungfun-agents" }
 cheungfun-integrations = { path = "../cheungfun-integrations" }
 
 [features]
-default = []
+# Default: Safe and stable features that work everywhere
+default = ["optimized-memory"]
+
+# Performance features (recommended for production)
+simd = ["cheungfun-integrations/simd"]
+optimized-memory = ["cheungfun-integrations/optimized-memory"]
+hnsw = ["cheungfun-integrations/hnsw"]
+
+# ML framework features
+candle = ["cheungfun-integrations/candle"]
+candle-cuda = ["cheungfun-integrations/gpu-cuda"]
+candle-metal = ["cheungfun-integrations/gpu-metal"]
+
+# Integration features
+qdrant = ["cheungfun-integrations/qdrant"]
+fastembed = ["cheungfun-integrations/fastembed"]
+
+# Performance bundle (for users who want speed)
+performance = ["simd", "optimized-memory", "hnsw"]
+
+# Full feature set (for advanced users)
+full = ["performance", "candle", "qdrant", "fastembed"]

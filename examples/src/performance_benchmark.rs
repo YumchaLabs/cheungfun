@@ -8,9 +8,9 @@
 //! Run with: cargo run --example performance_benchmark --features simd
 
 use cheungfun_core::{
-    traits::{VectorStore, DistanceMetric},
-    types::{Node, Query},
-    CheungfunError, Result,
+    traits::VectorStore,
+    types::{ChunkInfo, Node, Query},
+    DistanceMetric, CheungfunError, Result,
 };
 use cheungfun_integrations::vector_stores::{
     memory::InMemoryVectorStore,
@@ -119,12 +119,18 @@ fn generate_test_vectors(num_vectors: usize, dimension: usize) -> Vec<Node> {
             metadata.insert("index".to_string(), serde_json::Value::Number(i.into()));
             metadata.insert("category".to_string(), serde_json::Value::String(format!("cat_{}", i % 10)));
             
-            Node::new(
-                Uuid::new_v4(),
-                format!("Document {}", i),
-                Some(embedding),
-                metadata,
-            )
+            {
+                let source_doc_id = Uuid::new_v4();
+                let chunk_info = ChunkInfo::new(i * 100, (i + 1) * 100, i);
+                let mut node = Node::new(
+                    format!("Document {}", i),
+                    source_doc_id,
+                    chunk_info,
+                );
+                node.embedding = Some(embedding);
+                node.metadata = metadata;
+                node
+            }
         })
         .collect()
 }
@@ -140,13 +146,9 @@ fn generate_test_queries(num_queries: usize, dimension: usize, top_k: usize) -> 
                 .map(|_| rng.gen_range(-1.0..1.0))
                 .collect();
             
-            Query::new(
-                format!("Query {}", i),
-                Some(embedding),
-                top_k,
-                None,
-                std::collections::HashMap::new(),
-            )
+            Query::new(format!("Query {}", i))
+                .with_embedding(embedding)
+                .with_top_k(top_k)
         })
         .collect()
 }

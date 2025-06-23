@@ -5,6 +5,9 @@
 
 use cheungfun_core::{CheungfunError, Result};
 
+#[cfg(feature = "simd")]
+use simsimd::SpatialSimilarity;
+
 /// High-performance vector similarity calculator using SIMD instructions
 #[derive(Debug, Clone)]
 pub struct SimdVectorOps {
@@ -17,10 +20,17 @@ impl SimdVectorOps {
     pub fn new() -> Self {
         Self {
             #[cfg(feature = "simd")]
-            simd_available: true,
+            simd_available: Self::check_simd_support(),
             #[cfg(not(feature = "simd"))]
             simd_available: false,
         }
+    }
+
+    /// Check if SIMD operations are available on this CPU
+    #[cfg(feature = "simd")]
+    fn check_simd_support() -> bool {
+        // SimSIMD automatically detects and uses the best available SIMD instructions
+        true
     }
 
     /// Check if SIMD operations are available
@@ -31,7 +41,8 @@ impl SimdVectorOps {
     /// Get available CPU capabilities for SIMD operations
     #[cfg(feature = "simd")]
     pub fn get_capabilities(&self) -> String {
-        "SIMD enabled with SimSIMD".to_string()
+        format!("SIMD enabled with SimSIMD - CPU features: {}",
+                std::env::consts::ARCH)
     }
 
     #[cfg(not(feature = "simd"))]
@@ -49,9 +60,14 @@ impl SimdVectorOps {
 
         #[cfg(feature = "simd")]
         {
-            // TODO: Implement proper SimSIMD integration
-            // For now, use optimized scalar implementation
-            Ok(self.cosine_similarity_f32_scalar(a, b))
+            // Use SimSIMD for high-performance cosine similarity
+            if let Some(distance) = simsimd::SpatialSimilarity::cosine(a, b) {
+                // SimSIMD returns cosine distance (1 - similarity), convert to similarity
+                Ok(1.0 - distance as f32)
+            } else {
+                // Fallback to scalar implementation if SIMD fails
+                Ok(self.cosine_similarity_f32_scalar(a, b))
+            }
         }
 
         #[cfg(not(feature = "simd"))]
@@ -85,9 +101,13 @@ impl SimdVectorOps {
 
         #[cfg(feature = "simd")]
         {
-            // TODO: Implement proper SimSIMD integration
-            // For now, use optimized scalar implementation
-            Ok(self.dot_product_f32_scalar(a, b))
+            // Use SimSIMD for high-performance dot product
+            if let Some(result) = simsimd::SpatialSimilarity::dot(a, b) {
+                Ok(result as f32)
+            } else {
+                // Fallback to scalar implementation if SIMD fails
+                Ok(self.dot_product_f32_scalar(a, b))
+            }
         }
 
         #[cfg(not(feature = "simd"))]
@@ -107,9 +127,13 @@ impl SimdVectorOps {
 
         #[cfg(feature = "simd")]
         {
-            // TODO: Implement proper SimSIMD integration
-            // For now, use optimized scalar implementation
-            Ok(self.euclidean_distance_squared_f32_scalar(a, b))
+            // Use SimSIMD for high-performance euclidean distance
+            if let Some(distance) = simsimd::SpatialSimilarity::sqeuclidean(a, b) {
+                Ok(distance as f32)
+            } else {
+                // Fallback to scalar implementation if SIMD fails
+                Ok(self.euclidean_distance_squared_f32_scalar(a, b))
+            }
         }
 
         #[cfg(not(feature = "simd"))]
@@ -121,28 +145,66 @@ impl SimdVectorOps {
 
     /// Batch cosine similarity calculation for multiple vector pairs
     pub fn batch_cosine_similarity_f32(&self, pairs: &[(&[f32], &[f32])]) -> Result<Vec<f32>> {
-        let mut results = Vec::with_capacity(pairs.len());
-        
-        for (a, b) in pairs {
-            results.push(self.cosine_similarity_f32(a, b)?);
+        #[cfg(feature = "simd")]
+        {
+            // Use parallel processing with SIMD for large batches
+            if pairs.len() > 100 {
+                use rayon::prelude::*;
+                pairs
+                    .par_iter()
+                    .map(|(a, b)| self.cosine_similarity_f32(a, b))
+                    .collect()
+            } else {
+                pairs
+                    .iter()
+                    .map(|(a, b)| self.cosine_similarity_f32(a, b))
+                    .collect()
+            }
         }
-        
-        Ok(results)
+
+        #[cfg(not(feature = "simd"))]
+        {
+            pairs
+                .iter()
+                .map(|(a, b)| self.cosine_similarity_f32(a, b))
+                .collect()
+        }
     }
 
     /// One-to-many cosine similarity calculation (query vector vs multiple vectors)
+    ///
+    /// # Errors
+    ///
+    /// Returns an error if vector dimensions don't match or SIMD operations fail.
     pub fn one_to_many_cosine_similarity_f32(
         &self,
         query: &[f32],
         vectors: &[&[f32]],
     ) -> Result<Vec<f32>> {
-        let mut results = Vec::with_capacity(vectors.len());
-        
-        for vector in vectors {
-            results.push(self.cosine_similarity_f32(query, vector)?);
+        #[cfg(feature = "simd")]
+        {
+            // Use parallel processing for large vector sets
+            if vectors.len() > 50 {
+                use rayon::prelude::*;
+                vectors
+                    .par_iter()
+                    .map(|vector| self.cosine_similarity_f32(query, vector))
+                    .collect()
+            } else {
+                vectors
+                    .iter()
+                    .map(|vector| self.cosine_similarity_f32(query, vector))
+                    .collect()
+            }
         }
-        
-        Ok(results)
+
+        #[cfg(not(feature = "simd"))]
+        {
+            vectors
+                .iter()
+                .map(|vector| self.cosine_similarity_f32(query, vector))
+                .collect()
+        }
     }
 
     // Scalar fallback implementations for when SIMD is not available
