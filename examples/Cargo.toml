@@ -29,9 +29,19 @@ tracing-subscriber = { workspace = true }
 # Additional dependencies
 uuid = { workspace = true }
 siumai = { workspace = true }
+tempfile = "3.20"
 
 [features]
 default = []
+
+# Feature for Candle embedder examples
+candle = ["cheungfun-integrations/candle"]
+
+# Feature for FastEmbed examples
+fastembed = ["cheungfun-integrations/fastembed"]
+
+# All embedding features
+all-embedders = ["candle", "fastembed"]
 
 [[bin]]
 name = "basic_usage"
@@ -48,3 +58,12 @@ path = "end_to_end_query.rs"
 [[bin]]
 name = "end_to_end_retrieval_demo"
 path = "end_to_end_retrieval_demo.rs"
+
+[[bin]]
+name = "complete_rag_demo"
+path = "complete_rag_demo.rs"
+
+[[bin]]
+name = "candle_embedder_demo"
+path = "candle_embedder_demo.rs"
+required-features = ["candle"]

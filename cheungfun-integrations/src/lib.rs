@@ -11,5 +11,11 @@ pub mod embedders;
 pub mod vector_stores;
 
 // Re-export commonly used types
-pub use embedders::CandleEmbedder;
 pub use vector_stores::InMemoryVectorStore;
+
+// Feature-gated embedder exports
+#[cfg(feature = "candle")]
+pub use embedders::CandleEmbedder;
+
+#[cfg(feature = "fastembed")]
+pub use embedders::FastEmbedder;

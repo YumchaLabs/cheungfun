@@ -28,14 +28,17 @@ uuid = { workspace = true }
 # Vector stores
 qdrant-client = { workspace = true }
 
-# Candle ML Framework
-candle-core = { workspace = true }
-candle-nn = { workspace = true }
-candle-transformers = { workspace = true }
+# Candle ML Framework (optional)
+candle-core = { workspace = true, optional = true }
+candle-nn = { workspace = true, optional = true }
+candle-transformers = { workspace = true, optional = true }
 
-# HuggingFace Integration
-hf-hub = { workspace = true }
-tokenizers = { workspace = true }
+# HuggingFace Integration (optional, for Candle)
+hf-hub = { workspace = true, optional = true }
+tokenizers = { workspace = true, optional = true }
+
+# FastEmbed (optional, default) - using latest version to fix ort compatibility
+fastembed = { version = "4.0", optional = true }
 
 # Logging
 tracing = { workspace = true }
@@ -45,4 +48,24 @@ tokio-test = "0.4"
 test-case = { workspace = true }
 
 [features]
-default = []
+# Default feature: FastEmbed for best user experience
+default = ["fastembed"]
+
+# FastEmbed integration (recommended)
+fastembed = ["dep:fastembed"]
+
+# Candle integration (advanced users)
+candle = [
+    "dep:candle-core",
+    "dep:candle-nn",
+    "dep:candle-transformers",
+    "dep:hf-hub",
+    "dep:tokenizers"
+]
+
+# Enable all embedding backends
+all-embedders = ["fastembed", "candle"]
+
+[[example]]
+name = "feature_demo"
+required-features = []

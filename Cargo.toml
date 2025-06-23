@@ -88,9 +88,9 @@ candle-transformers = "0.9"
 hf-hub = { version = "0.3", features = ["tokio"] }
 tokenizers = "0.20"
 
-# Alternative ML (optional)
-ort = "2.0"
-faiss = "0.12"
+# Alternative ML (optional) - disabled for now due to compatibility issues
+# ort = "2.0"
+# faiss = "0.12"
 
 # Search and indexing
 tantivy = "0.24"
