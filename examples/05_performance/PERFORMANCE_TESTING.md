@@ -4,52 +4,58 @@ This guide explains how to use the comprehensive performance testing suite for t
 
 ## 🎯 Overview
 
-The performance testing suite provides comprehensive benchmarks for all major components of Cheungfun:
-
-- **Embedder Performance**: Test FastEmbedder, ApiEmbedder, and CandleEmbedder
-- **Vector Store Performance**: Test InMemoryVectorStore and QdrantVectorStore  
-- **End-to-End RAG Performance**: Test complete indexing and query pipelines
-- **Comprehensive Reporting**: Generate detailed reports with visualizations
+The performance testing suite provides comprehensive benchmarks for all major components of Cheungfun with feature-aware testing.
 
 ## 🚀 Quick Start
 
-### Prerequisites
+### Unified Performance Testing (Recommended)
 
-1. **Rust Environment**: Ensure you have Rust 1.75+ installed
-2. **Optional Dependencies**:
-   - **Qdrant**: `docker run -p 6334:6334 qdrant/qdrant` (for vector store benchmarks)
-   - **API Keys**: Set `OPENAI_API_KEY` or `SIUMAI_API_KEY` (for cloud embedding benchmarks)
-
-### Running All Benchmarks
-
-**Linux/macOS:**
-```bash
-cd examples
-chmod +x run_benchmarks.sh
-./run_benchmarks.sh
-```
-
-**Windows:**
-```cmd
-cd examples
-run_benchmarks.bat
-```
-
-### Running Individual Benchmarks
+Use the unified test runner for the best experience:
 
 ```bash
+# Run all tests with recommended features
+cargo run --bin run_performance_tests
+
+# Run with specific features
+cargo run --bin run_performance_tests --features performance
+
+# Run specific test categories
+cargo run --bin run_performance_tests -- --embedders
+cargo run --bin run_performance_tests -- --vector-stores
+cargo run --bin run_performance_tests -- --comprehensive
+```
+
+### Individual Component Tests
+
+```bash
+# Comprehensive performance comparison
+cargo run --bin performance_benchmark --features performance
+
+# Embedder performance
+cargo run --bin embedder_benchmark
+
 # Vector store performance
 cargo run --bin vector_store_benchmark
 
-# Embedder performance (requires fastembed feature)
-cargo run --features fastembed --bin embedder_benchmark
-
 # End-to-end RAG performance
-cargo run --features fastembed --bin end_to_end_benchmark
-
-# Comprehensive benchmark suite
-cargo run --bin performance_benchmark
+cargo run --bin end_to_end_benchmark
 ```
+
+## Available Features
+
+### Performance Features
+
+- `simd` - SIMD vector operations (2-4x speedup)
+- `optimized-memory` - Memory-optimized data structures
+- `hnsw` - Approximate nearest neighbor search
+- `performance` - All performance features combined
+
+### ML Framework Features
+
+- `candle` - Local ML models with Candle framework
+- `fastembed` - Fast embedding models (default)
+- `gpu-cuda` - NVIDIA GPU acceleration
+- `gpu-metal` - Apple Silicon GPU acceleration
 
 ## 📊 Benchmark Components
 

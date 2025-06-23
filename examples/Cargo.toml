@@ -55,8 +55,13 @@ fastembed = ["cheungfun-integrations/fastembed"]
 # All embedding features
 all-embedders = ["candle", "fastembed"]
 
-# SIMD performance features
+# Performance features
 simd = ["cheungfun-integrations/simd"]
+optimized-memory = ["cheungfun-integrations/optimized-memory"]
+hnsw = ["cheungfun-integrations/hnsw"]
+
+# Performance bundle
+performance = ["simd", "optimized-memory", "hnsw"]
 
 # Getting Started Examples
 [[bin]]
@@ -96,12 +101,12 @@ path = "04_integrations/mcp_integration_example.rs"
 
 # Performance Examples
 [[bin]]
-name = "performance_benchmark"
-path = "src/performance_benchmark.rs"
+name = "run_performance_tests"
+path = "run_performance_tests.rs"
 
 [[bin]]
-name = "simple_performance_test"
-path = "src/simple_performance_test.rs"
+name = "performance_benchmark"
+path = "src/performance_benchmark.rs"
 
 [[bin]]
 name = "embedder_benchmark"
