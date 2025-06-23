@@ -66,6 +66,12 @@ pub struct HnswStats {
     pub memory_usage_bytes: usize,
     /// Average recall rate
     pub avg_recall: f64,
+    /// Number of layers in the HNSW graph
+    pub num_layers: usize,
+    /// Total number of connections in the graph
+    pub total_connections: usize,
+    /// Search efficiency (0.0 to 1.0)
+    pub search_efficiency: f64,
 }
 
 /// High-performance HNSW vector store

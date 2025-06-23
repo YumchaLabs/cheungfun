@@ -229,3 +229,27 @@ required-features = ["candle-metal"]
 name = "list_examples"
 path = "list_examples.rs"
 required-features = ["basic-examples"]
+
+# Simple SIMD test
+[[bin]]
+name = "simple_simd_test"
+path = "simple_simd_test.rs"
+required-features = ["simd"]
+
+# Simple HNSW test
+[[bin]]
+name = "simple_hnsw_test"
+path = "simple_hnsw_test.rs"
+required-features = ["hnsw"]
+
+# Simple parallel processing test
+[[bin]]
+name = "simple_parallel_test"
+path = "simple_parallel_test.rs"
+required-features = ["performance"]
+
+# Comprehensive performance test
+[[bin]]
+name = "comprehensive_performance_test"
+path = "comprehensive_performance_test.rs"
+required-features = ["performance"]

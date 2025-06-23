@@ -277,7 +277,7 @@ async fn benchmark_hnsw_store(
     let mut result = BenchmarkResult::new("HNSW VectorStore".to_string());
 
     // Create HNSW store with default parameters
-    let store = HnswVectorStore::new(config.dimension, config.distance_metric.clone())?;
+    let store = HnswVectorStore::new(config.dimension, config.distance_metric.clone());
 
     // Benchmark indexing
     let start_time = Instant::now();
@@ -294,7 +294,7 @@ async fn benchmark_hnsw_store(
     result.calculate_derived_metrics(test_queries.len());
 
     // Get HNSW-specific metrics
-    let hnsw_stats = store.get_hnsw_stats();
+    let hnsw_stats = store.get_stats();
     result.additional_metrics.insert(
         "HNSW Layers".to_string(),
         hnsw_stats.num_layers.to_string(),
