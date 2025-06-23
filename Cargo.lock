@@ -848,6 +848,7 @@ name = "cheungfun-core"
 version = "0.1.0"
 dependencies = [
  "anyhow",
+ "approx",
  "async-trait",
  "chrono",
  "derive_builder",

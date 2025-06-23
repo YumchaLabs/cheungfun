@@ -359,6 +359,7 @@ impl Default for GeneratorConfig {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use approx::assert_relative_eq;
 
     #[test]
     fn test_generation_stats() {
@@ -370,10 +371,10 @@ mod tests {
         stats.total_generation_time = std::time::Duration::from_secs(30);
         stats.update_avg_time();
 
-        assert_eq!(stats.success_rate(), 95.0);
+        assert_relative_eq!(stats.success_rate(), 95.0);
         assert_eq!(stats.total_tokens(), 15000);
-        assert_eq!(stats.tokens_per_second(), 500.0);
-        assert_eq!(stats.avg_tokens_per_response(), 157.89473684210526);
+        assert_relative_eq!(stats.tokens_per_second(), 500.0);
+        assert_relative_eq!(stats.avg_tokens_per_response(), 157.894_736_842_105_26);
         assert_eq!(
             stats.avg_generation_time,
             std::time::Duration::from_millis(300)
@@ -399,7 +400,7 @@ mod tests {
             .with_component("prompt", 0.02)
             .with_component("completion", 0.03);
 
-        assert_eq!(cost.amount, 0.05);
+        assert_relative_eq!(cost.amount, 0.05);
         assert_eq!(cost.currency, "USD");
         assert_eq!(cost.breakdown.get("prompt"), Some(&0.02));
         assert_eq!(cost.breakdown.get("completion"), Some(&0.03));

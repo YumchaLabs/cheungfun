@@ -6,8 +6,8 @@
 //! including:
 //!
 //! - **Data structures**: Document, Node, Query, and Response types
-//! - **Core traits**: Loader, Transformer, Embedder, VectorStore, Retriever, ResponseGenerator
-//! - **Pipeline interfaces**: IndexingPipeline and QueryPipeline
+//! - **Core traits**: Loader, Transformer, Embedder, `VectorStore`, Retriever, `ResponseGenerator`
+//! - **Pipeline interfaces**: `IndexingPipeline` and `QueryPipeline`
 //! - **Configuration**: Type-safe configuration structures
 //! - **Error handling**: Comprehensive error types with context
 //! - **Builder patterns**: Fluent APIs for constructing pipelines

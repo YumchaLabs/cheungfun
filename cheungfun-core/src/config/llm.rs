@@ -263,7 +263,7 @@ impl LlmConfig {
         info
     }
 
-    /// Create a configuration for OpenAI models.
+    /// Create a configuration for `OpenAI` models.
     pub fn openai<S: Into<String>>(model: S, api_key: S) -> Self {
         let model_str = model.into();
         let api_key_str = api_key.into();
@@ -300,6 +300,7 @@ impl Default for LlmConfig {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use approx::assert_relative_eq;
 
     #[test]
     fn test_openai_config() {
@@ -310,7 +311,7 @@ mod tests {
 
         assert_eq!(config.provider, "openai");
         assert_eq!(config.model, "gpt-4");
-        assert_eq!(config.effective_temperature(), 0.8);
+        assert_relative_eq!(config.effective_temperature(), 0.8);
         assert_eq!(config.effective_max_tokens(), 2000);
         assert!(config.stream);
         assert!(!config.is_local());
@@ -387,7 +388,7 @@ mod tests {
     fn test_effective_values() {
         let config = LlmConfig::new("test", "model");
 
-        assert_eq!(config.effective_temperature(), 0.7);
+        assert_relative_eq!(config.effective_temperature(), 0.7);
         assert_eq!(config.effective_max_tokens(), 1000);
         assert_eq!(config.effective_timeout(), 60);
         assert_eq!(config.effective_max_retries(), 3);
