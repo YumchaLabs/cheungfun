@@ -19,3 +19,6 @@ pub use embedders::CandleEmbedder;
 
 #[cfg(feature = "fastembed")]
 pub use embedders::FastEmbedder;
+
+#[cfg(feature = "api")]
+pub use embedders::ApiEmbedder;

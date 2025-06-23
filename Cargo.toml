@@ -56,6 +56,7 @@ text-splitter = "0.27"
 tiktoken-rs = "0.7"
 regex = "1.11"
 itertools = "0.14"
+rand = "0.8"
 
 # Serialization and config
 toml = "0.8"

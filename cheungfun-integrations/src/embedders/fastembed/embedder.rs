@@ -5,7 +5,7 @@ use cheungfun_core::{
     Result as CoreResult,
     traits::{Embedder, EmbeddingStats},
 };
-use fastembed::{TextEmbedding, InitOptions, EmbeddingModel};
+use fastembed::{EmbeddingModel, InitOptions, TextEmbedding};
 use std::sync::Arc;
 use tokio::sync::Mutex;
 use tracing::{debug, info, warn};
@@ -34,7 +34,7 @@ use super::{
 ///
 /// // Use a specific model
 /// let embedder = FastEmbedder::with_model("BAAI/bge-large-en-v1.5").await?;
-/// 
+///
 /// // Use a preset for common scenarios
 /// let embedder = FastEmbedder::multilingual().await?;
 /// let embedder = FastEmbedder::high_quality().await?;
@@ -62,54 +62,54 @@ impl std::fmt::Debug for FastEmbedder {
 
 impl FastEmbedder {
     /// Create a new embedder with default configuration.
-    /// 
+    ///
     /// Uses the default model (BAAI/bge-small-en-v1.5) which provides a good
     /// balance of speed and quality for English text.
     pub async fn new() -> Result<Self> {
         Self::from_config(FastEmbedConfig::default()).await
     }
-    
+
     /// Create an embedder with a specific model name.
     pub async fn with_model<S: Into<String>>(model_name: S) -> Result<Self> {
         let config = FastEmbedConfig::new(model_name);
         Self::from_config(config).await
     }
-    
+
     /// Create an embedder optimized for high quality English text.
     /// Uses BAAI/bge-large-en-v1.5 (1024 dimensions).
     pub async fn high_quality() -> Result<Self> {
         let config = FastEmbedConfig::from_preset(ModelPreset::HighQuality);
         Self::from_config(config).await
     }
-    
+
     /// Create an embedder optimized for multilingual text.
     /// Uses BAAI/bge-m3 (1024 dimensions).
     pub async fn multilingual() -> Result<Self> {
         let config = FastEmbedConfig::from_preset(ModelPreset::Multilingual);
         Self::from_config(config).await
     }
-    
+
     /// Create an embedder optimized for speed.
     /// Uses sentence-transformers/all-MiniLM-L6-v2 (384 dimensions).
     pub async fn fast() -> Result<Self> {
         let config = FastEmbedConfig::from_preset(ModelPreset::Fast);
         Self::from_config(config).await
     }
-    
+
     /// Create an embedder optimized for source code.
     /// Uses microsoft/codebert-base (768 dimensions).
     pub async fn for_code() -> Result<Self> {
         let config = FastEmbedConfig::from_preset(ModelPreset::Code);
         Self::from_config(config).await
     }
-    
+
     /// Create an embedder from a custom configuration.
     pub async fn from_config(config: FastEmbedConfig) -> Result<Self> {
         // Validate configuration
         config.validate()?;
-        
+
         info!("Initializing FastEmbed model: {}", config.model_name);
-        
+
         // Create FastEmbed initialization options
         // First, convert model name string to EmbeddingModel enum
         let embedding_model = Self::parse_model_name(&config.model_name)?;
@@ -121,34 +121,34 @@ impl FastEmbedder {
         if let Some(cache_dir) = &config.cache_dir {
             init_options = init_options.with_cache_dir(cache_dir.clone());
         }
-        
+
         // Initialize the model
-        let model = TextEmbedding::try_new(init_options)
-            .map_err(|e| FastEmbedError::ModelInit {
+        let model =
+            TextEmbedding::try_new(init_options).map_err(|e| FastEmbedError::ModelInit {
                 model: config.model_name.clone(),
                 reason: e.to_string(),
             })?;
-        
+
         info!("FastEmbed model initialized successfully");
-        
+
         Ok(Self {
             config,
             model,
             stats: Arc::new(Mutex::new(EmbeddingStats::new())),
         })
     }
-    
+
     /// Get the configuration used by this embedder.
     pub fn config(&self) -> &FastEmbedConfig {
         &self.config
     }
-    
+
     /// Get embedding statistics.
     pub async fn stats(&self) -> EmbeddingStats {
         let stats = self.stats.lock().await;
         stats.clone()
     }
-    
+
     /// Reset statistics.
     pub async fn reset_stats(&self) {
         let mut stats = self.stats.lock().await;
@@ -161,7 +161,10 @@ impl FastEmbedder {
         let mut last_error = None;
 
         for attempt in 1..=MAX_RETRIES {
-            match self.model.embed(texts.clone(), Some(self.config.batch_size)) {
+            match self
+                .model
+                .embed(texts.clone(), Some(self.config.batch_size))
+            {
                 Ok(embeddings) => {
                     debug!("Generated {} embeddings successfully", embeddings.len());
                     return Ok(embeddings);
@@ -180,8 +183,13 @@ impl FastEmbedder {
         }
 
         Err(FastEmbedError::Embedding {
-            reason: format!("Failed after {} attempts: {}", MAX_RETRIES,
-                          last_error.map(|e| e.to_string()).unwrap_or_else(|| "Unknown error".to_string())),
+            reason: format!(
+                "Failed after {} attempts: {}",
+                MAX_RETRIES,
+                last_error
+                    .map(|e| e.to_string())
+                    .unwrap_or_else(|| "Unknown error".to_string())
+            ),
         })
     }
 
@@ -205,7 +213,9 @@ impl Embedder for FastEmbedder {
     async fn embed(&self, text: &str) -> CoreResult<Vec<f32>> {
         let start_time = std::time::Instant::now();
 
-        let result = self.generate_embeddings_with_retry(vec![text.to_string()]).await;
+        let result = self
+            .generate_embeddings_with_retry(vec![text.to_string()])
+            .await;
         let duration = start_time.elapsed();
 
         match result {
@@ -281,7 +291,10 @@ impl FastEmbedder {
             // Add more model mappings as needed
             _ => Err(FastEmbedError::ModelInit {
                 model: model_name.to_string(),
-                reason: format!("Unsupported model: {}. Please use a supported model name.", model_name),
+                reason: format!(
+                    "Unsupported model: {}. Please use a supported model name.",
+                    model_name
+                ),
             }),
         }
     }

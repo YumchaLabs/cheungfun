@@ -34,14 +34,14 @@
 //! # }
 //! ```
 
+pub mod config;
 pub mod device;
+pub mod embedder;
+pub mod error;
 pub mod model;
 pub mod tokenizer;
-pub mod embedder;
-pub mod config;
-pub mod error;
 
 // Re-export main types
-pub use embedder::CandleEmbedder;
 pub use config::CandleEmbedderConfig;
+pub use embedder::CandleEmbedder;
 pub use error::CandleError;

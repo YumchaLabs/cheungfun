@@ -9,42 +9,42 @@ pub enum CandleError {
     #[error("Model loading failed: {message}")]
     ModelLoading {
         /// Error message
-        message: String
+        message: String,
     },
 
     /// Tokenization errors
     #[error("Tokenization failed: {message}")]
     Tokenization {
         /// Error message
-        message: String
+        message: String,
     },
 
     /// Device initialization errors
     #[error("Device initialization failed: {message}")]
     Device {
         /// Error message
-        message: String
+        message: String,
     },
 
     /// Inference errors
     #[error("Model inference failed: {message}")]
     Inference {
         /// Error message
-        message: String
+        message: String,
     },
 
     /// Configuration errors
     #[error("Configuration error: {message}")]
     Configuration {
         /// Error message
-        message: String
+        message: String,
     },
 
     /// HuggingFace Hub errors
     #[error("HuggingFace Hub error: {message}")]
     HuggingFaceHub {
         /// Error message
-        message: String
+        message: String,
     },
 
     /// I/O errors

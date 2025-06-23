@@ -46,10 +46,12 @@
 //! - **Flexible Configuration**: Customizable retrieval and generation parameters
 //! - **Error Handling**: Comprehensive error types and recovery strategies
 
-#![deny(missing_docs)]
+#![warn(missing_docs)]
 #![warn(clippy::all, clippy::pedantic)]
 #![allow(clippy::module_name_repetitions)]
 
+/// Advanced query processing capabilities including transformers, rerankers, and fusion algorithms.
+pub mod advanced;
 pub mod engine;
 pub mod factory;
 pub mod generator;

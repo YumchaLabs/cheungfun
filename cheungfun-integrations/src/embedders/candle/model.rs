@@ -40,8 +40,8 @@ use std::path::PathBuf;
 use tracing::{debug, info};
 
 use super::{
-    error::CandleError,
     config::CandleEmbedderConfig,
+    error::CandleError,
     tokenizer::{EmbeddingTokenizer, ModelInputs},
 };
 
@@ -109,7 +109,8 @@ impl BertConfig {
             initializer_range: self.initializer_range,
             layer_norm_eps: self.layer_norm_eps,
             pad_token_id: 0,
-            position_embedding_type: candle_transformers::models::bert::PositionEmbeddingType::Absolute,
+            position_embedding_type:
+                candle_transformers::models::bert::PositionEmbeddingType::Absolute,
             use_cache: false,
             classifier_dropout: None,
             model_type: None,
@@ -139,12 +140,11 @@ pub struct ModelDownloader {
 impl ModelDownloader {
     /// Create a new model downloader.
     pub fn new() -> Result<Self, CandleError> {
-        let api = ApiBuilder::new()
-            .with_progress(true)
-            .build()
-            .map_err(|e| CandleError::ModelLoading {
+        let api = ApiBuilder::new().with_progress(true).build().map_err(|e| {
+            CandleError::ModelLoading {
                 message: format!("Failed to create HuggingFace API client: {}", e),
-            })?;
+            }
+        })?;
 
         Ok(Self {
             api,
@@ -176,18 +176,29 @@ impl ModelDownloader {
         model_name: &str,
         revision: &str,
     ) -> Result<ModelFiles, CandleError> {
-        info!("Downloading model files for: {} (revision: {})", model_name, revision);
+        info!(
+            "Downloading model files for: {} (revision: {})",
+            model_name, revision
+        );
 
         let repo = self.api.model(model_name.to_string());
 
         // Download required files - try safetensors first, fallback to pytorch_model.bin
-        let model_weights = match self.download_file(&repo, "model.safetensors", revision).await {
+        let model_weights = match self
+            .download_file(&repo, "model.safetensors", revision)
+            .await
+        {
             Ok(path) => path,
-            Err(_) => self.download_file(&repo, "pytorch_model.bin", revision).await?,
+            Err(_) => {
+                self.download_file(&repo, "pytorch_model.bin", revision)
+                    .await?
+            }
         };
 
         let model_config = self.download_file(&repo, "config.json", revision).await?;
-        let tokenizer_config = self.download_file(&repo, "tokenizer.json", revision).await?;
+        let tokenizer_config = self
+            .download_file(&repo, "tokenizer.json", revision)
+            .await?;
 
         // Optional files
         let tokenizer_vocab = self.download_file(&repo, "vocab.txt", revision).await.ok();
@@ -253,16 +264,16 @@ impl ModelLoader {
     async fn ensure_model_downloaded(&mut self) -> Result<&ModelFiles, CandleError> {
         if self.model_files.is_none() {
             info!("Downloading model files for: {}", self.config.model_name);
-            let files = self.downloader.download_model(
-                &self.config.model_name,
-                &self.config.revision,
-            ).await?;
+            let files = self
+                .downloader
+                .download_model(&self.config.model_name, &self.config.revision)
+                .await?;
             self.model_files = Some(files);
         }
 
         Ok(self.model_files.as_ref().unwrap())
     }
-    
+
     /// Load the embedding model.
     pub async fn load_model(&mut self, device: &Device) -> Result<EmbeddingModel, CandleError> {
         info!("Loading embedding model: {}", self.config.model_name);
@@ -291,16 +302,17 @@ impl ModelLoader {
     /// Load tokenizer from downloaded files (static version).
     async fn load_tokenizer_static(
         model_files: &ModelFiles,
-        max_length: usize
+        max_length: usize,
     ) -> Result<EmbeddingTokenizer, CandleError> {
         info!("Loading tokenizer from: {:?}", model_files.tokenizer_config);
 
         use tokenizers::Tokenizer;
 
-        let tokenizer = Tokenizer::from_file(&model_files.tokenizer_config)
-            .map_err(|e| CandleError::Tokenization {
+        let tokenizer = Tokenizer::from_file(&model_files.tokenizer_config).map_err(|e| {
+            CandleError::Tokenization {
                 message: format!("Failed to load tokenizer: {}", e),
-            })?;
+            }
+        })?;
 
         EmbeddingTokenizer::from_tokenizer(tokenizer, max_length)
     }
@@ -309,21 +321,20 @@ impl ModelLoader {
     async fn load_bert_config_static(model_files: &ModelFiles) -> Result<BertConfig, CandleError> {
         info!("Loading BERT config from: {:?}", model_files.model_config);
 
-        let config_content = std::fs::read_to_string(&model_files.model_config)
-            .map_err(|e| CandleError::ModelLoading {
+        let config_content = std::fs::read_to_string(&model_files.model_config).map_err(|e| {
+            CandleError::ModelLoading {
                 message: format!("Failed to read config.json: {}", e),
-            })?;
+            }
+        })?;
 
-        let config: BertConfig = serde_json::from_str(&config_content)
-            .map_err(|e| CandleError::ModelLoading {
+        let config: BertConfig =
+            serde_json::from_str(&config_content).map_err(|e| CandleError::ModelLoading {
                 message: format!("Failed to parse config.json: {}", e),
             })?;
 
         Ok(config)
     }
-    
 
-    
     /// Get model information.
     pub fn model_info(&self) -> ModelInfo {
         ModelInfo {
@@ -372,7 +383,11 @@ impl EmbeddingModel {
 
         // Run BERT inference
         let sequence_output = bert_model
-            .forward(&inputs.input_ids, &inputs.token_type_ids, Some(&inputs.attention_mask))
+            .forward(
+                &inputs.input_ids,
+                &inputs.token_type_ids,
+                Some(&inputs.attention_mask),
+            )
             .map_err(|e| CandleError::Inference {
                 message: format!("BERT forward pass failed: {}", e),
             })?;
@@ -390,7 +405,10 @@ impl EmbeddingModel {
 
     /// Load the BERT model from downloaded weights.
     async fn load_bert_model(&mut self) -> Result<(), CandleError> {
-        info!("Loading BERT model from: {:?}", self.model_files.model_weights);
+        info!(
+            "Loading BERT model from: {:?}",
+            self.model_files.model_weights
+        );
 
         // Load model weights
         let weights = candle_core::safetensors::load(&self.model_files.model_weights, &self.device)
@@ -402,9 +420,11 @@ impl EmbeddingModel {
         let vb = VarBuilder::from_tensors(weights, candle_core::DType::F32, &self.device);
 
         // Create BERT model
-        let bert_model = BertModel::load(vb, &self.bert_config.to_candle_config())
-            .map_err(|e| CandleError::ModelLoading {
-                message: format!("Failed to create BERT model: {}", e),
+        let bert_model =
+            BertModel::load(vb, &self.bert_config.to_candle_config()).map_err(|e| {
+                CandleError::ModelLoading {
+                    message: format!("Failed to create BERT model: {}", e),
+                }
             })?;
 
         self.bert_model = Some(bert_model);
@@ -413,7 +433,11 @@ impl EmbeddingModel {
     }
 
     /// Apply pooling strategy to get sentence embeddings from token embeddings.
-    fn apply_pooling(&self, sequence_output: &Tensor, attention_mask: &Tensor) -> Result<Tensor, CandleError> {
+    fn apply_pooling(
+        &self,
+        sequence_output: &Tensor,
+        attention_mask: &Tensor,
+    ) -> Result<Tensor, CandleError> {
         // For sentence-transformers models, we typically use mean pooling
         // This averages the token embeddings, weighted by attention mask
 
@@ -436,28 +460,30 @@ impl EmbeddingModel {
         let sum_mask = sum_mask.clamp(1e-9, f64::INFINITY)?;
 
         // Compute mean pooling
-        let mean_pooled = sum_embeddings.div(&sum_mask)
+        let mean_pooled = sum_embeddings
+            .div(&sum_mask)
             .map_err(|e| CandleError::Inference {
                 message: format!("Failed to apply mean pooling: {}", e),
             })?;
 
         Ok(mean_pooled)
     }
-    
+
     /// Normalize embeddings to unit length.
     fn normalize_embeddings(&self, embeddings: &Tensor) -> Result<Tensor, CandleError> {
         let norm = embeddings.sqr()?.sum_keepdim(1)?.sqrt()?;
-        embeddings.broadcast_div(&norm)
+        embeddings
+            .broadcast_div(&norm)
             .map_err(|e| CandleError::Inference {
                 message: format!("Failed to normalize embeddings: {}", e),
             })
     }
-    
+
     /// Get the tokenizer.
     pub fn tokenizer(&self) -> &EmbeddingTokenizer {
         &self.tokenizer
     }
-    
+
     /// Get the embedding dimension.
     pub fn embedding_dimension(&self) -> usize {
         self.bert_config.hidden_size
@@ -498,9 +524,15 @@ mod tests {
             tokenizer_vocab: Some(PathBuf::from("vocab.txt")),
         };
 
-        assert_eq!(files.model_weights.file_name().unwrap(), "model.safetensors");
+        assert_eq!(
+            files.model_weights.file_name().unwrap(),
+            "model.safetensors"
+        );
         assert_eq!(files.model_config.file_name().unwrap(), "config.json");
-        assert_eq!(files.tokenizer_config.file_name().unwrap(), "tokenizer.json");
+        assert_eq!(
+            files.tokenizer_config.file_name().unwrap(),
+            "tokenizer.json"
+        );
         assert!(files.tokenizer_vocab.is_some());
     }
 

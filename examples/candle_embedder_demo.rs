@@ -26,20 +26,21 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     // Test 1: Create embedder with default configuration
     println!("📝 Test 1: Creating embedder with default configuration");
     info!("📝 Test 1: Creating embedder with default configuration");
-    let embedder = match CandleEmbedder::from_pretrained("sentence-transformers/all-MiniLM-L6-v2").await {
-        Ok(embedder) => {
-            info!("✅ Successfully created CandleEmbedder");
-            info!("   Model: {}", embedder.model_name());
-            info!("   Dimension: {}", embedder.dimension());
-            info!("   Device: {}", embedder.device_info());
-            embedder
-        }
-        Err(e) => {
-            warn!("❌ Failed to create CandleEmbedder: {}", e);
-            warn!("   This might be due to network issues or missing dependencies");
-            return Err(e.into());
-        }
-    };
+    let embedder =
+        match CandleEmbedder::from_pretrained("sentence-transformers/all-MiniLM-L6-v2").await {
+            Ok(embedder) => {
+                info!("✅ Successfully created CandleEmbedder");
+                info!("   Model: {}", embedder.model_name());
+                info!("   Dimension: {}", embedder.dimension());
+                info!("   Device: {}", embedder.device_info());
+                embedder
+            }
+            Err(e) => {
+                warn!("❌ Failed to create CandleEmbedder: {}", e);
+                warn!("   This might be due to network issues or missing dependencies");
+                return Err(e.into());
+            }
+        };
 
     // Test 2: Single text embedding
     info!("📝 Test 2: Generating single text embedding");
@@ -49,7 +50,10 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
             info!("✅ Successfully generated embedding");
             info!("   Text: '{}'", text);
             info!("   Embedding dimension: {}", embedding.len());
-            info!("   First 5 values: {:?}", &embedding[..5.min(embedding.len())]);
+            info!(
+                "   First 5 values: {:?}",
+                &embedding[..5.min(embedding.len())]
+            );
         }
         Err(e) => {
             warn!("❌ Failed to generate embedding: {}", e);
@@ -72,10 +76,12 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
             info!("   Number of texts: {}", texts.len());
             info!("   Number of embeddings: {}", embeddings.len());
             for (i, (text, embedding)) in texts.iter().zip(embeddings.iter()).enumerate() {
-                info!("   Text {}: '{}' -> {} dimensions", 
-                      i + 1, 
-                      &text[..50.min(text.len())], 
-                      embedding.len());
+                info!(
+                    "   Text {}: '{}' -> {} dimensions",
+                    i + 1,
+                    &text[..50.min(text.len())],
+                    embedding.len()
+                );
             }
         }
         Err(e) => {
@@ -124,7 +130,10 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     info!("📊 Embedding Statistics:");
     info!("   Texts embedded: {}", stats.texts_embedded);
     info!("   Total duration: {:?}", stats.duration);
-    info!("   Average time per embedding: {:?}", stats.avg_time_per_embedding);
+    info!(
+        "   Average time per embedding: {:?}",
+        stats.avg_time_per_embedding
+    );
 
     info!("🎉 Candle Embedder Demo completed!");
     info!("");

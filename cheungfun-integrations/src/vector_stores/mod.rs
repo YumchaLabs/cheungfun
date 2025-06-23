@@ -8,4 +8,4 @@ pub mod qdrant;
 
 // Re-export implementations
 pub use memory::InMemoryVectorStore;
-pub use qdrant::{QdrantVectorStore, QdrantConfig};
+pub use qdrant::{QdrantConfig, QdrantVectorStore};

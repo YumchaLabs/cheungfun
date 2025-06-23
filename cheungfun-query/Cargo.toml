@@ -36,6 +36,12 @@ siumai = { workspace = true }
 # Logging
 tracing = { workspace = true }
 
+# Random number generation
+rand = { workspace = true }
+
+# Date and time
+chrono = { workspace = true }
+
 [dev-dependencies]
 tokio-test = "0.4"
 test-case = { workspace = true }

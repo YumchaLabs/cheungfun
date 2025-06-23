@@ -4,9 +4,9 @@
 //! Candle-based embedding models. It supports automatic device selection
 //! based on availability and performance characteristics.
 
+use super::error::CandleError;
 use candle_core::Device;
 use tracing::{debug, info, warn};
-use super::error::CandleError;
 
 /// Device manager for Candle operations.
 #[derive(Debug, Clone)]
@@ -31,7 +31,7 @@ impl DeviceManager {
     pub fn new() -> Result<Self, CandleError> {
         Self::with_preference("auto")
     }
-    
+
     /// Create a device manager with the specified device preference.
     ///
     /// # Arguments
@@ -58,40 +58,40 @@ impl DeviceManager {
                 });
             }
         };
-        
+
         info!("Selected device: {:?}", device_type);
-        
+
         Ok(Self {
             device,
             device_type,
         })
     }
-    
+
     /// Get the Candle device.
     pub fn device(&self) -> &Device {
         &self.device
     }
-    
+
     /// Get the device type.
     pub fn device_type(&self) -> &DeviceType {
         &self.device_type
     }
-    
+
     /// Check if the device is CUDA.
     pub fn is_cuda(&self) -> bool {
         matches!(self.device_type, DeviceType::Cuda(_))
     }
-    
+
     /// Check if the device is CPU.
     pub fn is_cpu(&self) -> bool {
         matches!(self.device_type, DeviceType::Cpu)
     }
-    
+
     /// Check if the device is Metal.
     pub fn is_metal(&self) -> bool {
         matches!(self.device_type, DeviceType::Metal)
     }
-    
+
     /// Get device information as a string.
     pub fn device_info(&self) -> String {
         match &self.device_type {
@@ -100,17 +100,17 @@ impl DeviceManager {
             DeviceType::Metal => "Metal GPU".to_string(),
         }
     }
-    
+
     /// Select the best available device automatically.
     fn select_best_device() -> Result<(Device, DeviceType), CandleError> {
         debug!("Auto-selecting best available device");
-        
+
         // Try CUDA first (if available)
         if let Ok((device, device_type)) = Self::select_cuda_device(None) {
             debug!("Selected CUDA device");
             return Ok((device, device_type));
         }
-        
+
         // Try Metal on macOS
         if cfg!(target_os = "macos") {
             if let Ok((device, device_type)) = Self::select_metal_device() {
@@ -118,16 +118,16 @@ impl DeviceManager {
                 return Ok((device, device_type));
             }
         }
-        
+
         // Fall back to CPU
         debug!("Falling back to CPU device");
         Ok((Device::Cpu, DeviceType::Cpu))
     }
-    
+
     /// Select a CUDA device.
     fn select_cuda_device(gpu_index: Option<usize>) -> Result<(Device, DeviceType), CandleError> {
         let index = gpu_index.unwrap_or(0);
-        
+
         match Device::new_cuda(index) {
             Ok(device) => {
                 info!("Successfully initialized CUDA device {}", index);
@@ -141,7 +141,7 @@ impl DeviceManager {
             }
         }
     }
-    
+
     /// Select a Metal device.
     fn select_metal_device() -> Result<(Device, DeviceType), CandleError> {
         match Device::new_metal(0) {
@@ -157,7 +157,7 @@ impl DeviceManager {
             }
         }
     }
-    
+
     /// Get memory usage information (if supported).
     pub fn memory_info(&self) -> Option<MemoryInfo> {
         match &self.device_type {
@@ -208,20 +208,20 @@ impl MemoryInfo {
 #[cfg(test)]
 mod tests {
     use super::*;
-    
+
     #[test]
     fn test_device_manager_creation() {
         let manager = DeviceManager::new();
         assert!(manager.is_ok());
     }
-    
+
     #[test]
     fn test_cpu_device_selection() {
         let manager = DeviceManager::with_preference("cpu").unwrap();
         assert!(manager.is_cpu());
         assert_eq!(manager.device_info(), "CPU");
     }
-    
+
     #[test]
     fn test_invalid_device_preference() {
         let result = DeviceManager::with_preference("invalid");

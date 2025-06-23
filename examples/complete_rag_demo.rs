@@ -16,21 +16,19 @@ use cheungfun_core::{
 };
 use cheungfun_indexing::{
     loaders::DirectoryLoader,
-    transformers::{MetadataExtractor, TextSplitter},
     prelude::SplitterConfig,
-};
-use cheungfun_query::{
-    generator::SiumaiGenerator,
-    pipeline::DefaultQueryPipeline,
-    retriever::VectorRetriever,
+    transformers::{MetadataExtractor, TextSplitter},
 };
 use cheungfun_integrations::{CandleEmbedder, InMemoryVectorStore};
-use std::sync::Arc;
+use cheungfun_query::{
+    generator::SiumaiGenerator, pipeline::DefaultQueryPipeline, retriever::VectorRetriever,
+};
+use siumai::prelude::*;
 use std::path::Path;
+use std::sync::Arc;
 use tempfile::TempDir;
 use tokio::fs;
-use tracing::{info, warn, Level};
-use siumai::prelude::*;
+use tracing::{Level, info, warn};
 
 #[tokio::main]
 async fn main() -> Result<()> {
@@ -100,21 +98,22 @@ struct IndexingStats {
 /// Setup demo environment with sample documents
 async fn setup_demo_environment() -> Result<DemoEnvironment> {
     info!("📁 Setting up demo environment...");
-    
-    let temp_dir = tempfile::tempdir().map_err(|e| {
-        cheungfun_core::CheungfunError::Io(e)
-    })?;
-    
+
+    let temp_dir = tempfile::tempdir().map_err(|e| cheungfun_core::CheungfunError::Io(e))?;
+
     let documents_path = temp_dir.path().join("documents");
-    fs::create_dir_all(&documents_path).await.map_err(|e| {
-        cheungfun_core::CheungfunError::Io(e)
-    })?;
+    fs::create_dir_all(&documents_path)
+        .await
+        .map_err(|e| cheungfun_core::CheungfunError::Io(e))?;
 
     // Create sample documents
     create_sample_documents(&documents_path).await?;
-    
-    info!("📄 Created sample documents in: {}", documents_path.display());
-    
+
+    info!(
+        "📄 Created sample documents in: {}",
+        documents_path.display()
+    );
+
     Ok(DemoEnvironment {
         temp_dir,
         documents_path,
@@ -139,7 +138,7 @@ async fn create_sample_documents(docs_path: &Path) -> Result<()> {
             3. Reinforcement Learning: Learns through interaction with an environment, \
             receiving rewards or penalties for actions taken.\n\n\
             Popular algorithms include linear regression, decision trees, neural networks, \
-            support vector machines, and ensemble methods like random forests."
+            support vector machines, and ensemble methods like random forests.",
         ),
         (
             "deep_learning_guide.txt",
@@ -157,7 +156,7 @@ async fn create_sample_documents(docs_path: &Path) -> Result<()> {
             3. Transformers: The foundation of modern NLP, using attention mechanisms \
             to process sequences. Examples include BERT, GPT, and T5.\n\n\
             Training deep networks requires large datasets, significant computational \
-            resources (often GPUs), and careful hyperparameter tuning."
+            resources (often GPUs), and careful hyperparameter tuning.",
         ),
         (
             "vector_databases.txt",
@@ -176,7 +175,7 @@ async fn create_sample_documents(docs_path: &Path) -> Result<()> {
             4. Scalability: Designed to handle millions or billions of vectors with \
             horizontal scaling capabilities.\n\n\
             Popular vector databases include Pinecone, Weaviate, Qdrant, Chroma, and Milvus. \
-            Each offers different trade-offs in terms of performance, scalability, and features."
+            Each offers different trade-offs in terms of performance, scalability, and features.",
         ),
         (
             "rag_systems.txt",
@@ -198,15 +197,15 @@ async fn create_sample_documents(docs_path: &Path) -> Result<()> {
             5. Generation: The language model generates a response using both the original \
             query and the retrieved context.\n\n\
             RAG systems are widely used in chatbots, question-answering systems, \
-            documentation assistants, and knowledge management platforms."
+            documentation assistants, and knowledge management platforms.",
         ),
     ];
 
     for (filename, content) in documents {
         let file_path = docs_path.join(filename);
-        fs::write(&file_path, content).await.map_err(|e| {
-            cheungfun_core::CheungfunError::Io(e)
-        })?;
+        fs::write(&file_path, content)
+            .await
+            .map_err(|e| cheungfun_core::CheungfunError::Io(e))?;
     }
 
     Ok(())
@@ -218,19 +217,19 @@ async fn initialize_components() -> Result<RagComponents> {
 
     // Initialize embedder
     info!("  📊 Initializing embedder...");
-    let embedder = Arc::new(
-        CandleEmbedder::from_pretrained("sentence-transformers/all-MiniLM-L6-v2").await?
+    let embedder =
+        Arc::new(CandleEmbedder::from_pretrained("sentence-transformers/all-MiniLM-L6-v2").await?);
+    info!(
+        "    ✅ Embedder ready (dimension: {})",
+        embedder.dimension()
     );
-    info!("    ✅ Embedder ready (dimension: {})", embedder.dimension());
 
     // Initialize vector store
     info!("  🗄️  Initializing vector store...");
-    let vector_store = Arc::new(
-        InMemoryVectorStore::new(
-            embedder.dimension(),
-            cheungfun_core::traits::DistanceMetric::Cosine
-        )
-    );
+    let vector_store = Arc::new(InMemoryVectorStore::new(
+        embedder.dimension(),
+        cheungfun_core::traits::DistanceMetric::Cosine,
+    ));
     info!("    ✅ Vector store ready");
 
     // Initialize text splitter
@@ -325,10 +324,8 @@ async fn build_query_pipeline(components: &RagComponents) -> Result<Box<dyn Quer
     info!("🔍 Building query pipeline...");
 
     // Create retriever
-    let retriever = VectorRetriever::new(
-        components.vector_store.clone(),
-        components.embedder.clone(),
-    );
+    let retriever =
+        VectorRetriever::new(components.vector_store.clone(), components.embedder.clone());
 
     // Create response generator (check for API key)
     let generator = if std::env::var("OPENAI_API_KEY").is_ok() {
@@ -363,10 +360,7 @@ async fn build_query_pipeline(components: &RagComponents) -> Result<Box<dyn Quer
     };
 
     // Build query pipeline
-    let query_pipeline = DefaultQueryPipeline::new(
-        Arc::new(retriever),
-        Arc::new(generator)
-    );
+    let query_pipeline = DefaultQueryPipeline::new(Arc::new(retriever), Arc::new(generator));
 
     Ok(Box::new(query_pipeline))
 }
@@ -394,21 +388,32 @@ async fn demonstrate_querying(query_pipeline: &Box<dyn QueryPipeline>) -> Result
             Ok(response) => {
                 info!("✅ Response generated successfully");
                 info!("📝 Content: {}", response.response.content);
-                info!("📊 Retrieved {} relevant chunks", response.retrieved_nodes.len());
+                info!(
+                    "📊 Retrieved {} relevant chunks",
+                    response.retrieved_nodes.len()
+                );
 
                 // Show top retrieved chunks
                 for (j, scored_node) in response.retrieved_nodes.iter().take(2).enumerate() {
-                    let preview = scored_node.node.content
+                    let preview = scored_node
+                        .node
+                        .content
                         .chars()
                         .take(100)
                         .collect::<String>();
-                    info!("  {}. Score: {:.3} - {}...",
-                          j + 1, scored_node.score, preview);
+                    info!(
+                        "  {}. Score: {:.3} - {}...",
+                        j + 1,
+                        scored_node.score,
+                        preview
+                    );
                 }
 
                 if let Some(usage) = &response.response.usage {
-                    info!("🔢 Token usage: {} prompt + {} completion = {} total",
-                          usage.prompt_tokens, usage.completion_tokens, usage.total_tokens);
+                    info!(
+                        "🔢 Token usage: {} prompt + {} completion = {} total",
+                        usage.prompt_tokens, usage.completion_tokens, usage.total_tokens
+                    );
                 }
             }
             Err(e) => {
@@ -430,8 +435,10 @@ fn print_indexing_stats(stats: &IndexingStats) {
     info!("🧮 Embeddings generated: {}", stats.embeddings_generated);
     info!("💾 Nodes stored: {}", stats.nodes_stored);
     info!("⏱️  Processing time: {:?}", stats.processing_time);
-    info!("⚡ Average time per document: {:?}",
-          stats.processing_time / stats.documents_loaded as u32);
+    info!(
+        "⚡ Average time per document: {:?}",
+        stats.processing_time / stats.documents_loaded as u32
+    );
 }
 
 /// Show comprehensive system statistics
@@ -445,16 +452,24 @@ async fn show_system_statistics(components: &RagComponents) -> Result<()> {
     let store_metadata = components.vector_store.metadata().await?;
     info!("🗄️  Vector Store:");
     info!("   - Total nodes: {}", store_count);
-    info!("   - Type: {}", store_metadata.get("type").unwrap_or(&"unknown".into()));
-    info!("   - Dimension: {}", store_metadata.get("dimension").unwrap_or(&"unknown".into()));
+    info!(
+        "   - Type: {}",
+        store_metadata.get("type").unwrap_or(&"unknown".into())
+    );
+    info!(
+        "   - Dimension: {}",
+        store_metadata.get("dimension").unwrap_or(&"unknown".into())
+    );
 
     // Embedder statistics
     let embedder_metadata = components.embedder.metadata();
     info!("📊 Embedder:");
     info!("   - Model: {}", components.embedder.model_name());
     info!("   - Dimension: {}", components.embedder.dimension());
-    info!("   - Texts embedded: {}",
-          embedder_metadata.get("texts_embedded").unwrap_or(&0.into()));
+    info!(
+        "   - Texts embedded: {}",
+        embedder_metadata.get("texts_embedded").unwrap_or(&0.into())
+    );
 
     // Health checks
     info!("🏥 Health Checks:");

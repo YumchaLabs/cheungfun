@@ -11,21 +11,21 @@ pub enum FastEmbedError {
         /// The model name that failed to initialize
         model: String,
         /// The reason for the failure
-        reason: String
+        reason: String,
     },
 
     /// Embedding generation failed
     #[error("Failed to generate embeddings: {reason}")]
     Embedding {
         /// The reason for the failure
-        reason: String
+        reason: String,
     },
 
     /// Configuration error
     #[error("Invalid configuration: {reason}")]
     Config {
         /// The reason for the configuration error
-        reason: String
+        reason: String,
     },
 
     /// I/O error (file operations, network, etc.)

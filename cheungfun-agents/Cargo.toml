@@ -13,21 +13,37 @@ categories.workspace = true
 
 [dependencies]
 cheungfun-core = { path = "../cheungfun-core" }
+cheungfun-query = { path = "../cheungfun-query" }
 
 # Core async and error handling
 tokio = { workspace = true }
 async-trait = { workspace = true }
 anyhow = { workspace = true }
 thiserror = { workspace = true }
+futures = "0.3"
 
 # Serialization
 serde = { workspace = true }
 serde_json = { workspace = true }
 uuid = { workspace = true }
 
+
+
+# HTTP client for tools
+reqwest = { version = "0.11", features = ["json"] }
+
 # MCP integration
-rmcp = { workspace = true }
+rmcp = { workspace = true, features = ["client"] }
 schemars = { workspace = true }
+
+# Siumai for LLM integration
+siumai = { workspace = true }
+
+# Web server for MCP HTTP transport
+axum = { workspace = true }
+
+# Time handling
+chrono = { workspace = true }
 
 # Logging
 tracing = { workspace = true }
