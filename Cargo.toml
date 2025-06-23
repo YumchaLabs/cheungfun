@@ -7,10 +7,10 @@ members = [
     "cheungfun-query",
     "cheungfun-agents",
     "cheungfun-integrations",
+    "cheungfun-multimodal",
     "examples",
 ]
 # "cheungfun-evaluation",
-# "cheungfun-multimodal",
 # "cheungfun-workflow",
 # "cheungfun-training",
 default-members = ["cheungfun", "cheungfun-*"]
@@ -105,9 +105,15 @@ schemars = "0.8"
 
 # Multimodal processing
 image = "0.25"
+imageproc = "0.25"
 rodio = "0.19"
-opencv = "0.92"
-whisper-rs = "0.10"
+hound = "3.5"
+symphonia = "0.5"
+ffmpeg-next = "7.0"
+infer = "0.16"
+base64 = "0.22"
+sha2 = "0.10"
+path-absolutize = "3.1"
 
 # Workflow and training
 petgraph = "0.6"

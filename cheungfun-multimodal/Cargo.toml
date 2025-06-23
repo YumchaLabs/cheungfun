@@ -1,0 +1,104 @@
+[package]
+name = "cheungfun-multimodal"
+version = "0.1.0"
+edition = "2021"
+authors = ["Cheungfun Contributors"]
+description = "Multimodal support for the Cheungfun RAG framework"
+license = "MIT OR Apache-2.0"
+repository = "https://github.com/your-org/cheungfun"
+keywords = ["rag", "multimodal", "ai", "ml", "search"]
+categories = ["multimedia", "science"]
+
+[dependencies]
+# Core dependencies
+cheungfun-core = { path = "../cheungfun-core" }
+tokio = { version = "1.45", features = ["full"] }
+async-trait = "0.1"
+anyhow = { workspace = true }
+thiserror = { workspace = true }
+
+# Serialization
+serde = { version = "1.0", features = ["derive"] }
+serde_json = "1.0"
+uuid = { version = "1.0", features = ["v4", "serde"] }
+
+# Date/time
+chrono = { version = "0.4", features = ["serde"] }
+
+# Collections and utilities
+indexmap = "2.0"
+tracing = "0.1"
+tracing-subscriber = "0.3"
+tokio-stream = "0.1"
+
+# Image processing
+image = { version = "0.25", optional = true }
+imageproc = { version = "0.25", optional = true }
+
+# Audio processing
+rodio = { version = "0.19", optional = true }
+hound = { version = "3.5", optional = true }
+symphonia = { version = "0.5", optional = true }
+
+# Video processing (through FFmpeg)
+ffmpeg-next = { version = "7.0", optional = true }
+
+# Machine learning
+candle-core = { version = "0.9", optional = true }
+candle-nn = { version = "0.9", optional = true }
+candle-transformers = { version = "0.9", optional = true }
+tokenizers = { version = "0.20", optional = true }
+
+# HTTP client for remote resources
+reqwest = { version = "0.12", features = ["stream"], optional = true }
+
+# File format detection
+infer = { version = "0.16", optional = true }
+
+# Base64 encoding/decoding
+base64 = "0.22"
+
+# Path utilities
+path-absolutize = "3.1"
+
+# Cryptographic hashing
+sha2 = "0.10"
+
+# URL parsing
+url = "2.5"
+
+[dev-dependencies]
+tempfile = "3.8"
+criterion = "0.5"
+
+[features]
+default = ["image-support", "format-detection"]
+
+# Core features
+image-support = ["dep:image", "dep:imageproc", "dep:infer"]
+audio-support = ["dep:rodio", "dep:hound", "dep:symphonia", "dep:infer"]
+video-support = ["dep:ffmpeg-next", "dep:infer"]
+format-detection = ["dep:infer"]
+remote-resources = ["dep:reqwest"]
+
+# ML features
+candle = ["dep:candle-core", "dep:candle-nn", "dep:candle-transformers", "dep:tokenizers"]
+clip = ["candle", "image-support"]
+
+# All features
+full = [
+    "image-support",
+    "audio-support", 
+    "video-support",
+    "format-detection",
+    "remote-resources",
+    "candle",
+    "clip"
+]
+
+[[example]]
+name = "image_processing"
+required-features = ["image-support"]
+
+[package.metadata.docs.rs]
+features = ["full"]

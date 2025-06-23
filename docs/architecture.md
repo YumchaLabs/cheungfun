@@ -21,8 +21,8 @@ Cheungfun是一个基于Rust的高性能RAG（检索增强生成）框架，参�
 - **cheungfun-agents**: 智能代理、工具调用、MCP集成
 - **cheungfun-integrations**: 向量数据库、外部服务集成
 
-### 扩展模块 (后期开发)
-- **cheungfun-multimodal**: 图像、音频、视频处理
+### 扩展模块
+- **cheungfun-multimodal**: 图像、音频、视频处理 ✅ **开发中**
 - **cheungfun-workflow**: 复杂工作流编排
 - **cheungfun-training**: 模型微调和训练
 - **cheungfun-evaluation**: 性能评估和指标
