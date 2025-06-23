@@ -1,5 +1,5 @@
 //! Example demonstrating MCP (Model Context Protocol) integration in Cheungfun
-//! 
+//!
 //! This example shows how to:
 //! 1. Create MCP clients and servers
 //! 2. Register tools with MCP servers
@@ -7,9 +7,9 @@
 //! 4. Execute tools through MCP protocol
 
 use cheungfun_agents::{
-    mcp::{McpClient, McpServer, McpService},
-    tool::{builtin::EchoTool, ToolRegistry},
     error::Result,
+    mcp::{McpClient, McpServer, McpService},
+    tool::{ToolRegistry, builtin::EchoTool},
 };
 use std::sync::Arc;
 use tokio;
@@ -46,13 +46,12 @@ async fn example_mcp_server() -> Result<()> {
     tool_registry.register(echo_tool as Arc<dyn cheungfun_agents::tool::Tool>)?;
 
     // Create MCP server
-    let mut server = McpServer::new(
-        "example-server",
-        "1.0.0",
-        Arc::new(tool_registry),
-    );
+    let mut server = McpServer::new("example-server", "1.0.0", Arc::new(tool_registry));
 
-    println!("  📋 Server info: {:?}", server.server_info().server_info.name);
+    println!(
+        "  📋 Server info: {:?}",
+        server.server_info().server_info.name
+    );
     println!("  🔧 Available tools: {:?}", server.available_tools());
     println!("  📊 Server stats: {:?}", server.stats());
 
@@ -96,7 +95,10 @@ async fn example_mcp_service() -> Result<()> {
     // Create a client (note: this will fail to add since it's not connected)
     let client = McpClient::new("service-client", "1.0.0");
     let result = service.add_client("main-client", client).await;
-    println!("  ⚠️  Adding disconnected client (expected to fail): {:?}", result.is_err());
+    println!(
+        "  ⚠️  Adding disconnected client (expected to fail): {:?}",
+        result.is_err()
+    );
 
     // Check service status
     let status = service.status();

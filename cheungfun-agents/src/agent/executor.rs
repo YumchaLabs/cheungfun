@@ -393,10 +393,8 @@ mod tests {
             ..Default::default()
         };
 
-        let executor = AgentExecutor::with_config(
-            AgentBuilder::new().name("test").build().unwrap(),
-            config,
-        );
+        let executor =
+            AgentExecutor::with_config(AgentBuilder::new().name("test").build().unwrap(), config);
 
         assert_eq!(executor.calculate_retry_delay(0), 0);
         assert_eq!(executor.calculate_retry_delay(1), 1000);

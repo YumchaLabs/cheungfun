@@ -6,14 +6,12 @@ use cheungfun::prelude::*;
 use cheungfun_query::advanced::*;
 use std::sync::Arc;
 use std::time::Duration;
-use tracing::{info, Level};
+use tracing::{Level, info};
 
 #[tokio::main]
 async fn main() -> Result<()> {
     // 初始化日志
-    tracing_subscriber::fmt()
-        .with_max_level(Level::INFO)
-        .init();
+    tracing_subscriber::fmt().with_max_level(Level::INFO).init();
 
     info!("🚀 Starting Advanced Retrieval Demo");
 
@@ -51,19 +49,15 @@ async fn setup_components() -> Result<(
     let vector_store = Arc::new(
         QdrantVectorStore::new(
             QdrantConfig::new("http://localhost:6334", "advanced_demo", 384)
-                .with_create_collection_if_missing(true)
-        ).await?
+                .with_create_collection_if_missing(true),
+        )
+        .await?,
     );
 
     // 创建LLM客户端
-    let llm_client = Arc::new(
-        SiumaiGenerator::new(
-            siumai::Siumai::builder()
-                .openai()
-                .build()
-                .await?
-        )
-    );
+    let llm_client = Arc::new(SiumaiGenerator::new(
+        siumai::Siumai::builder().openai().build().await?,
+    ));
 
     // 索引一些示例文档
     index_sample_documents(&embedder, &vector_store).await?;
@@ -142,15 +136,19 @@ async fn demo_basic_hybrid_search(
 
     println!("\n📊 Basic Hybrid Search Results:");
     println!("Query: {}", query);
-    println!("Found {} results in {:?}", 
-             response.nodes.len(), 
-             response.stats.retrieval_time);
+    println!(
+        "Found {} results in {:?}",
+        response.nodes.len(),
+        response.stats.retrieval_time
+    );
 
     for (i, node) in response.nodes.iter().take(3).enumerate() {
-        println!("{}. [Score: {:.3}] {}", 
-                 i + 1, 
-                 node.score, 
-                 node.node.content.chars().take(100).collect::<String>());
+        println!(
+            "{}. [Score: {:.3}] {}",
+            i + 1,
+            node.score,
+            node.node.content.chars().take(100).collect::<String>()
+        );
     }
 
     Ok(())
@@ -170,11 +168,10 @@ async fn demo_advanced_pipeline(
         .add_query_transformer(
             HyDETransformer::new(llm_client.clone())
                 .with_num_hypothetical_docs(2)
-                .with_include_original(true)
+                .with_include_original(true),
         )
         .add_query_transformer(
-            SubquestionTransformer::new(llm_client.clone())
-                .with_num_subquestions(3)
+            SubquestionTransformer::new(llm_client.clone()).with_num_subquestions(3),
         )
         // 混合搜索策略
         .with_search_strategy(
@@ -182,46 +179,44 @@ async fn demo_advanced_pipeline(
                 .with_vector_weight(0.6)
                 .with_keyword_weight(0.4)
                 .with_fusion_method(FusionMethod::ReciprocalRankFusion { k: 60.0 })
-                .build()
+                .build(),
         )
         // 重排序器
         .add_reranker(
             LLMReranker::new(llm_client.clone())
                 .with_top_n(10)
-                .with_batch_size(5)
+                .with_batch_size(5),
         )
         .add_reranker(
-            ScoreReranker::new(ScoreRerankStrategy::Diversity { 
-                similarity_threshold: 0.8 
-            }).with_top_n(8)
+            ScoreReranker::new(ScoreRerankStrategy::Diversity {
+                similarity_threshold: 0.8,
+            })
+            .with_top_n(8),
         )
         // 响应转换器
         .add_response_transformer(
-            DeduplicationTransformer::new(0.9)
-                .with_method(DeduplicationMethod::TextSimilarity)
+            DeduplicationTransformer::new(0.9).with_method(DeduplicationMethod::TextSimilarity),
         )
         .add_response_transformer(
             FilterTransformer::new()
                 .with_min_score(0.1)
-                .with_content_length(Some(10), Some(500))
+                .with_content_length(Some(10), Some(500)),
         )
         .add_response_transformer(
             SummaryTransformer::new(llm_client.clone())
                 .with_max_length(150)
-                .with_preserve_original(true)
+                .with_preserve_original(true),
         )
         .with_vector_store(vector_store.clone())
-        .with_config(
-            PipelineConfig {
-                concurrency: 4,
-                timeout: Duration::from_secs(60),
-                enable_cache: true,
-                enable_metrics: true,
-                enable_concurrent_query_transform: true,
-                enable_concurrent_rerank: false,
-                retry_config: RetryConfig::default(),
-            }
-        )
+        .with_config(PipelineConfig {
+            concurrency: 4,
+            timeout: Duration::from_secs(60),
+            enable_cache: true,
+            enable_metrics: true,
+            enable_concurrent_query_transform: true,
+            enable_concurrent_rerank: false,
+            retry_config: RetryConfig::default(),
+        })
         .build()?;
 
     // 执行复杂查询
@@ -235,15 +230,23 @@ async fn demo_advanced_pipeline(
         println!("  - {}: {:?}", stage, duration);
     }
     println!("Total time: {:?}", response.stats.retrieval_time);
-    println!("Query transformations: {}", response.stats.query_transformations);
+    println!(
+        "Query transformations: {}",
+        response.stats.query_transformations
+    );
     println!("Rerank operations: {}", response.stats.rerank_operations);
-    println!("Response transformations: {}", response.stats.response_transformations);
+    println!(
+        "Response transformations: {}",
+        response.stats.response_transformations
+    );
     println!("Final results: {}", response.nodes.len());
 
     for (i, node) in response.nodes.iter().take(3).enumerate() {
         println!("\n{}. [Score: {:.3}]", i + 1, node.score);
-        println!("   Content: {}", 
-                 node.node.content.chars().take(80).collect::<String>());
+        println!(
+            "   Content: {}",
+            node.node.content.chars().take(80).collect::<String>()
+        );
         if let Some(summary) = node.node.metadata.get("summary") {
             println!("   Summary: {}", summary.as_str().unwrap_or(""));
         }
@@ -266,7 +269,7 @@ async fn demo_code_search_pipeline(
         .add_query_transformer(
             SubquestionTransformer::new(llm_client.clone())
                 .with_prompt_template(CODE_SUBQUESTION_TEMPLATE.to_string())
-                .with_num_subquestions(2)
+                .with_num_subquestions(2),
         )
         // 混合搜索，更重视关键词匹配
         .with_search_strategy(
@@ -274,23 +277,20 @@ async fn demo_code_search_pipeline(
                 .with_vector_weight(0.4)
                 .with_keyword_weight(0.6)
                 .with_keyword_fields(vec!["content", "function_name", "class_name"])
-                .build()
+                .build(),
         )
         // 代码相关的重排序
         .add_reranker(
             LLMReranker::new(llm_client.clone())
                 .with_prompt_template(CODE_RERANK_TEMPLATE.to_string())
-                .with_top_n(8)
+                .with_top_n(8),
         )
         // 去重和过滤
         .add_response_transformer(
             DeduplicationTransformer::new(0.85)
-                .with_method(DeduplicationMethod::EmbeddingSimilarity)
+                .with_method(DeduplicationMethod::EmbeddingSimilarity),
         )
-        .add_response_transformer(
-            FilterTransformer::new()
-                .with_min_score(0.2)
-        )
+        .add_response_transformer(FilterTransformer::new().with_min_score(0.2))
         .with_vector_store(vector_store.clone())
         .build()?;
 
@@ -302,10 +302,12 @@ async fn demo_code_search_pipeline(
     println!("Found {} code-relevant results", response.nodes.len());
 
     for (i, node) in response.nodes.iter().take(2).enumerate() {
-        println!("{}. [Score: {:.3}] {}", 
-                 i + 1, 
-                 node.score, 
-                 node.node.content.chars().take(120).collect::<String>());
+        println!(
+            "{}. [Score: {:.3}] {}",
+            i + 1,
+            node.score,
+            node.node.content.chars().take(120).collect::<String>()
+        );
     }
 
     Ok(())
@@ -365,8 +367,14 @@ async fn demo_performance_comparison(
     println!("3. Advanced Pipeline:");
     println!("   Time: {:?}", advanced_time);
     println!("   Results: {}", advanced_response.nodes.len());
-    println!("   Query transformations: {}", advanced_response.stats.query_transformations);
-    println!("   Rerank operations: {}", advanced_response.stats.rerank_operations);
+    println!(
+        "   Query transformations: {}",
+        advanced_response.stats.query_transformations
+    );
+    println!(
+        "   Rerank operations: {}",
+        advanced_response.stats.rerank_operations
+    );
 
     Ok(())
 }

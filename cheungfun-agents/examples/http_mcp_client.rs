@@ -404,7 +404,7 @@ impl HttpMcpLlmDemo {
 #[tokio::main]
 async fn main() -> Result<(), Box<dyn std::error::Error>> {
     // Initialize logging
-    tracing_subscriber::init();
+    tracing_subscriber::fmt::init();
 
     println!("🌐 HTTP MCP Client - LLM Integration Demo");
     println!("==========================================");

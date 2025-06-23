@@ -28,10 +28,20 @@ tracing = { workspace = true }
 tracing-subscriber = { workspace = true }
 
 # Additional dependencies
+async-trait = "0.1"
 uuid = { workspace = true }
 siumai = { workspace = true }
+serde = { workspace = true }
 serde_json = { workspace = true }
 tempfile = "3.20"
+
+# Performance testing dependencies
+criterion = "0.5"
+plotters = "0.3"
+sysinfo = "0.32"
+rand = "0.8"
+rayon = "1.10"
+futures = "0.3"
 
 [features]
 default = []
@@ -45,35 +55,72 @@ fastembed = ["cheungfun-integrations/fastembed"]
 # All embedding features
 all-embedders = ["candle", "fastembed"]
 
+# Getting Started Examples
 [[bin]]
-name = "basic_usage"
-path = "src/basic_usage.rs"
+name = "hello_world"
+path = "01_getting_started/hello_world.rs"
+
+[[bin]]
+name = "basic_indexing"
+path = "01_getting_started/basic_indexing.rs"
+
+[[bin]]
+name = "basic_querying"
+path = "01_getting_started/basic_querying.rs"
+
+# Core Components Examples
+[[bin]]
+name = "candle_embedder_demo"
+path = "02_core_components/embedders/candle_embedder_demo.rs"
+
+[[bin]]
+name = "candle_embedder_performance"
+path = "02_core_components/embedders/candle_embedder_performance.rs"
+
+[[bin]]
+name = "qdrant_store_demo"
+path = "02_core_components/vector_stores/qdrant_vector_store_demo.rs"
+
+# Advanced Features Examples
+[[bin]]
+name = "advanced_retrieval_demo"
+path = "03_advanced_features/advanced_retrieval_demo.rs"
+
+# Integration Examples
+[[bin]]
+name = "mcp_integration_example"
+path = "04_integrations/mcp_integration_example.rs"
+
+# Performance Examples
+[[bin]]
+name = "performance_benchmark"
+path = "05_performance/benchmarks/performance_benchmark.rs"
+
+[[bin]]
+name = "embedder_benchmark"
+path = "05_performance/benchmarks/embedder_benchmark.rs"
+
+[[bin]]
+name = "vector_store_benchmark"
+path = "05_performance/benchmarks/vector_store_benchmark.rs"
+
+[[bin]]
+name = "end_to_end_benchmark"
+path = "05_performance/benchmarks/end_to_end_benchmark.rs"
+
+# Production Examples
+[[bin]]
+name = "complete_rag_system"
+path = "06_production/complete_rag_demo.rs"
 
 [[bin]]
 name = "end_to_end_indexing"
-path = "end_to_end_indexing.rs"
+path = "06_production/end_to_end_indexing.rs"
 
 [[bin]]
 name = "end_to_end_query"
-path = "end_to_end_query.rs"
+path = "06_production/end_to_end_query.rs"
 
 [[bin]]
-name = "end_to_end_retrieval_demo"
-path = "end_to_end_retrieval_demo.rs"
-
-[[bin]]
-name = "complete_rag_demo"
-path = "complete_rag_demo.rs"
-
-[[bin]]
-name = "candle_embedder_demo"
-path = "candle_embedder_demo.rs"
-required-features = ["candle"]
-
-[[bin]]
-name = "qdrant_vector_store_demo"
-path = "src/qdrant_vector_store_demo.rs"
-
-[[bin]]
-name = "mcp_integration_example"
-path = "mcp_integration_example.rs"
+name = "end_to_end_retrieval"
+path = "06_production/end_to_end_retrieval_demo.rs"

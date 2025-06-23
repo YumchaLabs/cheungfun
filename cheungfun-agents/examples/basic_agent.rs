@@ -2,7 +2,6 @@
 
 use cheungfun_agents::prelude::*;
 use std::sync::Arc;
-use tokio;
 
 #[tokio::main]
 async fn main() -> Result<()> {

@@ -7,7 +7,7 @@ use tokio;
 #[tokio::main]
 async fn main() -> Result<()> {
     // Initialize logging
-    tracing_subscriber::init();
+    tracing_subscriber::fmt::init();
 
     println!("🎭 Cheungfun Agents - Workflow Orchestration Example");
     println!("===================================================");

@@ -17,14 +17,14 @@ pub enum AgentError {
     #[error("Agent configuration error: {message}")]
     Configuration {
         /// Error message
-        message: String
+        message: String,
     },
 
     /// Agent execution errors
     #[error("Agent execution error: {message}")]
     Execution {
         /// Error message
-        message: String
+        message: String,
     },
 
     /// Tool-related errors
@@ -33,14 +33,14 @@ pub enum AgentError {
         /// Tool name
         tool_name: String,
         /// Error message
-        message: String
+        message: String,
     },
 
     /// MCP protocol errors
     #[error("MCP protocol error: {message}")]
     Mcp {
         /// Error message
-        message: String
+        message: String,
     },
 
     /// Task processing errors
@@ -49,14 +49,14 @@ pub enum AgentError {
         /// Task ID
         task_id: String,
         /// Error message
-        message: String
+        message: String,
     },
 
     /// Orchestration errors
     #[error("Orchestration error: {message}")]
     Orchestration {
         /// Error message
-        message: String
+        message: String,
     },
 
     /// Workflow errors
@@ -72,7 +72,7 @@ pub enum AgentError {
     #[error("Communication error: {message}")]
     Communication {
         /// Error message
-        message: String
+        message: String,
     },
 
     /// Resource access errors
@@ -81,7 +81,7 @@ pub enum AgentError {
         /// Resource name
         resource: String,
         /// Error message
-        message: String
+        message: String,
     },
 
     /// Timeout errors
@@ -90,14 +90,14 @@ pub enum AgentError {
         /// Operation name
         operation: String,
         /// Timeout in milliseconds
-        timeout_ms: u64
+        timeout_ms: u64,
     },
 
     /// Authentication/authorization errors
     #[error("Authentication error: {message}")]
     Authentication {
         /// Error message
-        message: String
+        message: String,
     },
 
     /// Validation errors
@@ -106,7 +106,7 @@ pub enum AgentError {
         /// Field name
         field: String,
         /// Error message
-        message: String
+        message: String,
     },
 
     /// Serialization/deserialization errors
@@ -121,7 +121,7 @@ pub enum AgentError {
     #[error("Agent error: {message}")]
     Generic {
         /// Error message
-        message: String
+        message: String,
     },
 }
 

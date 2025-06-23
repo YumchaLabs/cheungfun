@@ -21,7 +21,7 @@ use tokio;
 #[tokio::main]
 async fn main() -> Result<(), Box<dyn std::error::Error>> {
     // Initialize logging (optional)
-    // tracing_subscriber::init();
+    tracing_subscriber::fmt::init();
 
     println!("🚀 ApiEmbedder Example");
     println!("======================");

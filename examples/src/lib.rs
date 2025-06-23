@@ -3,19 +3,50 @@
 //! This crate contains practical examples demonstrating how to use
 //! the Cheungfun framework for building RAG applications.
 //!
-//! ## Available Examples
+//! # Cheungfun Examples Library
 //!
-//! - `basic_usage`: Demonstrates core types and configuration system
+//! This library provides shared utilities and frameworks for Cheungfun examples.
 //!
-//! ## Running Examples
+//! ## Directory Structure
+//!
+//! - `01_getting_started/` - Basic usage examples for beginners
+//! - `02_core_components/` - Individual component demonstrations
+//! - `03_advanced_features/` - Advanced RAG functionality
+//! - `04_integrations/` - External system integrations
+//! - `05_performance/` - Performance testing and optimization
+//! - `06_production/` - Production-ready implementations
+//! - `07_use_cases/` - Real-world application examples
+//! - `shared/` - Common utilities and frameworks
+//!
+//! ## Quick Start
 //!
 //! ```bash
-//! cargo run --bin basic_usage
+//! # Start with the basics
+//! cargo run --bin hello_world
+//! cargo run --bin basic_indexing
+//! cargo run --bin basic_querying
+//!
+//! # Explore components
+//! cargo run --features fastembed --bin embedder_demo
+//! cargo run --bin vector_store_demo
+//!
+//! # Performance testing
+//! cargo run --bin vector_store_benchmark
 //! ```
 
 #![deny(missing_docs)]
 #![warn(clippy::all, clippy::pedantic)]
 #![allow(clippy::module_name_repetitions)]
 
-// This crate contains binary examples, not library modules.
-// See Cargo.toml for the list of available binaries.
+// Re-export shared modules from their new locations
+pub use crate::shared::*;
+
+/// Shared utilities and frameworks
+pub mod shared {
+    /// Performance benchmarking framework
+    pub mod benchmark_framework;
+    /// Common utilities used across examples
+    pub mod common;
+    /// Report generation utilities
+    pub mod report_generator;
+}
