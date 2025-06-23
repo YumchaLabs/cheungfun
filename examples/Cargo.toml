@@ -17,6 +17,7 @@ cheungfun-core = { path = "../cheungfun-core" }
 cheungfun-indexing = { path = "../cheungfun-indexing" }
 cheungfun-query = { path = "../cheungfun-query" }
 cheungfun-integrations = { path = "../cheungfun-integrations" }
+cheungfun-agents = { path = "../cheungfun-agents" }
 
 # Core async
 tokio = { workspace = true }
@@ -72,3 +73,7 @@ required-features = ["candle"]
 [[bin]]
 name = "qdrant_vector_store_demo"
 path = "src/qdrant_vector_store_demo.rs"
+
+[[bin]]
+name = "mcp_integration_example"
+path = "mcp_integration_example.rs"

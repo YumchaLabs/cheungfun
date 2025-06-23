@@ -184,7 +184,7 @@ impl AgentBuilder {
     }
 
     /// Build the agent
-    pub fn build(self) -> Result<Box<dyn Agent>> {
+    pub fn build(self) -> Result<Arc<dyn Agent>> {
         let name = self.name.unwrap_or_else(|| "unnamed_agent".to_string());
 
         // Create or use tool registry
@@ -235,7 +235,7 @@ impl AgentBuilder {
         }
 
         let agent = BasicAgent::new(config, tool_registry);
-        Ok(Box::new(agent))
+        Ok(Arc::new(agent))
     }
 
     /// Validate the agent configuration

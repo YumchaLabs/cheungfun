@@ -312,7 +312,7 @@ mod tests {
         let echo_tool = Arc::new(EchoTool::new());
 
         // Register tool
-        registry.register(Arc::clone(&echo_tool)).unwrap();
+        registry.register(echo_tool as Arc<dyn Tool>).unwrap();
         assert!(registry.contains("echo"));
         assert_eq!(registry.tool_names().len(), 1);
 

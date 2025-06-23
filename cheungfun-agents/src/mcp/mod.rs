@@ -175,18 +175,10 @@ impl McpToolRegistry {
         for tool in tools {
             let tool_info = McpToolInfo {
                 name: tool.name.to_string(),
-                description: tool
-                    .description
-                    .as_ref()
-                    .map(|d| d.to_string())
-                    .unwrap_or_default(),
+                description: tool.description.to_string(),
                 schema: ToolSchema {
                     name: tool.name.to_string(),
-                    description: tool
-                        .description
-                        .as_ref()
-                        .map(|d| d.to_string())
-                        .unwrap_or_default(),
+                    description: tool.description.to_string(),
                     input_schema: serde_json::Value::Object(tool.input_schema.as_ref().clone()),
                     output_schema: None,
                     dangerous: false,
@@ -290,18 +282,10 @@ impl McpToolRegistry {
         for tool in tools {
             let tool_info = McpToolInfo {
                 name: tool.name.to_string(),
-                description: tool
-                    .description
-                    .as_ref()
-                    .map(|d| d.to_string())
-                    .unwrap_or_default(),
+                description: tool.description.to_string(),
                 schema: ToolSchema {
                     name: tool.name.to_string(),
-                    description: tool
-                        .description
-                        .as_ref()
-                        .map(|d| d.to_string())
-                        .unwrap_or_default(),
+                    description: tool.description.to_string(),
                     input_schema: serde_json::Value::Object(tool.input_schema.as_ref().clone()),
                     output_schema: None,
                     dangerous: false,

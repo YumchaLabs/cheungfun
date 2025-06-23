@@ -197,7 +197,7 @@ impl ServerHandler for McpServerHandler {
                 .into_iter()
                 .map(|schema| RmcpTool {
                     name: schema.name.into(),
-                    description: Some(schema.description.into()),
+                    description: schema.description.into(),
                     input_schema: Arc::new(schema.input_schema.as_object().unwrap().clone()),
                 })
                 .collect();
@@ -416,7 +416,7 @@ mod tests {
             .build()
             .unwrap();
 
-        assert_eq!(server.server_info().name, "test_server");
+        assert_eq!(server.server_info().server_info.name, "test_server");
         assert!(server.available_tools().contains(&"echo".to_string()));
     }
 

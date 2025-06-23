@@ -591,6 +591,7 @@ dependencies = [
  "serde",
  "serde_json",
  "siumai",
+ "tempfile",
  "test-case",
  "thiserror 2.0.12",
  "tokio",
@@ -631,6 +632,7 @@ version = "0.1.0"
 dependencies = [
  "anyhow",
  "cheungfun",
+ "cheungfun-agents",
  "cheungfun-core",
  "cheungfun-indexing",
  "cheungfun-integrations",

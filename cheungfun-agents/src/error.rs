@@ -15,54 +15,99 @@ pub enum AgentError {
 
     /// Agent configuration errors
     #[error("Agent configuration error: {message}")]
-    Configuration { message: String },
+    Configuration {
+        /// Error message
+        message: String
+    },
 
     /// Agent execution errors
     #[error("Agent execution error: {message}")]
-    Execution { message: String },
+    Execution {
+        /// Error message
+        message: String
+    },
 
     /// Tool-related errors
     #[error("Tool error: {tool_name} - {message}")]
-    Tool { tool_name: String, message: String },
+    Tool {
+        /// Tool name
+        tool_name: String,
+        /// Error message
+        message: String
+    },
 
     /// MCP protocol errors
     #[error("MCP protocol error: {message}")]
-    Mcp { message: String },
+    Mcp {
+        /// Error message
+        message: String
+    },
 
     /// Task processing errors
     #[error("Task error: {task_id} - {message}")]
-    Task { task_id: String, message: String },
+    Task {
+        /// Task ID
+        task_id: String,
+        /// Error message
+        message: String
+    },
 
     /// Orchestration errors
     #[error("Orchestration error: {message}")]
-    Orchestration { message: String },
+    Orchestration {
+        /// Error message
+        message: String
+    },
 
     /// Workflow errors
     #[error("Workflow error: {workflow_id} - {message}")]
     Workflow {
+        /// Workflow ID
         workflow_id: String,
+        /// Error message
         message: String,
     },
 
     /// Agent communication errors
     #[error("Communication error: {message}")]
-    Communication { message: String },
+    Communication {
+        /// Error message
+        message: String
+    },
 
     /// Resource access errors
     #[error("Resource access error: {resource} - {message}")]
-    ResourceAccess { resource: String, message: String },
+    ResourceAccess {
+        /// Resource name
+        resource: String,
+        /// Error message
+        message: String
+    },
 
     /// Timeout errors
     #[error("Timeout error: {operation} took longer than {timeout_ms}ms")]
-    Timeout { operation: String, timeout_ms: u64 },
+    Timeout {
+        /// Operation name
+        operation: String,
+        /// Timeout in milliseconds
+        timeout_ms: u64
+    },
 
     /// Authentication/authorization errors
     #[error("Authentication error: {message}")]
-    Authentication { message: String },
+    Authentication {
+        /// Error message
+        message: String
+    },
 
     /// Validation errors
     #[error("Validation error: {field} - {message}")]
-    Validation { field: String, message: String },
+    Validation {
+        /// Field name
+        field: String,
+        /// Error message
+        message: String
+    },
 
     /// Serialization/deserialization errors
     #[error("Serialization error: {0}")]
@@ -74,7 +119,10 @@ pub enum AgentError {
 
     /// Generic errors with context
     #[error("Agent error: {message}")]
-    Generic { message: String },
+    Generic {
+        /// Error message
+        message: String
+    },
 }
 
 impl AgentError {

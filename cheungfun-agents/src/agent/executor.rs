@@ -394,7 +394,7 @@ mod tests {
         };
 
         let executor = AgentExecutor::with_config(
-            Arc::new(AgentBuilder::new().name("test").build().unwrap()),
+            AgentBuilder::new().name("test").build().unwrap(),
             config,
         );
 

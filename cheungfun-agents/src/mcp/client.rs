@@ -198,12 +198,14 @@ impl McpClient {
             let name = tool_value
                 .get("name")
                 .and_then(|n| n.as_str())
-                .ok_or_else(|| AgentError::mcp("Tool missing name"))?;
+                .ok_or_else(|| AgentError::mcp("Tool missing name"))?
+                .to_string();
 
             let description = tool_value
                 .get("description")
                 .and_then(|d| d.as_str())
-                .unwrap_or("No description");
+                .unwrap_or("No description")
+                .to_string();
 
             let input_schema = tool_value
                 .get("inputSchema")
@@ -211,7 +213,7 @@ impl McpClient {
 
             let tool = RmcpTool {
                 name: name.into(),
-                description: Some(description.into()),
+                description: description.into(),
                 input_schema: Arc::new(input_schema.as_object().unwrap().clone()),
             };
 

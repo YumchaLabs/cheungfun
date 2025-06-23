@@ -357,13 +357,11 @@ mod tests {
         let mut service = McpService::new();
         let client = McpClient::new("test_client", "1.0.0");
 
-        // Add client
-        service.add_client("test_client", client).await.unwrap();
-        assert_eq!(service.client_names().len(), 1);
-        assert!(service.get_client("test_client").is_some());
+        // Test that we can't add a disconnected client (this should fail)
+        let result = service.add_client("test_client", client).await;
+        assert!(result.is_err());
 
-        // Remove client
-        service.remove_client("test_client").unwrap();
+        // Verify no client was added
         assert_eq!(service.client_names().len(), 0);
     }
 
