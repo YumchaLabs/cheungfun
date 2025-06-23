@@ -172,6 +172,15 @@ pub struct ProcessingOptions {
     /// Whether to preserve metadata.
     pub preserve_metadata: bool,
 
+    /// Audio-specific processing options.
+    pub audio_options: Option<AudioProcessingOptions>,
+
+    /// Image-specific processing options.
+    pub image_options: Option<ImageProcessingOptions>,
+
+    /// Video-specific processing options.
+    pub video_options: Option<VideoProcessingOptions>,
+
     /// Custom processing parameters.
     pub custom_params: HashMap<String, serde_json::Value>,
 }
@@ -183,7 +192,127 @@ impl Default for ProcessingOptions {
             quality: Some(0.8),
             max_output_size: None,
             preserve_metadata: true,
+            audio_options: None,
+            image_options: None,
+            video_options: None,
             custom_params: HashMap::new(),
+        }
+    }
+}
+
+/// Audio-specific processing options.
+#[derive(Debug, Clone)]
+pub struct AudioProcessingOptions {
+    /// Target sample rate (Hz).
+    pub target_sample_rate: Option<u32>,
+
+    /// Target number of channels (1 = mono, 2 = stereo).
+    pub target_channels: Option<u16>,
+
+    /// Whether to normalize audio levels.
+    pub normalize: bool,
+
+    /// Trim start time in seconds.
+    pub trim_start: Option<f32>,
+
+    /// Trim duration in seconds (from start time).
+    pub trim_duration: Option<f32>,
+
+    /// Target bitrate for compressed formats.
+    pub target_bitrate: Option<u32>,
+
+    /// Whether to enable speech-to-text extraction.
+    pub extract_speech: bool,
+}
+
+impl Default for AudioProcessingOptions {
+    fn default() -> Self {
+        Self {
+            target_sample_rate: None,
+            target_channels: None,
+            normalize: false,
+            trim_start: None,
+            trim_duration: None,
+            target_bitrate: None,
+            extract_speech: false,
+        }
+    }
+}
+
+/// Image-specific processing options.
+#[derive(Debug, Clone)]
+pub struct ImageProcessingOptions {
+    /// Target width in pixels.
+    pub target_width: Option<u32>,
+
+    /// Target height in pixels.
+    pub target_height: Option<u32>,
+
+    /// Whether to maintain aspect ratio when resizing.
+    pub maintain_aspect_ratio: bool,
+
+    /// Crop region (if specified).
+    pub crop_region: Option<BoundingBox>,
+
+    /// Rotation angle in degrees.
+    pub rotation: Option<f32>,
+
+    /// Whether to preserve EXIF data.
+    pub preserve_exif: bool,
+}
+
+impl Default for ImageProcessingOptions {
+    fn default() -> Self {
+        Self {
+            target_width: None,
+            target_height: None,
+            maintain_aspect_ratio: true,
+            crop_region: None,
+            rotation: None,
+            preserve_exif: true,
+        }
+    }
+}
+
+/// Video-specific processing options.
+#[derive(Debug, Clone)]
+pub struct VideoProcessingOptions {
+    /// Target width in pixels.
+    pub target_width: Option<u32>,
+
+    /// Target height in pixels.
+    pub target_height: Option<u32>,
+
+    /// Target frame rate (fps).
+    pub target_fps: Option<f32>,
+
+    /// Whether to extract frames.
+    pub extract_frames: bool,
+
+    /// Frame extraction interval in seconds.
+    pub frame_interval: Option<f32>,
+
+    /// Trim start time in seconds.
+    pub trim_start: Option<f32>,
+
+    /// Trim duration in seconds.
+    pub trim_duration: Option<f32>,
+
+    /// Whether to extract audio track.
+    pub extract_audio: bool,
+}
+
+impl Default for VideoProcessingOptions {
+    fn default() -> Self {
+        Self {
+            target_width: None,
+            target_height: None,
+            target_fps: None,
+            extract_frames: false,
+            frame_interval: None,
+            trim_start: None,
+            trim_duration: None,
+            extract_audio: false,
         }
     }
 }

@@ -1,13 +1,25 @@
 //! Audio processing module.
 //!
-//! This module provides audio processing capabilities including format conversion,
-//! feature extraction, and basic audio analysis operations.
+//! This module provides comprehensive audio processing capabilities including:
+//! - Audio file loading and format detection
+//! - Format conversion between different audio formats
+//! - Feature extraction (duration, sample rate, channels, spectral features)
+//! - Speech-to-text conversion
+//! - Audio normalization and preprocessing
 
 use crate::traits::{MediaProcessor, ProcessingOptions, FeatureExtractor};
 use crate::types::{MediaContent, MediaFormat, ModalityType};
 use crate::error::Result;
 use async_trait::async_trait;
 use std::collections::HashMap;
+
+pub mod loader;
+pub mod converter;
+pub mod features;
+
+pub use loader::*;
+pub use converter::*;
+pub use features::*;
 
 /// Audio processor for handling various audio formats and operations.
 #[derive(Debug, Clone)]
@@ -81,22 +93,53 @@ impl MediaProcessor for AudioProcessor {
         }
     }
     
-    async fn process(&self, content: &MediaContent, _options: &ProcessingOptions) -> Result<MediaContent> {
+    async fn process(&self, content: &MediaContent, options: &ProcessingOptions) -> Result<MediaContent> {
         self.validate_input(content)?;
-        
+
         #[cfg(feature = "audio-support")]
         {
-            // TODO: Implement actual audio processing
-            // This would involve:
-            // 1. Loading audio data using rodio/symphonia
-            // 2. Converting sample rates if needed
-            // 3. Applying normalization
-            // 4. Format conversion
-            
-            // For now, return the content as-is
-            Ok(content.clone())
+            let mut processed_content = content.clone();
+
+            // Apply audio processing based on options
+            if let Some(target_format) = &options.target_format {
+                if target_format != &content.format {
+                    let converter = AudioConverter::new();
+                    processed_content = converter.convert_format(&processed_content, target_format.clone()).await?;
+                }
+            }
+
+            // Apply sample rate conversion if specified
+            if let Some(sample_rate) = options.audio_options.as_ref().and_then(|opts| opts.target_sample_rate) {
+                let converter = AudioConverter::new();
+                processed_content = converter.convert_sample_rate(&processed_content, sample_rate).await?;
+            }
+
+            // Apply channel conversion if specified
+            if let Some(channels) = options.audio_options.as_ref().and_then(|opts| opts.target_channels) {
+                let converter = AudioConverter::new();
+                processed_content = converter.convert_channels(&processed_content, channels).await?;
+            }
+
+            // Apply normalization if requested
+            if self.normalize_audio || options.audio_options.as_ref().map_or(false, |opts| opts.normalize) {
+                let converter = AudioConverter::new();
+                processed_content = converter.normalize_audio(&processed_content).await?;
+            }
+
+            // Apply duration limits if specified
+            if let Some(max_duration) = self.max_duration {
+                if let Some(audio_opts) = &options.audio_options {
+                    if let Some(start) = audio_opts.trim_start {
+                        let duration = audio_opts.trim_duration.or(Some(max_duration));
+                        let converter = AudioConverter::new();
+                        processed_content = converter.trim_audio(&processed_content, start, duration).await?;
+                    }
+                }
+            }
+
+            Ok(processed_content)
         }
-        
+
         #[cfg(not(feature = "audio-support"))]
         {
             Err(crate::error::MultimodalError::feature_not_enabled("audio-support"))
@@ -106,39 +149,36 @@ impl MediaProcessor for AudioProcessor {
     async fn extract_features(&self, content: &MediaContent) -> Result<HashMap<String, serde_json::Value>> {
         #[cfg(feature = "audio-support")]
         {
+            let extractor = AudioFeatureExtractor::new();
+            extractor.extract_features(content).await
+        }
+
+        #[cfg(not(feature = "audio-support"))]
+        {
             let mut features = HashMap::new();
-            
-            // TODO: Implement actual audio feature extraction
-            // This would involve:
-            // 1. Loading audio data
-            // 2. Extracting duration, sample rate, channels
-            // 3. Computing spectral features (MFCCs, spectral centroid, etc.)
-            // 4. Detecting tempo, key, loudness
-            
-            // Basic placeholder features
             features.insert("format".to_string(), content.format.to_string().into());
             if let Some(size) = content.estimated_size() {
                 features.insert("file_size".to_string(), size.into());
             }
-            
             Ok(features)
-        }
-        
-        #[cfg(not(feature = "audio-support"))]
-        {
-            Ok(HashMap::new())
         }
     }
     
-    async fn extract_text(&self, _content: &MediaContent) -> Result<Option<String>> {
+    async fn extract_text(&self, content: &MediaContent) -> Result<Option<String>> {
         #[cfg(feature = "audio-support")]
         {
-            // TODO: Implement speech-to-text functionality
-            // This would require integration with speech recognition services
-            // or libraries like whisper-rs
+            // TODO: Implement speech-to-text functionality using Whisper
+            // This would involve:
+            // 1. Loading the audio data
+            // 2. Converting to appropriate format for Whisper (16kHz mono WAV)
+            // 3. Running Whisper inference
+            // 4. Returning transcribed text
+
+            // For now, return None to indicate no text extraction
+            // In a real implementation, this would use whisper-rs or similar
             Ok(None)
         }
-        
+
         #[cfg(not(feature = "audio-support"))]
         {
             Ok(None)

@@ -102,5 +102,9 @@ full = [
 name = "image_processing"
 required-features = ["image-support"]
 
+[[example]]
+name = "audio_processing"
+required-features = ["audio-support"]
+
 [package.metadata.docs.rs]
 features = ["full"]
