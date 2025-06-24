@@ -72,33 +72,33 @@ async fn main() -> Result<()> {
 fn display_enabled_features() {
     info!("🔧 Enabled Features");
     info!("==================");
-    
+
     // Check compile-time features
     #[cfg(feature = "simd")]
     info!("✅ SIMD acceleration enabled");
     #[cfg(not(feature = "simd"))]
     info!("❌ SIMD acceleration disabled");
-    
+
     #[cfg(feature = "optimized-memory")]
     info!("✅ Optimized memory management enabled");
     #[cfg(not(feature = "optimized-memory"))]
     info!("❌ Optimized memory management disabled");
-    
+
     #[cfg(feature = "hnsw")]
     info!("✅ HNSW approximate search enabled");
     #[cfg(not(feature = "hnsw"))]
     info!("❌ HNSW approximate search disabled");
-    
+
     #[cfg(feature = "candle-cuda")]
     info!("✅ CUDA GPU acceleration enabled");
     #[cfg(not(feature = "candle-cuda"))]
     info!("❌ CUDA GPU acceleration disabled");
-    
+
     #[cfg(feature = "candle-metal")]
     info!("✅ Metal GPU acceleration enabled");
     #[cfg(not(feature = "candle-metal"))]
     info!("❌ Metal GPU acceleration disabled");
-    
+
     info!("");
 }
 
@@ -126,7 +126,7 @@ fn generate_test_data() -> Vec<String> {
 /// Benchmark embedding generation performance
 async fn benchmark_embeddings(texts: &[String]) -> Result<EmbeddingBenchmarkResults> {
     info!("📊 Benchmarking embedding generation...");
-    
+
     // Initialize embedder with appropriate device
     let device = if cfg!(feature = "candle-cuda") {
         Some("cuda:0".to_string())
@@ -135,12 +135,13 @@ async fn benchmark_embeddings(texts: &[String]) -> Result<EmbeddingBenchmarkResu
     } else {
         None
     };
-    
+
     let embedder = if let Some(device) = device {
         CandleEmbedder::from_pretrained_with_device(
             "sentence-transformers/all-MiniLM-L6-v2",
-            Some(device)
-        ).await?
+            Some(device),
+        )
+        .await?
     } else {
         CandleEmbedder::from_pretrained("sentence-transformers/all-MiniLM-L6-v2").await?
     };
@@ -171,9 +172,10 @@ async fn benchmark_embeddings(texts: &[String]) -> Result<EmbeddingBenchmarkResu
 /// Benchmark vector operations performance
 async fn benchmark_vector_operations(texts: &[String]) -> Result<VectorBenchmarkResults> {
     info!("📊 Benchmarking vector operations...");
-    
+
     // Initialize components
-    let embedder = CandleEmbedder::from_pretrained("sentence-transformers/all-MiniLM-L6-v2").await?;
+    let embedder =
+        CandleEmbedder::from_pretrained("sentence-transformers/all-MiniLM-L6-v2").await?;
     let vector_store = InMemoryVectorStore::new(
         embedder.dimension(),
         cheungfun_core::traits::DistanceMetric::Cosine,
@@ -214,8 +216,14 @@ fn display_embedding_results(results: &EmbeddingBenchmarkResults) {
     info!("================================");
     info!("Single embedding: {:?}", results.single_embedding_time);
     info!("Batch time: {:?}", results.batch_time);
-    info!("Average per embedding: {:?}", results.batch_time / results.texts_count as u32);
-    info!("Embeddings per second: {:.2}", results.embeddings_per_second);
+    info!(
+        "Average per embedding: {:?}",
+        results.batch_time / results.texts_count as u32
+    );
+    info!(
+        "Embeddings per second: {:.2}",
+        results.embeddings_per_second
+    );
 }
 
 /// Display vector operations benchmark results
@@ -225,7 +233,10 @@ fn display_vector_results(results: &VectorBenchmarkResults) {
     info!("========================================");
     info!("Insertion time: {:?}", results.insertion_time);
     info!("Search time: {:?}", results.search_time);
-    info!("Insertions per second: {:.2}", results.insertions_per_second);
+    info!(
+        "Insertions per second: {:.2}",
+        results.insertions_per_second
+    );
 }
 
 /// Provide performance recommendations based on results

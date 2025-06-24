@@ -8,7 +8,7 @@ use std::path::{Path, PathBuf};
 use tokio::fs;
 use tracing::{debug, error, info, warn};
 
-use super::{LoaderConfig, file::FileLoader};
+use super::{FileFilter, LoaderConfig, file::FileLoader};
 use crate::error::{IndexingError, Result};
 
 /// Loads documents from all files in a directory.
@@ -35,12 +35,14 @@ use crate::error::{IndexingError, Result};
 ///     Ok(())
 /// }
 /// ```
-#[derive(Debug, Clone)]
+#[derive(Debug)]
 pub struct DirectoryLoader {
     /// Path to the directory to load from.
     path: PathBuf,
     /// Configuration for the loader.
     config: LoaderConfig,
+    /// Enhanced file filter (if enabled).
+    file_filter: Option<FileFilter>,
 }
 
 impl DirectoryLoader {
@@ -72,13 +74,30 @@ impl DirectoryLoader {
         Ok(Self {
             path,
             config: LoaderConfig::default(),
+            file_filter: None,
         })
     }
 
     /// Create a new directory loader with custom configuration.
     pub fn with_config<P: AsRef<Path>>(path: P, config: LoaderConfig) -> Result<Self> {
-        let mut loader = Self::new(path)?;
+        let path = path.as_ref().to_path_buf();
+
+        // Create file filter if enhanced filtering is enabled
+        let file_filter = if let Some(ref filter_config) = config.filter_config {
+            match FileFilter::new(&path, filter_config.clone()) {
+                Ok(filter) => Some(filter),
+                Err(e) => {
+                    warn!("Failed to create file filter: {}", e);
+                    None
+                }
+            }
+        } else {
+            None
+        };
+
+        let mut loader = Self::new(&path)?;
         loader.config = config;
+        loader.file_filter = file_filter;
         Ok(loader)
     }
 
@@ -154,15 +173,20 @@ impl DirectoryLoader {
                         files.push(path);
                     }
                 } else if metadata.is_dir() {
-                    // Recursively process subdirectory
-                    if let Err(e) = self
-                        .find_files_recursive(&path, current_depth + 1, files)
-                        .await
-                    {
-                        error!("Failed to process directory {}: {}", path.display(), e);
-                        if !self.config.continue_on_error {
-                            return Err(e);
+                    // Check if directory should be traversed
+                    if self.should_traverse_directory(&path) {
+                        // Recursively process subdirectory
+                        if let Err(e) = self
+                            .find_files_recursive(&path, current_depth + 1, files)
+                            .await
+                        {
+                            error!("Failed to process directory {}: {}", path.display(), e);
+                            if !self.config.continue_on_error {
+                                return Err(e);
+                            }
                         }
+                    } else {
+                        debug!("Skipping directory: {}", path.display());
                     }
                 }
                 // Skip other file types (symlinks, devices, etc.)
@@ -174,6 +198,28 @@ impl DirectoryLoader {
 
     /// Check if a file should be included based on configuration.
     fn should_include_file(&self, path: &Path) -> bool {
+        // Use enhanced filtering if available
+        if let Some(ref filter) = self.file_filter {
+            return filter.should_include_file(path);
+        }
+
+        // Fall back to legacy filtering
+        self.legacy_should_include_file(path)
+    }
+
+    /// Check if a directory should be traversed.
+    fn should_traverse_directory(&self, path: &Path) -> bool {
+        // Use enhanced filtering if available
+        if let Some(ref filter) = self.file_filter {
+            return filter.should_traverse_directory(path);
+        }
+
+        // Legacy behavior: traverse all directories
+        true
+    }
+
+    /// Legacy file filtering logic (for backward compatibility).
+    fn legacy_should_include_file(&self, path: &Path) -> bool {
         // Check file extension
         if let Some(extension) = path.extension().and_then(|e| e.to_str()) {
             let ext = extension.to_lowercase();

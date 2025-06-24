@@ -7,16 +7,16 @@
 //! - Optimized data structures
 //! - Batch processing capabilities
 
+use async_trait::async_trait;
 use cheungfun_core::{
-    traits::{VectorStore, DistanceMetric},
-    types::{Node, Query, ScoredNode},
     CheungfunError, Result,
+    traits::{DistanceMetric, VectorStore},
+    types::{Node, Query, ScoredNode},
 };
 use std::collections::HashMap;
 use std::sync::{Arc, RwLock};
-use uuid::Uuid;
-use async_trait::async_trait;
 use tracing::{debug, info, warn};
+use uuid::Uuid;
 
 #[cfg(feature = "simd")]
 use crate::simd::SimdVectorOps;
@@ -271,7 +271,10 @@ impl OptimizedInMemoryVectorStore {
 #[async_trait]
 impl VectorStore for OptimizedInMemoryVectorStore {
     async fn add(&self, nodes: Vec<Node>) -> Result<Vec<Uuid>> {
-        debug!("Adding {} nodes to OptimizedInMemoryVectorStore", nodes.len());
+        debug!(
+            "Adding {} nodes to OptimizedInMemoryVectorStore",
+            nodes.len()
+        );
 
         let mut node_storage = self.nodes.write().unwrap();
         let mut vector_storage = self.vectors.write().unwrap();
@@ -308,18 +311,19 @@ impl VectorStore for OptimizedInMemoryVectorStore {
 
     async fn search(&self, query: &Query) -> Result<Vec<ScoredNode>> {
         let start_time = std::time::Instant::now();
-        
+
         debug!(
             "Searching OptimizedInMemoryVectorStore with query: '{}', top_k: {}",
             query.text, query.top_k
         );
 
-        let query_embedding = query
-            .embedding
-            .as_ref()
-            .ok_or_else(|| CheungfunError::Validation {
-                message: "Query must have an embedding for vector search".to_string(),
-            })?;
+        let query_embedding =
+            query
+                .embedding
+                .as_ref()
+                .ok_or_else(|| CheungfunError::Validation {
+                    message: "Query must have an embedding for vector search".to_string(),
+                })?;
 
         self.validate_vector(query_embedding)?;
 
@@ -332,7 +336,9 @@ impl VectorStore for OptimizedInMemoryVectorStore {
         let valid_entries: Vec<_> = vector_storage
             .iter()
             .filter_map(|(node_id, stored_vector)| {
-                node_storage.get(node_id).map(|node| (node_id, node, stored_vector))
+                node_storage
+                    .get(node_id)
+                    .map(|node| (node_id, node, stored_vector))
             })
             .filter(|(_, node, _)| self.matches_filters(node, &query.filters))
             .collect();
@@ -346,7 +352,8 @@ impl VectorStore for OptimizedInMemoryVectorStore {
             // Parallel processing would go here with rayon
             // For now, use sequential processing
             for (_node_id, node, stored_vector) in valid_entries {
-                let similarity = self.calculate_similarity_optimized(query_embedding, stored_vector)?;
+                let similarity =
+                    self.calculate_similarity_optimized(query_embedding, stored_vector)?;
 
                 if let Some(threshold) = query.similarity_threshold {
                     if similarity < threshold {
@@ -359,7 +366,8 @@ impl VectorStore for OptimizedInMemoryVectorStore {
         } else {
             // Sequential processing
             for (_node_id, node, stored_vector) in valid_entries {
-                let similarity = self.calculate_similarity_optimized(query_embedding, stored_vector)?;
+                let similarity =
+                    self.calculate_similarity_optimized(query_embedding, stored_vector)?;
 
                 if let Some(threshold) = query.similarity_threshold {
                     if similarity < threshold {
@@ -397,7 +405,10 @@ impl VectorStore for OptimizedInMemoryVectorStore {
     }
 
     async fn get(&self, node_ids: Vec<Uuid>) -> Result<Vec<Option<Node>>> {
-        debug!("Getting {} nodes from OptimizedInMemoryVectorStore", node_ids.len());
+        debug!(
+            "Getting {} nodes from OptimizedInMemoryVectorStore",
+            node_ids.len()
+        );
 
         let node_storage = self.nodes.read().unwrap();
         let results = node_ids
@@ -409,7 +420,10 @@ impl VectorStore for OptimizedInMemoryVectorStore {
     }
 
     async fn update(&self, nodes: Vec<Node>) -> Result<()> {
-        debug!("Updating {} nodes in OptimizedInMemoryVectorStore", nodes.len());
+        debug!(
+            "Updating {} nodes in OptimizedInMemoryVectorStore",
+            nodes.len()
+        );
 
         let mut node_storage = self.nodes.write().unwrap();
         let mut vector_storage = self.vectors.write().unwrap();
@@ -442,7 +456,10 @@ impl VectorStore for OptimizedInMemoryVectorStore {
     }
 
     async fn delete(&self, node_ids: Vec<Uuid>) -> Result<()> {
-        debug!("Deleting {} nodes from OptimizedInMemoryVectorStore", node_ids.len());
+        debug!(
+            "Deleting {} nodes from OptimizedInMemoryVectorStore",
+            node_ids.len()
+        );
 
         let mut node_storage = self.nodes.write().unwrap();
         let mut vector_storage = self.vectors.write().unwrap();
@@ -476,7 +493,10 @@ impl VectorStore for OptimizedInMemoryVectorStore {
             });
         }
 
-        debug!("OptimizedInMemoryVectorStore health check passed: {} nodes", node_count);
+        debug!(
+            "OptimizedInMemoryVectorStore health check passed: {} nodes",
+            node_count
+        );
         Ok(())
     }
 }

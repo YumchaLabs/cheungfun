@@ -56,51 +56,51 @@ impl Default for TestConfig {
 fn main() -> Result<(), Box<dyn std::error::Error>> {
     println!("🚀 Cheungfun Performance Testing Suite");
     println!("======================================");
-    
+
     let config = parse_args()?;
     print_config(&config);
-    
+
     let start_time = Instant::now();
     let mut results = Vec::new();
-    
+
     // Run comprehensive performance benchmark (main test)
     if config.run_comprehensive {
         println!("\n📊 Running Comprehensive Performance Benchmark");
         println!("==============================================");
-        
+
         let result = run_test("performance_benchmark", &config)?;
         results.push(("Comprehensive Benchmark", result));
     }
-    
+
     // Run specific component tests
     if config.run_embedders {
         println!("\n🔥 Running Embedder Benchmarks");
         println!("==============================");
-        
+
         let result = run_test("embedder_benchmark", &config)?;
         results.push(("Embedder Benchmark", result));
     }
-    
+
     if config.run_vector_stores {
         println!("\n🗄️  Running Vector Store Benchmarks");
         println!("===================================");
-        
+
         let result = run_test("vector_store_benchmark", &config)?;
         results.push(("Vector Store Benchmark", result));
     }
-    
+
     if config.run_end_to_end {
         println!("\n🔄 Running End-to-End Benchmarks");
         println!("================================");
-        
+
         let result = run_test("end_to_end_benchmark", &config)?;
         results.push(("End-to-End Benchmark", result));
     }
-    
+
     // Print summary
     let total_time = start_time.elapsed();
     print_summary(&results, total_time);
-    
+
     Ok(())
 }
 
@@ -108,7 +108,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
 fn parse_args() -> Result<TestConfig, Box<dyn std::error::Error>> {
     let args: Vec<String> = env::args().collect();
     let mut config = TestConfig::default();
-    
+
     let mut i = 1;
     while i < args.len() {
         match args[i].as_str() {
@@ -141,7 +141,10 @@ fn parse_args() -> Result<TestConfig, Box<dyn std::error::Error>> {
             }
             "--features" => {
                 if i + 1 < args.len() {
-                    config.features = args[i + 1].split(',').map(|s| s.trim().to_string()).collect();
+                    config.features = args[i + 1]
+                        .split(',')
+                        .map(|s| s.trim().to_string())
+                        .collect();
                     i += 1;
                 }
             }
@@ -157,7 +160,7 @@ fn parse_args() -> Result<TestConfig, Box<dyn std::error::Error>> {
         }
         i += 1;
     }
-    
+
     Ok(config)
 }
 
@@ -170,24 +173,24 @@ fn print_config(config: &TestConfig) {
     println!("  Comprehensive: {}", config.run_comprehensive);
     println!("  Release Mode: {}", config.use_release);
     println!("  Features: {:?}", config.features);
-    
+
     // Show enabled features
     println!("\nEnabled Rust features:");
     #[cfg(feature = "simd")]
     println!("  ✅ SIMD acceleration");
     #[cfg(not(feature = "simd"))]
     println!("  ❌ SIMD acceleration");
-    
+
     #[cfg(feature = "optimized-memory")]
     println!("  ✅ Optimized memory stores");
     #[cfg(not(feature = "optimized-memory"))]
     println!("  ❌ Optimized memory stores");
-    
+
     #[cfg(feature = "hnsw")]
     println!("  ✅ HNSW approximate search");
     #[cfg(not(feature = "hnsw"))]
     println!("  ❌ HNSW approximate search");
-    
+
     #[cfg(feature = "performance")]
     println!("  ✅ Performance bundle");
     #[cfg(not(feature = "performance"))]
@@ -197,33 +200,30 @@ fn print_config(config: &TestConfig) {
 /// Run a specific test
 fn run_test(test_name: &str, config: &TestConfig) -> Result<bool, Box<dyn std::error::Error>> {
     let mut cmd = Command::new("cargo");
-    cmd.arg("run")
-       .arg("--bin")
-       .arg(test_name);
-    
+    cmd.arg("run").arg("--bin").arg(test_name);
+
     if config.use_release {
         cmd.arg("--release");
     }
-    
+
     if !config.features.is_empty() {
         cmd.arg("--features");
         cmd.arg(config.features.join(","));
     }
-    
-    cmd.stdout(Stdio::inherit())
-       .stderr(Stdio::inherit());
-    
+
+    cmd.stdout(Stdio::inherit()).stderr(Stdio::inherit());
+
     println!("Running: {:?}", cmd);
-    
+
     let start = Instant::now();
     let status = cmd.status()?;
     let duration = start.elapsed();
-    
+
     let success = status.success();
     let status_icon = if success { "✅" } else { "❌" };
-    
+
     println!("{} {} completed in {:?}", status_icon, test_name, duration);
-    
+
     Ok(success)
 }
 
@@ -231,21 +231,21 @@ fn run_test(test_name: &str, config: &TestConfig) -> Result<bool, Box<dyn std::e
 fn print_summary(results: &[(&str, bool)], total_time: std::time::Duration) {
     println!("\n📈 Performance Testing Summary");
     println!("=============================");
-    
+
     let successful = results.iter().filter(|(_, success)| *success).count();
     let total = results.len();
-    
+
     println!("Total tests: {}", total);
     println!("Successful: {}", successful);
     println!("Failed: {}", total - successful);
     println!("Total time: {:?}", total_time);
-    
+
     println!("\nDetailed results:");
     for (name, success) in results {
         let status = if *success { "✅ PASS" } else { "❌ FAIL" };
         println!("  {} {}", status, name);
     }
-    
+
     if successful == total {
         println!("\n🎉 All performance tests completed successfully!");
     } else {

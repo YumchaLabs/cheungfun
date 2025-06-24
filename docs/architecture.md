@@ -131,11 +131,48 @@ async fn main() -> Result<()> {
 }
 ```
 
-## 📋 开发路线图
+## � 增强文件过滤系统
+
+### 核心特性
+- **🎯 Gitignore 支持**: 自动识别和应用 `.gitignore` 规则
+- **🌟 Glob 模式**: 支持复杂的 glob 模式匹配 (`*.rs`, `**/*.tmp`, `src/**`)
+- **📏 文件大小过滤**: 基于文件大小的智能过滤
+- **🔤 大小写控制**: 可配置的大小写敏感匹配
+- **📁 隐藏文件处理**: 可选的隐藏文件排除
+- **⚡ 高性能**: 使用 `ignore` 和 `globset` crate 优化性能
+
+### 使用示例
+
+```rust
+use cheungfun_indexing::loaders::{DirectoryLoader, FilterConfig, LoaderConfig};
+
+// 基础 gitignore 支持
+let filter = FilterConfig::new()
+    .with_respect_gitignore(true)
+    .with_exclude_hidden(true);
+
+let config = LoaderConfig::new().with_filter_config(filter);
+let loader = DirectoryLoader::with_config("./src", config)?;
+
+// 源代码专用过滤
+let config = LoaderConfig::new().with_source_code_filtering();
+
+// 自定义 glob 模式
+let filter = FilterConfig::new()
+    .with_exclude_patterns(vec!["target/**".to_string(), "*.log".to_string()])
+    .with_include_patterns(vec!["src/**/*.rs".to_string()]);
+```
+
+### 预设配置
+- `FilterConfig::source_code_only()`: 仅处理源代码文件
+- `FilterConfig::text_files_only()`: 仅处理文本文件
+- `LoaderConfig::with_enhanced_filtering()`: 启用默认增强过滤
+
+## �📋 开发路线图
 
 ### 第一阶段 (核心功能)
 - [ ] cheungfun-core: 基础trait和数据结构
-- [ ] cheungfun-indexing: 文件加载和文本处理
+- [x] cheungfun-indexing: 文件加载和文本处理 ✅ **增强文件过滤已完成**
 - [ ] cheungfun-query: 基础查询引擎
 - [ ] Candle嵌入生成器
 - [ ] 内存向量存储

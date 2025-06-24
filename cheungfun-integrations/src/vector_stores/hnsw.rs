@@ -7,16 +7,16 @@
 //! - Excellent performance scaling
 //! - Memory efficient storage
 
+use async_trait::async_trait;
 use cheungfun_core::{
-    traits::{VectorStore, DistanceMetric},
-    types::{Node, Query, ScoredNode},
     CheungfunError, Result,
+    traits::{DistanceMetric, VectorStore},
+    types::{Node, Query, ScoredNode},
 };
 use std::collections::HashMap;
 use std::sync::{Arc, RwLock};
-use uuid::Uuid;
-use async_trait::async_trait;
 use tracing::{debug, info, warn};
+use uuid::Uuid;
 
 #[cfg(feature = "hnsw")]
 use hnsw_rs::prelude::*;
@@ -131,7 +131,7 @@ impl HnswVectorStore {
     #[cfg(feature = "hnsw")]
     pub fn initialize_index(&self, estimated_capacity: usize) -> Result<()> {
         let mut index_guard = self.hnsw_index.write().unwrap();
-        
+
         if index_guard.is_some() {
             warn!("HNSW index already initialized");
             return Ok(());
@@ -146,8 +146,11 @@ impl HnswVectorStore {
         );
 
         *index_guard = Some(hnsw);
-        info!("HNSW index initialized with capacity: {}", estimated_capacity);
-        
+        info!(
+            "HNSW index initialized with capacity: {}",
+            estimated_capacity
+        );
+
         Ok(())
     }
 
@@ -168,7 +171,7 @@ impl HnswVectorStore {
         }
 
         info!("Rebuilding HNSW index for {} nodes", node_count);
-        
+
         // Clear existing index
         {
             let mut index_guard = self.hnsw_index.write().unwrap();
@@ -181,7 +184,7 @@ impl HnswVectorStore {
         // Re-add all nodes
         let nodes = self.nodes.read().unwrap();
         let mut vectors_to_add = Vec::new();
-        
+
         for (uuid, node) in nodes.iter() {
             if let Some(ref embedding) = node.embedding {
                 vectors_to_add.push((*uuid, embedding.clone()));
@@ -202,7 +205,7 @@ impl HnswVectorStore {
     #[cfg(feature = "hnsw")]
     fn add_vector_to_index(&self, uuid: Uuid, embedding: &[f32]) -> Result<()> {
         let mut index_guard = self.hnsw_index.write().unwrap();
-        
+
         if let Some(ref mut hnsw) = index_guard.as_mut() {
             let internal_id = {
                 let mut next_id = self.next_id.write().unwrap();
@@ -218,7 +221,7 @@ impl HnswVectorStore {
             {
                 let mut id_mapping = self.id_mapping.write().unwrap();
                 let mut reverse_mapping = self.reverse_id_mapping.write().unwrap();
-                
+
                 id_mapping.insert(internal_id, uuid);
                 reverse_mapping.insert(uuid, internal_id);
             }
@@ -241,15 +244,15 @@ impl HnswVectorStore {
     #[cfg(feature = "hnsw")]
     fn search_hnsw(&self, query_embedding: &[f32], top_k: usize) -> Result<Vec<(Uuid, f32)>> {
         let start_time = std::time::Instant::now();
-        
+
         let index_guard = self.hnsw_index.read().unwrap();
-        
+
         if let Some(ref hnsw) = index_guard.as_ref() {
             let search_results = hnsw.search(query_embedding, top_k, self.config.ef_search);
-            
+
             let mut results = Vec::new();
             let id_mapping = self.id_mapping.read().unwrap();
-            
+
             for neighbor in search_results {
                 if let Some(&uuid) = id_mapping.get(&neighbor.d_id) {
                     // Convert distance to similarity (HNSW returns distances)
@@ -263,8 +266,9 @@ impl HnswVectorStore {
                 let mut stats = self.stats.write().unwrap();
                 stats.searches_performed += 1;
                 let search_time_us = start_time.elapsed().as_micros() as f64;
-                stats.avg_search_time_us = 
-                    (stats.avg_search_time_us * (stats.searches_performed - 1) as f64 + search_time_us) 
+                stats.avg_search_time_us = (stats.avg_search_time_us
+                    * (stats.searches_performed - 1) as f64
+                    + search_time_us)
                     / stats.searches_performed as f64;
             }
 
@@ -280,7 +284,7 @@ impl HnswVectorStore {
     #[cfg(not(feature = "hnsw"))]
     fn search_linear(&self, query_embedding: &[f32], top_k: usize) -> Result<Vec<(Uuid, f32)>> {
         warn!("HNSW feature not enabled, falling back to linear search");
-        
+
         let nodes = self.nodes.read().unwrap();
         let mut scored_results = Vec::new();
 
@@ -309,7 +313,7 @@ impl HnswVectorStore {
                 let dot_product: f32 = vec1.iter().zip(vec2.iter()).map(|(a, b)| a * b).sum();
                 let norm1: f32 = vec1.iter().map(|x| x * x).sum::<f32>().sqrt();
                 let norm2: f32 = vec2.iter().map(|x| x * x).sum::<f32>().sqrt();
-                
+
                 if norm1 == 0.0 || norm2 == 0.0 {
                     0.0
                 } else {
@@ -325,9 +329,7 @@ impl HnswVectorStore {
                     .sqrt();
                 1.0 / (1.0 + distance)
             }
-            DistanceMetric::DotProduct => {
-                vec1.iter().zip(vec2.iter()).map(|(a, b)| a * b).sum()
-            }
+            DistanceMetric::DotProduct => vec1.iter().zip(vec2.iter()).map(|(a, b)| a * b).sum(),
             DistanceMetric::Manhattan => {
                 let distance: f32 = vec1
                     .iter()
@@ -341,7 +343,7 @@ impl HnswVectorStore {
                 let dot_product: f32 = vec1.iter().zip(vec2.iter()).map(|(a, b)| a * b).sum();
                 let norm1: f32 = vec1.iter().map(|x| x * x).sum::<f32>().sqrt();
                 let norm2: f32 = vec2.iter().map(|x| x * x).sum::<f32>().sqrt();
-                
+
                 if norm1 == 0.0 || norm2 == 0.0 {
                     0.0
                 } else {
@@ -413,11 +415,13 @@ impl VectorStore for HnswVectorStore {
     async fn search(&self, query: &Query) -> Result<Vec<ScoredNode>> {
         debug!("Searching HNSW vector store with query: {:?}", query.text);
 
-        let query_embedding = query.embedding.as_ref().ok_or_else(|| {
-            CheungfunError::Validation {
-                message: "Query embedding is required for vector search".to_string(),
-            }
-        })?;
+        let query_embedding =
+            query
+                .embedding
+                .as_ref()
+                .ok_or_else(|| CheungfunError::Validation {
+                    message: "Query embedding is required for vector search".to_string(),
+                })?;
 
         if query_embedding.len() != self.dimension {
             return Err(CheungfunError::Validation {
@@ -556,7 +560,10 @@ impl VectorStore for HnswVectorStore {
             }
         }
 
-        debug!("HNSW vector store health check passed: {} nodes", node_count);
+        debug!(
+            "HNSW vector store health check passed: {} nodes",
+            node_count
+        );
         Ok(())
     }
 

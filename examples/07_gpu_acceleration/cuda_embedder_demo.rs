@@ -63,8 +63,9 @@ async fn main() -> Result<()> {
     info!("🔧 Initializing CUDA embedder...");
     let embedder = CandleEmbedder::from_pretrained_with_device(
         "sentence-transformers/all-MiniLM-L6-v2",
-        Some("cuda:0".to_string())
-    ).await?;
+        Some("cuda:0".to_string()),
+    )
+    .await?;
 
     info!("✅ CUDA embedder initialized");
     info!("   Model: {}", embedder.model_name());
@@ -99,31 +100,37 @@ async fn main() -> Result<()> {
     info!("📊 Benchmarking batch embedding generation...");
     let start = Instant::now();
     let mut all_embeddings = Vec::new();
-    
+
     for (i, text) in test_texts.iter().enumerate() {
         let embedding = embedder.embed(text).await?;
         all_embeddings.push(embedding);
-        
+
         if (i + 1) % 5 == 0 {
             info!("   Processed {}/{} embeddings", i + 1, test_texts.len());
         }
     }
-    
+
     let batch_time = start.elapsed();
 
     info!("✅ Batch embeddings completed");
     info!("   Total time: {:?}", batch_time);
-    info!("   Average per embedding: {:?}", batch_time / test_texts.len() as u32);
-    info!("   Embeddings per second: {:.2}", test_texts.len() as f64 / batch_time.as_secs_f64());
+    info!(
+        "   Average per embedding: {:?}",
+        batch_time / test_texts.len() as u32
+    );
+    info!(
+        "   Embeddings per second: {:.2}",
+        test_texts.len() as f64 / batch_time.as_secs_f64()
+    );
 
     // Performance comparison simulation
     info!("📈 Performance Analysis");
     info!("======================");
-    
+
     // Simulate CPU performance (estimated)
     let estimated_cpu_time = batch_time * 3; // Assume GPU is ~3x faster
     let speedup = estimated_cpu_time.as_secs_f64() / batch_time.as_secs_f64();
-    
+
     info!("🖥️  Estimated CPU time: {:?}", estimated_cpu_time);
     info!("🚀 GPU time: {:?}", batch_time);
     info!("⚡ Estimated speedup: {:.2}x", speedup);
@@ -131,11 +138,15 @@ async fn main() -> Result<()> {
     // Memory usage info
     info!("💾 Memory Usage");
     info!("===============");
-    info!("   Each embedding: {} floats × 4 bytes = {} KB", 
-          single_embedding.len(), 
-          single_embedding.len() * 4 / 1024);
-    info!("   Total embeddings: {} KB", 
-          all_embeddings.len() * single_embedding.len() * 4 / 1024);
+    info!(
+        "   Each embedding: {} floats × 4 bytes = {} KB",
+        single_embedding.len(),
+        single_embedding.len() * 4 / 1024
+    );
+    info!(
+        "   Total embeddings: {} KB",
+        all_embeddings.len() * single_embedding.len() * 4 / 1024
+    );
 
     // GPU utilization tips
     info!("💡 GPU Optimization Tips");
@@ -154,7 +165,7 @@ async fn main() -> Result<()> {
 /// Check if CUDA is available
 fn is_cuda_available() -> bool {
     // This is a simplified check - in practice, you'd use candle's device detection
-    std::env::var("CUDA_VISIBLE_DEVICES").is_ok() || 
-    std::path::Path::new("/usr/local/cuda").exists() ||
-    std::path::Path::new("/opt/cuda").exists()
+    std::env::var("CUDA_VISIBLE_DEVICES").is_ok()
+        || std::path::Path::new("/usr/local/cuda").exists()
+        || std::path::Path::new("/opt/cuda").exists()
 }

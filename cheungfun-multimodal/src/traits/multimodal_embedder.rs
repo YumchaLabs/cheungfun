@@ -3,8 +3,8 @@
 //! This module defines traits for generating embeddings from different modalities
 //! and performing cross-modal embedding operations.
 
-use crate::types::{MediaContent, ModalityType};
 use crate::error::Result;
+use crate::types::{MediaContent, ModalityType};
 use async_trait::async_trait;
 use std::collections::HashMap;
 
@@ -80,10 +80,22 @@ pub trait MultimodalEmbedder: Send + Sync + std::fmt::Debug {
     fn metadata(&self) -> HashMap<String, serde_json::Value> {
         let mut metadata = HashMap::new();
         metadata.insert("model_name".to_string(), self.model_name().into());
-        metadata.insert("embedding_dimension".to_string(), self.embedding_dimension().into());
-        metadata.insert("cross_modal_dimension".to_string(), self.cross_modal_dimension().into());
-        metadata.insert("supported_modalities".to_string(), 
-                        self.supported_modalities().iter().map(|m| m.to_string()).collect::<Vec<_>>().into());
+        metadata.insert(
+            "embedding_dimension".to_string(),
+            self.embedding_dimension().into(),
+        );
+        metadata.insert(
+            "cross_modal_dimension".to_string(),
+            self.cross_modal_dimension().into(),
+        );
+        metadata.insert(
+            "supported_modalities".to_string(),
+            self.supported_modalities()
+                .iter()
+                .map(|m| m.to_string())
+                .collect::<Vec<_>>()
+                .into(),
+        );
         metadata
     }
 
@@ -133,14 +145,16 @@ pub trait MultimodalSimilarity: MultimodalEmbedder {
             return Ok(None);
         }
 
-        let query_embedding = self.embed_cross_modal(query_content, query_modality).await?;
+        let query_embedding = self
+            .embed_cross_modal(query_content, query_modality)
+            .await?;
         let mut best_index = 0;
         let mut best_similarity = f32::NEG_INFINITY;
 
         for (i, (content, modality)) in candidates.iter().enumerate() {
             let candidate_embedding = self.embed_cross_modal(content, *modality).await?;
             let similarity = self.compute_similarity(&query_embedding, &candidate_embedding)?;
-            
+
             if similarity > best_similarity {
                 best_similarity = similarity;
                 best_index = i;
@@ -155,10 +169,17 @@ pub trait MultimodalSimilarity: MultimodalEmbedder {
 #[async_trait]
 pub trait ModalitySpecificEmbedder: MultimodalEmbedder {
     /// Get modality-specific configuration.
-    fn get_modality_config(&self, modality: ModalityType) -> Option<HashMap<String, serde_json::Value>>;
+    fn get_modality_config(
+        &self,
+        modality: ModalityType,
+    ) -> Option<HashMap<String, serde_json::Value>>;
 
     /// Set modality-specific configuration.
-    fn set_modality_config(&mut self, modality: ModalityType, config: HashMap<String, serde_json::Value>) -> Result<()>;
+    fn set_modality_config(
+        &mut self,
+        modality: ModalityType,
+        config: HashMap<String, serde_json::Value>,
+    ) -> Result<()>;
 
     /// Get the optimal batch size for a specific modality.
     fn optimal_batch_size(&self, modality: ModalityType) -> usize {
@@ -288,7 +309,7 @@ impl MultimodalEmbeddingStats {
         let successes = self.embeddings_per_modality.get(&modality).unwrap_or(&0);
         let failures = self.failures_per_modality.get(&modality).unwrap_or(&0);
         let total = successes + failures;
-        
+
         if total == 0 {
             0.0
         } else {

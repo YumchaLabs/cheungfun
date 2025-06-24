@@ -29,13 +29,12 @@
 //! - `performance`: Enable all performance optimizations (simd + optimized-memory + hnsw)
 
 use cheungfun_core::{
+    DistanceMetric, Result,
     traits::VectorStore,
     types::{ChunkInfo, Node, Query},
-    DistanceMetric, Result,
 };
 use cheungfun_integrations::vector_stores::{
-    memory::InMemoryVectorStore,
-    memory_optimized::OptimizedInMemoryVectorStore,
+    memory::InMemoryVectorStore, memory_optimized::OptimizedInMemoryVectorStore,
 };
 use std::time::Instant;
 use uuid::Uuid;
@@ -121,8 +120,11 @@ impl BenchmarkResult {
         println!("Total query time: {} ms", self.total_query_time_ms);
         println!("Average query time: {:.2} ms", self.avg_query_time_ms);
         println!("Queries per second: {:.2}", self.qps);
-        println!("Memory usage: {:.2} MB", self.memory_usage_bytes as f64 / 1_048_576.0);
-        
+        println!(
+            "Memory usage: {:.2} MB",
+            self.memory_usage_bytes as f64 / 1_048_576.0
+        );
+
         if !self.additional_metrics.is_empty() {
             println!("Additional metrics:");
             for (key, value) in &self.additional_metrics {
@@ -136,25 +138,22 @@ impl BenchmarkResult {
 fn generate_test_vectors(num_vectors: usize, dimension: usize) -> Vec<Node> {
     use rand::Rng;
     let mut rng = rand::thread_rng();
-    
+
     (0..num_vectors)
         .map(|i| {
-            let embedding: Vec<f32> = (0..dimension)
-                .map(|_| rng.gen_range(-1.0..1.0))
-                .collect();
-            
+            let embedding: Vec<f32> = (0..dimension).map(|_| rng.gen_range(-1.0..1.0)).collect();
+
             let mut metadata = std::collections::HashMap::new();
             metadata.insert("index".to_string(), serde_json::Value::Number(i.into()));
-            metadata.insert("category".to_string(), serde_json::Value::String(format!("cat_{}", i % 10)));
-            
+            metadata.insert(
+                "category".to_string(),
+                serde_json::Value::String(format!("cat_{}", i % 10)),
+            );
+
             {
                 let source_doc_id = Uuid::new_v4();
                 let chunk_info = ChunkInfo::new(i * 100, (i + 1) * 100, i);
-                let mut node = Node::new(
-                    format!("Document {}", i),
-                    source_doc_id,
-                    chunk_info,
-                );
+                let mut node = Node::new(format!("Document {}", i), source_doc_id, chunk_info);
                 node.embedding = Some(embedding);
                 node.metadata = metadata;
                 node
@@ -167,13 +166,11 @@ fn generate_test_vectors(num_vectors: usize, dimension: usize) -> Vec<Node> {
 fn generate_test_queries(num_queries: usize, dimension: usize, top_k: usize) -> Vec<Query> {
     use rand::Rng;
     let mut rng = rand::thread_rng();
-    
+
     (0..num_queries)
         .map(|i| {
-            let embedding: Vec<f32> = (0..dimension)
-                .map(|_| rng.gen_range(-1.0..1.0))
-                .collect();
-            
+            let embedding: Vec<f32> = (0..dimension).map(|_| rng.gen_range(-1.0..1.0)).collect();
+
             Query::new(format!("Query {}", i))
                 .with_embedding(embedding)
                 .with_top_k(top_k)
@@ -188,28 +185,28 @@ async fn benchmark_basic_memory_store(
     test_queries: &[Query],
 ) -> Result<BenchmarkResult> {
     let mut result = BenchmarkResult::new("Basic InMemoryVectorStore".to_string());
-    
+
     // Create store
     let store = InMemoryVectorStore::new(config.dimension, config.distance_metric.clone());
-    
+
     // Benchmark indexing
     let start_time = Instant::now();
     store.add(test_vectors.to_vec()).await?;
     result.indexing_time_ms = start_time.elapsed().as_millis() as u64;
-    
+
     // Benchmark queries
     let start_time = Instant::now();
     for query in test_queries {
         let _results = store.search(query).await?;
     }
     result.total_query_time_ms = start_time.elapsed().as_millis() as u64;
-    
+
     result.calculate_derived_metrics(test_queries.len());
-    
+
     // Estimate memory usage
     result.memory_usage_bytes = test_vectors.len() * config.dimension * 4 + // f32 vectors
                                test_vectors.len() * 200; // estimated node overhead
-    
+
     Ok(result)
 }
 
@@ -220,10 +217,10 @@ async fn benchmark_optimized_memory_store(
     test_queries: &[Query],
 ) -> Result<BenchmarkResult> {
     let mut result = BenchmarkResult::new("Optimized InMemoryVectorStore".to_string());
-    
+
     // Create store
     let store = OptimizedInMemoryVectorStore::new(config.dimension, config.distance_metric.clone());
-    
+
     // Add SIMD capability info
     result.additional_metrics.insert(
         "SIMD Available".to_string(),
@@ -233,21 +230,21 @@ async fn benchmark_optimized_memory_store(
         "SIMD Capabilities".to_string(),
         store.get_simd_capabilities(),
     );
-    
+
     // Benchmark indexing
     let start_time = Instant::now();
     store.add(test_vectors.to_vec()).await?;
     result.indexing_time_ms = start_time.elapsed().as_millis() as u64;
-    
+
     // Benchmark queries
     let start_time = Instant::now();
     for query in test_queries {
         let _results = store.search(query).await?;
     }
     result.total_query_time_ms = start_time.elapsed().as_millis() as u64;
-    
+
     result.calculate_derived_metrics(test_queries.len());
-    
+
     // Get performance statistics
     let stats = store.get_stats();
     result.additional_metrics.insert(
@@ -258,12 +255,12 @@ async fn benchmark_optimized_memory_store(
         "Parallel Operations".to_string(),
         stats.parallel_operations.to_string(),
     );
-    
+
     // Estimate memory usage (optimized layout)
     result.memory_usage_bytes = test_vectors.len() * config.dimension * 4 + // f32 vectors
                                test_vectors.len() * 4 + // f32 norms
                                test_vectors.len() * 200; // estimated node overhead
-    
+
     Ok(result)
 }
 
@@ -295,10 +292,9 @@ async fn benchmark_hnsw_store(
 
     // Get HNSW-specific metrics
     let hnsw_stats = store.get_stats();
-    result.additional_metrics.insert(
-        "HNSW Layers".to_string(),
-        hnsw_stats.num_layers.to_string(),
-    );
+    result
+        .additional_metrics
+        .insert("HNSW Layers".to_string(), hnsw_stats.num_layers.to_string());
     result.additional_metrics.insert(
         "HNSW Connections".to_string(),
         hnsw_stats.total_connections.to_string(),
@@ -357,7 +353,10 @@ async fn test_simd_operations(config: &BenchmarkConfig) -> Result<()> {
     println!("SIMD one-to-many operations:");
     println!("  Operations: {}", num_pairs);
     println!("  Time: {:?}", simd_time);
-    println!("  Ops/sec: {:.2}", num_pairs as f64 / simd_time.as_secs_f64());
+    println!(
+        "  Ops/sec: {:.2}",
+        num_pairs as f64 / simd_time.as_secs_f64()
+    );
 
     Ok(())
 }
@@ -393,18 +392,23 @@ async fn run_performance_comparison() -> Result<()> {
     println!("  Queries: {}", config.num_queries);
     println!("  Top-k: {}", config.top_k);
     println!("  Distance metric: {:?}", config.distance_metric);
-    
+
     // Generate test data
     println!("\n📊 Generating test data...");
     let test_vectors = generate_test_vectors(config.num_vectors, config.dimension);
     let test_queries = generate_test_queries(config.num_queries, config.dimension, config.top_k);
-    println!("Generated {} vectors and {} queries", test_vectors.len(), test_queries.len());
-    
+    println!(
+        "Generated {} vectors and {} queries",
+        test_vectors.len(),
+        test_queries.len()
+    );
+
     // Run benchmarks
     println!("\n🔬 Running benchmarks...");
 
     let basic_result = benchmark_basic_memory_store(&config, &test_vectors, &test_queries).await?;
-    let optimized_result = benchmark_optimized_memory_store(&config, &test_vectors, &test_queries).await?;
+    let optimized_result =
+        benchmark_optimized_memory_store(&config, &test_vectors, &test_queries).await?;
 
     // Run HNSW benchmark if feature is enabled
     #[cfg(feature = "hnsw")]
@@ -423,36 +427,45 @@ async fn run_performance_comparison() -> Result<()> {
     if let Some(ref result) = hnsw_result {
         result.print_summary();
     }
-    
+
     // Calculate improvements
     println!("\n📈 Performance Improvements");
     println!("===========================");
 
     if basic_result.total_query_time_ms > 0 {
-        let query_speedup = basic_result.total_query_time_ms as f64 / optimized_result.total_query_time_ms as f64;
+        let query_speedup =
+            basic_result.total_query_time_ms as f64 / optimized_result.total_query_time_ms as f64;
         println!("Optimized vs Basic - Query speedup: {:.2}x", query_speedup);
 
         #[cfg(feature = "hnsw")]
         if let Some(ref hnsw_result) = hnsw_result {
             if hnsw_result.total_query_time_ms > 0 {
-                let hnsw_speedup = basic_result.total_query_time_ms as f64 / hnsw_result.total_query_time_ms as f64;
+                let hnsw_speedup = basic_result.total_query_time_ms as f64
+                    / hnsw_result.total_query_time_ms as f64;
                 println!("HNSW vs Basic - Query speedup: {:.2}x", hnsw_speedup);
             }
         }
     }
 
     if basic_result.indexing_time_ms > 0 {
-        let indexing_speedup = basic_result.indexing_time_ms as f64 / optimized_result.indexing_time_ms as f64;
-        println!("Optimized vs Basic - Indexing speedup: {:.2}x", indexing_speedup);
+        let indexing_speedup =
+            basic_result.indexing_time_ms as f64 / optimized_result.indexing_time_ms as f64;
+        println!(
+            "Optimized vs Basic - Indexing speedup: {:.2}x",
+            indexing_speedup
+        );
     }
 
     let qps_improvement = (optimized_result.qps - basic_result.qps) / basic_result.qps * 100.0;
-    println!("Optimized vs Basic - QPS improvement: {:.1}%", qps_improvement);
+    println!(
+        "Optimized vs Basic - QPS improvement: {:.1}%",
+        qps_improvement
+    );
 
     // Test SIMD operations if available
     #[cfg(feature = "simd")]
     test_simd_operations(&config).await?;
-    
+
     Ok(())
 }
 
@@ -460,27 +473,31 @@ async fn run_performance_comparison() -> Result<()> {
 async fn run_scale_benchmarks() -> Result<()> {
     println!("\n🔍 Scale Benchmarks");
     println!("==================");
-    
+
     let scales = vec![1_000, 5_000, 10_000, 50_000];
-    
+
     for scale in scales {
         println!("\n--- Scale: {} vectors ---", scale);
-        
+
         let config = BenchmarkConfig {
             num_vectors: scale,
             num_queries: 50,
             ..Default::default()
         };
-        
+
         let test_vectors = generate_test_vectors(config.num_vectors, config.dimension);
-        let test_queries = generate_test_queries(config.num_queries, config.dimension, config.top_k);
-        
-        let result = benchmark_optimized_memory_store(&config, &test_vectors, &test_queries).await?;
-        
-        println!("Scale {}: {:.2} ms avg query, {:.2} QPS", 
-                scale, result.avg_query_time_ms, result.qps);
+        let test_queries =
+            generate_test_queries(config.num_queries, config.dimension, config.top_k);
+
+        let result =
+            benchmark_optimized_memory_store(&config, &test_vectors, &test_queries).await?;
+
+        println!(
+            "Scale {}: {:.2} ms avg query, {:.2} QPS",
+            scale, result.avg_query_time_ms, result.qps
+        );
     }
-    
+
     Ok(())
 }
 
@@ -488,16 +505,16 @@ async fn run_scale_benchmarks() -> Result<()> {
 async fn main() -> Result<()> {
     // Initialize tracing
     tracing_subscriber::fmt::init();
-    
+
     println!("Starting Cheungfun performance benchmarks...\n");
-    
+
     // Run main comparison
     run_performance_comparison().await?;
-    
+
     // Run scale benchmarks
     run_scale_benchmarks().await?;
-    
+
     println!("\n✅ Benchmarks completed!");
-    
+
     Ok(())
 }

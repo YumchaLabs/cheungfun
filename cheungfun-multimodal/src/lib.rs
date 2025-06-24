@@ -80,11 +80,12 @@ pub mod traits;
 pub mod types;
 
 // Feature-gated modules
-#[cfg(any(feature = "image-support", feature = "audio-support", feature = "video-support"))]
+#[cfg(any(
+    feature = "image-support",
+    feature = "audio-support",
+    feature = "video-support"
+))]
 pub mod processors;
-
-#[cfg(feature = "candle")]
-pub mod embedders;
 
 // #[cfg(any(feature = "image-support", feature = "audio-support", feature = "video-support"))]
 // pub mod retrievers;
@@ -101,16 +102,15 @@ pub use error::{MultimodalError, Result};
 pub mod prelude {
     // Core types
     pub use crate::types::{
-        HasModality, MediaContent, MediaContentBuilder, MediaData, MediaFormat,
-        MediaMetadata, ModalityType, MultimodalDocument, MultimodalNode,
-        MultimodalNodeBuilder, TextExtraction,
+        HasModality, MediaContent, MediaContentBuilder, MediaData, MediaFormat, MediaMetadata,
+        ModalityType, MultimodalDocument, MultimodalNode, MultimodalNodeBuilder, TextExtraction,
     };
 
     // Core traits
     pub use crate::traits::{
-        CrossModalQuery, CrossModalRetriever, CrossModalRetrievalOptions,
-        MediaProcessor, MultimodalComponent, MultimodalEmbedder,
-        ProcessingOptions, QueryContent, ScoredMultimodalNode,
+        CrossModalQuery, CrossModalRetrievalOptions, CrossModalRetriever, MediaProcessor,
+        MultimodalComponent, MultimodalEmbedder, ProcessingOptions, QueryContent,
+        ScoredMultimodalNode,
     };
 
     // Error handling
@@ -118,8 +118,7 @@ pub mod prelude {
 
     // Utility functions
     pub use crate::types::utils::{
-        are_modalities_compatible, detect_format_from_extension,
-        detect_modality_from_extension,
+        are_modalities_compatible, detect_format_from_extension, detect_modality_from_extension,
     };
 
     // Re-export core types for convenience
@@ -140,33 +139,33 @@ pub fn build_info() -> std::collections::HashMap<&'static str, &'static str> {
     info.insert("version", VERSION);
     info.insert("target", "unknown"); // Will be set at compile time in real builds
     info.insert("profile", "unknown"); // Will be set at compile time in real builds
-    
+
     // Feature flags
     #[cfg(feature = "image-support")]
     info.insert("image-support", "enabled");
     #[cfg(not(feature = "image-support"))]
     info.insert("image-support", "disabled");
-    
+
     #[cfg(feature = "audio-support")]
     info.insert("audio-support", "enabled");
     #[cfg(not(feature = "audio-support"))]
     info.insert("audio-support", "disabled");
-    
+
     #[cfg(feature = "video-support")]
     info.insert("video-support", "enabled");
     #[cfg(not(feature = "video-support"))]
     info.insert("video-support", "disabled");
-    
+
     #[cfg(feature = "candle")]
     info.insert("candle", "enabled");
     #[cfg(not(feature = "candle"))]
     info.insert("candle", "disabled");
-    
+
     #[cfg(feature = "clip")]
     info.insert("clip", "enabled");
     #[cfg(not(feature = "clip"))]
     info.insert("clip", "disabled");
-    
+
     info
 }
 
@@ -179,12 +178,12 @@ pub fn init() -> Result<()> {
     if std::env::var("RUST_LOG").is_err() {
         std::env::set_var("RUST_LOG", "cheungfun_multimodal=info");
     }
-    
+
     // Initialize tracing subscriber if not already initialized
     let _ = tracing_subscriber::fmt::try_init();
-    
+
     tracing::info!("Initializing Cheungfun Multimodal v{}", VERSION);
-    
+
     // Log enabled features
     let build_info = build_info();
     for (feature, status) in build_info.iter() {
@@ -192,10 +191,10 @@ pub fn init() -> Result<()> {
             tracing::debug!("Feature {}: {}", feature, status);
         }
     }
-    
+
     // Validate critical dependencies
     validate_dependencies()?;
-    
+
     tracing::info!("Cheungfun Multimodal initialized successfully");
     Ok(())
 }
@@ -207,32 +206,32 @@ fn validate_dependencies() -> Result<()> {
     // if let Err(e) = cheungfun_core::init() {
     //     return Err(MultimodalError::Core(e));
     // }
-    
+
     // Validate feature-specific dependencies
     #[cfg(feature = "image-support")]
     {
         // Image processing dependencies are compile-time checked
         tracing::debug!("Image support validated");
     }
-    
+
     #[cfg(feature = "audio-support")]
     {
         // Audio processing dependencies are compile-time checked
         tracing::debug!("Audio support validated");
     }
-    
+
     #[cfg(feature = "video-support")]
     {
         // Video processing dependencies are compile-time checked
         tracing::debug!("Video support validated");
     }
-    
+
     #[cfg(feature = "candle")]
     {
         // ML framework dependencies are compile-time checked
         tracing::debug!("Candle ML framework validated");
     }
-    
+
     Ok(())
 }
 
@@ -241,25 +240,25 @@ fn validate_dependencies() -> Result<()> {
 pub struct MultimodalConfig {
     /// Maximum content size in bytes for embedded data.
     pub max_embedded_size: u64,
-    
+
     /// Default timeout for operations in seconds.
     pub default_timeout: u64,
-    
+
     /// Enable automatic format detection.
     pub auto_format_detection: bool,
-    
+
     /// Enable cross-modal operations.
     pub enable_cross_modal: bool,
-    
+
     /// Default batch size for processing operations.
     pub default_batch_size: usize,
-    
+
     /// Enable metrics collection.
     pub enable_metrics: bool,
-    
+
     /// Enable progress reporting.
     pub enable_progress: bool,
-    
+
     /// Custom configuration values.
     pub custom: std::collections::HashMap<String, serde_json::Value>,
 }
@@ -268,7 +267,7 @@ impl Default for MultimodalConfig {
     fn default() -> Self {
         Self {
             max_embedded_size: 10 * 1024 * 1024, // 10 MB
-            default_timeout: 60,                  // 60 seconds
+            default_timeout: 60,                 // 60 seconds
             auto_format_detection: true,
             enable_cross_modal: true,
             default_batch_size: 16,
@@ -284,49 +283,49 @@ impl MultimodalConfig {
     pub fn new() -> Self {
         Self::default()
     }
-    
+
     /// Set the maximum embedded content size.
     pub fn with_max_embedded_size(mut self, size: u64) -> Self {
         self.max_embedded_size = size;
         self
     }
-    
+
     /// Set the default timeout.
     pub fn with_default_timeout(mut self, timeout: u64) -> Self {
         self.default_timeout = timeout;
         self
     }
-    
+
     /// Enable or disable automatic format detection.
     pub fn with_auto_format_detection(mut self, enabled: bool) -> Self {
         self.auto_format_detection = enabled;
         self
     }
-    
+
     /// Enable or disable cross-modal operations.
     pub fn with_cross_modal(mut self, enabled: bool) -> Self {
         self.enable_cross_modal = enabled;
         self
     }
-    
+
     /// Set the default batch size.
     pub fn with_default_batch_size(mut self, size: usize) -> Self {
         self.default_batch_size = size;
         self
     }
-    
+
     /// Enable or disable metrics collection.
     pub fn with_metrics(mut self, enabled: bool) -> Self {
         self.enable_metrics = enabled;
         self
     }
-    
+
     /// Enable or disable progress reporting.
     pub fn with_progress(mut self, enabled: bool) -> Self {
         self.enable_progress = enabled;
         self
     }
-    
+
     /// Add a custom configuration value.
     pub fn with_custom<K, V>(mut self, key: K, value: V) -> Self
     where
@@ -336,21 +335,27 @@ impl MultimodalConfig {
         self.custom.insert(key.into(), value.into());
         self
     }
-    
+
     /// Validate the configuration.
     pub fn validate(&self) -> Result<()> {
         if self.max_embedded_size == 0 {
-            return Err(MultimodalError::validation("max_embedded_size must be greater than 0"));
+            return Err(MultimodalError::validation(
+                "max_embedded_size must be greater than 0",
+            ));
         }
-        
+
         if self.default_timeout == 0 {
-            return Err(MultimodalError::validation("default_timeout must be greater than 0"));
+            return Err(MultimodalError::validation(
+                "default_timeout must be greater than 0",
+            ));
         }
-        
+
         if self.default_batch_size == 0 {
-            return Err(MultimodalError::validation("default_batch_size must be greater than 0"));
+            return Err(MultimodalError::validation(
+                "default_batch_size must be greater than 0",
+            ));
         }
-        
+
         Ok(())
     }
 }
@@ -386,7 +391,7 @@ mod tests {
         assert_eq!(config.default_timeout, 30);
         assert!(!config.auto_format_detection);
         assert!(config.enable_metrics);
-        
+
         assert!(config.validate().is_ok());
     }
 
@@ -394,7 +399,7 @@ mod tests {
     fn test_config_validation() {
         let invalid_config = MultimodalConfig::new().with_max_embedded_size(0);
         assert!(invalid_config.validate().is_err());
-        
+
         let valid_config = MultimodalConfig::new();
         assert!(valid_config.validate().is_ok());
     }

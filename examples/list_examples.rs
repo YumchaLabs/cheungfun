@@ -16,23 +16,29 @@ fn main() {
     println!();
 
     let examples = get_examples();
-    
+
     // Group examples by category
     let mut categories: HashMap<&str, Vec<&ExampleInfo>> = HashMap::new();
     for example in &examples {
-        categories.entry(example.category).or_default().push(example);
+        categories
+            .entry(example.category)
+            .or_default()
+            .push(example);
     }
 
     // Display examples by category
     for (category, examples) in categories {
         println!("📁 {}", category);
         println!("{}", "=".repeat(category.len() + 3));
-        
+
         for example in examples {
             println!("  📄 {}", example.name);
             println!("     Description: {}", example.description);
-            println!("     Command: cargo run --bin {} --features \"{}\"", 
-                     example.binary_name, example.features.join(","));
+            println!(
+                "     Command: cargo run --bin {} --features \"{}\"",
+                example.binary_name,
+                example.features.join(",")
+            );
             println!();
         }
     }
@@ -95,7 +101,6 @@ fn get_examples() -> Vec<ExampleInfo> {
             category: "Getting Started",
             features: vec!["basic-examples"],
         },
-
         // Core Components
         ExampleInfo {
             name: "Candle Embedder Demo",
@@ -118,7 +123,6 @@ fn get_examples() -> Vec<ExampleInfo> {
             category: "Core Components",
             features: vec!["qdrant"],
         },
-
         // Performance
         ExampleInfo {
             name: "Feature Comparison",
@@ -141,7 +145,6 @@ fn get_examples() -> Vec<ExampleInfo> {
             category: "Performance",
             features: vec!["benchmarks", "production"],
         },
-
         // GPU Acceleration
         ExampleInfo {
             name: "CUDA GPU Demo",
@@ -157,7 +160,6 @@ fn get_examples() -> Vec<ExampleInfo> {
             category: "GPU Acceleration",
             features: vec!["candle-metal"],
         },
-
         // Production
         ExampleInfo {
             name: "Complete RAG System",
@@ -180,7 +182,6 @@ fn get_examples() -> Vec<ExampleInfo> {
             category: "Production",
             features: vec!["production-examples"],
         },
-
         // Integrations
         ExampleInfo {
             name: "MCP Integration",

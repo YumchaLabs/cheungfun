@@ -3,8 +3,8 @@
 //! This module defines comprehensive error types for all multimodal operations
 //! including media processing, format conversion, and cross-modal operations.
 
-use thiserror::Error;
 use std::path::PathBuf;
+use thiserror::Error;
 
 /// Main error type for multimodal operations.
 #[derive(Error, Debug)]
@@ -113,10 +113,15 @@ pub enum MultimodalError {
 
     /// Operation timeout
     #[error("Operation timeout: {operation} took longer than {timeout_seconds} seconds")]
-    Timeout { operation: String, timeout_seconds: u64 },
+    Timeout {
+        operation: String,
+        timeout_seconds: u64,
+    },
 
     /// Insufficient memory
-    #[error("Insufficient memory: operation requires {required} bytes, only {available} available")]
+    #[error(
+        "Insufficient memory: operation requires {required} bytes, only {available} available"
+    )]
     InsufficientMemory { required: u64, available: u64 },
 
     /// Concurrent access error
@@ -148,7 +153,10 @@ impl MultimodalError {
     }
 
     /// Create an unsupported format error.
-    pub fn unsupported_format<S1: Into<String>, S2: Into<String>>(format: S1, modality: S2) -> Self {
+    pub fn unsupported_format<S1: Into<String>, S2: Into<String>>(
+        format: S1,
+        modality: S2,
+    ) -> Self {
         Self::UnsupportedFormat {
             format: format.into(),
             modality: modality.into(),
@@ -163,7 +171,10 @@ impl MultimodalError {
     }
 
     /// Create a cross-modal conversion error.
-    pub fn cross_modal_conversion<S1: Into<String>, S2: Into<String>>(source: S1, target: S2) -> Self {
+    pub fn cross_modal_conversion<S1: Into<String>, S2: Into<String>>(
+        source: S1,
+        target: S2,
+    ) -> Self {
         Self::CrossModalConversion {
             message: format!("cannot convert from {} to {}", source.into(), target.into()),
         }
@@ -241,7 +252,10 @@ impl MultimodalError {
 
     /// Create an insufficient memory error.
     pub fn insufficient_memory(required: u64, available: u64) -> Self {
-        Self::InsufficientMemory { required, available }
+        Self::InsufficientMemory {
+            required,
+            available,
+        }
     }
 
     /// Create a concurrent access error.
@@ -380,6 +394,9 @@ mod tests {
         ];
 
         let categories: Vec<_> = errors.iter().map(|e| e.category()).collect();
-        assert_eq!(categories, vec!["media_processing", "format_detection", "configuration"]);
+        assert_eq!(
+            categories,
+            vec!["media_processing", "format_detection", "configuration"]
+        );
     }
 }

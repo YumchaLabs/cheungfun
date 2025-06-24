@@ -38,7 +38,12 @@ pub trait PipelineCache: Send + Sync + std::fmt::Debug {
     /// * `key` - The cache key for the embedding
     /// * `embedding` - The embedding vector to cache
     /// * `ttl` - Time-to-live for the cache entry
-    async fn put_embedding(&self, key: &str, embedding: Vec<f32>, ttl: Duration) -> std::result::Result<(), Self::Error>;
+    async fn put_embedding(
+        &self,
+        key: &str,
+        embedding: Vec<f32>,
+        ttl: Duration,
+    ) -> std::result::Result<(), Self::Error>;
 
     /// Get cached nodes (processed document chunks).
     ///
@@ -57,7 +62,12 @@ pub trait PipelineCache: Send + Sync + std::fmt::Debug {
     /// * `key` - The cache key for the nodes
     /// * `nodes` - The nodes to cache
     /// * `ttl` - Time-to-live for the cache entry
-    async fn put_nodes(&self, key: &str, nodes: Vec<Node>, ttl: Duration) -> std::result::Result<(), Self::Error>;
+    async fn put_nodes(
+        &self,
+        key: &str,
+        nodes: Vec<Node>,
+        ttl: Duration,
+    ) -> std::result::Result<(), Self::Error>;
 
     /// Get arbitrary serializable data from the cache as bytes.
     ///
@@ -78,7 +88,12 @@ pub trait PipelineCache: Send + Sync + std::fmt::Debug {
     /// * `key` - The cache key
     /// * `data_bytes` - The serialized data to cache
     /// * `ttl` - Time-to-live for the cache entry
-    async fn put_data_bytes(&self, key: &str, data_bytes: Vec<u8>, ttl: Duration) -> std::result::Result<(), Self::Error>;
+    async fn put_data_bytes(
+        &self,
+        key: &str,
+        data_bytes: Vec<u8>,
+        ttl: Duration,
+    ) -> std::result::Result<(), Self::Error>;
 
     /// Check if a cache entry exists and is not expired.
     ///
@@ -145,12 +160,10 @@ pub trait PipelineCacheExt: PipelineCache {
         Self::Error: From<bincode::Error>,
     {
         match self.get_data_bytes(key).await? {
-            Some(bytes) => {
-                match bincode::deserialize(&bytes) {
-                    Ok(data) => Ok(Some(data)),
-                    Err(e) => Err(Self::Error::from(e)),
-                }
-            }
+            Some(bytes) => match bincode::deserialize(&bytes) {
+                Ok(data) => Ok(Some(data)),
+                Err(e) => Err(Self::Error::from(e)),
+            },
             None => Ok(None),
         }
     }
@@ -163,7 +176,12 @@ pub trait PipelineCacheExt: PipelineCache {
     /// * `key` - The cache key
     /// * `data` - The data to cache
     /// * `ttl` - Time-to-live for the cache entry
-    async fn put_data<T>(&self, key: &str, data: &T, ttl: Duration) -> std::result::Result<(), Self::Error>
+    async fn put_data<T>(
+        &self,
+        key: &str,
+        data: &T,
+        ttl: Duration,
+    ) -> std::result::Result<(), Self::Error>
     where
         T: Serialize + Send + Sync,
         Self::Error: From<bincode::Error>,
@@ -265,7 +283,7 @@ impl CacheKeyGenerator {
         if let Some(version) = model_version {
             version.hash(&mut hasher);
         }
-        
+
         format!("embedding:{:x}", hasher.finish())
     }
 
@@ -286,7 +304,7 @@ impl CacheKeyGenerator {
         document_id.hash(&mut hasher);
         chunk_size.hash(&mut hasher);
         overlap.hash(&mut hasher);
-        
+
         format!("nodes:{:x}", hasher.finish())
     }
 
@@ -304,7 +322,7 @@ impl CacheKeyGenerator {
 
         let mut hasher = DefaultHasher::new();
         query.hash(&mut hasher);
-        
+
         // Sort parameters for consistent hashing
         let mut sorted_params: Vec<_> = parameters.iter().collect();
         sorted_params.sort_by_key(|(k, _)| *k);
@@ -312,7 +330,7 @@ impl CacheKeyGenerator {
             key.hash(&mut hasher);
             value.hash(&mut hasher);
         }
-        
+
         format!("query:{:x}", hasher.finish())
     }
 
@@ -324,11 +342,15 @@ impl CacheKeyGenerator {
     ///
     /// # Returns
     /// A deterministic cache key based on the serialized data
-    pub fn generic_key<T: Serialize>(prefix: &str, data: &T) -> std::result::Result<String, Box<dyn std::error::Error + Send + Sync>> {
+    pub fn generic_key<T: Serialize>(
+        prefix: &str,
+        data: &T,
+    ) -> std::result::Result<String, Box<dyn std::error::Error + Send + Sync>> {
         use std::collections::hash_map::DefaultHasher;
         use std::hash::{Hash, Hasher};
 
-        let serialized = bincode::serialize(data).map_err(|e| Box::new(e) as Box<dyn std::error::Error + Send + Sync>)?;
+        let serialized = bincode::serialize(data)
+            .map_err(|e| Box::new(e) as Box<dyn std::error::Error + Send + Sync>)?;
         let mut hasher = DefaultHasher::new();
         serialized.hash(&mut hasher);
 

@@ -3,8 +3,8 @@
 //! This module defines traits for performing cross-modal retrieval operations,
 //! enabling search across different modalities (e.g., text query for images).
 
-use crate::types::{MediaContent, ModalityType, MultimodalNode};
 use crate::error::Result;
+use crate::types::{MediaContent, ModalityType, MultimodalNode};
 use async_trait::async_trait;
 use cheungfun_core::types::ScoredNode;
 use std::collections::HashMap;
@@ -46,7 +46,11 @@ pub trait CrossModalRetriever: Send + Sync + std::fmt::Debug {
     fn supported_cross_modal_pairs(&self) -> Vec<(ModalityType, ModalityType)>;
 
     /// Check if a specific cross-modal retrieval is supported.
-    fn supports_cross_modal(&self, query_modality: ModalityType, target_modality: ModalityType) -> bool {
+    fn supports_cross_modal(
+        &self,
+        query_modality: ModalityType,
+        target_modality: ModalityType,
+    ) -> bool {
         self.supported_cross_modal_pairs()
             .contains(&(query_modality, target_modality))
     }
@@ -65,12 +69,14 @@ pub trait CrossModalRetriever: Send + Sync + std::fmt::Debug {
     fn metadata(&self) -> HashMap<String, serde_json::Value> {
         let mut metadata = HashMap::new();
         metadata.insert("name".to_string(), self.name().into());
-        metadata.insert("supported_pairs".to_string(), 
-                        self.supported_cross_modal_pairs()
-                            .iter()
-                            .map(|(q, t)| format!("{}→{}", q, t))
-                            .collect::<Vec<_>>()
-                            .into());
+        metadata.insert(
+            "supported_pairs".to_string(),
+            self.supported_cross_modal_pairs()
+                .iter()
+                .map(|(q, t)| format!("{}→{}", q, t))
+                .collect::<Vec<_>>()
+                .into(),
+        );
         metadata
     }
 }
@@ -126,14 +132,20 @@ pub trait SimilarityBasedRetriever: CrossModalRetriever {
     ) -> Result<f32>;
 
     /// Get the similarity threshold for a modality pair.
-    fn similarity_threshold(&self, query_modality: ModalityType, target_modality: ModalityType) -> f32 {
+    fn similarity_threshold(
+        &self,
+        query_modality: ModalityType,
+        target_modality: ModalityType,
+    ) -> f32 {
         match (query_modality, target_modality) {
             // Same modality should have high threshold
             (a, b) if a == b => 0.8,
             // Text-image pairs are well-supported
-            (ModalityType::Text, ModalityType::Image) | (ModalityType::Image, ModalityType::Text) => 0.7,
+            (ModalityType::Text, ModalityType::Image)
+            | (ModalityType::Image, ModalityType::Text) => 0.7,
             // Video-audio pairs are natural
-            (ModalityType::Video, ModalityType::Audio) | (ModalityType::Audio, ModalityType::Video) => 0.75,
+            (ModalityType::Video, ModalityType::Audio)
+            | (ModalityType::Audio, ModalityType::Video) => 0.75,
             // Other cross-modal pairs need lower threshold
             _ => 0.6,
         }
@@ -398,7 +410,7 @@ mod tests {
     #[test]
     fn test_scored_multimodal_node_conversion() {
         use cheungfun_core::types::Node;
-        
+
         let chunk_info = cheungfun_core::types::ChunkInfo::new(0, 12, 0);
         let base_node = Node::new("test content", Uuid::new_v4(), chunk_info);
         let multimodal_node = MultimodalNode::from_node(base_node);

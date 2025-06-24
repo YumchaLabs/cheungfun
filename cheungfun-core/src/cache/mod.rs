@@ -39,7 +39,12 @@ impl PipelineCache for UnifiedCache {
         }
     }
 
-    async fn put_embedding(&self, key: &str, embedding: Vec<f32>, ttl: Duration) -> std::result::Result<(), Self::Error> {
+    async fn put_embedding(
+        &self,
+        key: &str,
+        embedding: Vec<f32>,
+        ttl: Duration,
+    ) -> std::result::Result<(), Self::Error> {
         match self {
             UnifiedCache::Memory(cache) => cache.put_embedding(key, embedding, ttl).await,
             UnifiedCache::File(cache) => cache.put_embedding(key, embedding, ttl).await,
@@ -53,7 +58,12 @@ impl PipelineCache for UnifiedCache {
         }
     }
 
-    async fn put_nodes(&self, key: &str, nodes: Vec<Node>, ttl: Duration) -> std::result::Result<(), Self::Error> {
+    async fn put_nodes(
+        &self,
+        key: &str,
+        nodes: Vec<Node>,
+        ttl: Duration,
+    ) -> std::result::Result<(), Self::Error> {
         match self {
             UnifiedCache::Memory(cache) => cache.put_nodes(key, nodes, ttl).await,
             UnifiedCache::File(cache) => cache.put_nodes(key, nodes, ttl).await,
@@ -67,7 +77,12 @@ impl PipelineCache for UnifiedCache {
         }
     }
 
-    async fn put_data_bytes(&self, key: &str, data_bytes: Vec<u8>, ttl: Duration) -> std::result::Result<(), Self::Error> {
+    async fn put_data_bytes(
+        &self,
+        key: &str,
+        data_bytes: Vec<u8>,
+        ttl: Duration,
+    ) -> std::result::Result<(), Self::Error> {
         match self {
             UnifiedCache::Memory(cache) => cache.put_data_bytes(key, data_bytes, ttl).await,
             UnifiedCache::File(cache) => cache.put_data_bytes(key, data_bytes, ttl).await,
@@ -139,6 +154,8 @@ impl UnifiedCache {
         default_ttl: Duration,
         max_size: usize,
     ) -> Result<Self, CheungfunError> {
-        Ok(UnifiedCache::File(FileCache::with_config(cache_dir, default_ttl, max_size).await?))
+        Ok(UnifiedCache::File(
+            FileCache::with_config(cache_dir, default_ttl, max_size).await?,
+        ))
     }
 }

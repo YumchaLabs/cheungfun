@@ -5,15 +5,16 @@
 
 pub mod directory;
 pub mod file;
+pub mod filter;
 pub mod web;
 
 pub use directory::DirectoryLoader;
 pub use file::FileLoader;
+pub use filter::{FileFilter, Filter, FilterConfig};
 pub use web::WebLoader;
 
 use crate::error::{IndexingError, Result};
 use cheungfun_core::Document;
-use std::path::Path;
 
 /// Utility functions for document loading.
 pub mod utils {
@@ -155,6 +156,9 @@ pub struct LoaderConfig {
 
     /// Timeout for individual file operations (in seconds).
     pub timeout_seconds: Option<u64>,
+
+    /// Enhanced file filtering configuration.
+    pub filter_config: Option<FilterConfig>,
 }
 
 impl Default for LoaderConfig {
@@ -173,6 +177,7 @@ impl Default for LoaderConfig {
             max_depth: Some(10),
             continue_on_error: true,
             timeout_seconds: Some(30),
+            filter_config: None, // Use enhanced filtering when specified
         }
     }
 }
@@ -223,5 +228,39 @@ impl LoaderConfig {
     pub fn with_timeout(mut self, seconds: u64) -> Self {
         self.timeout_seconds = Some(seconds);
         self
+    }
+
+    /// Set enhanced filter configuration.
+    pub fn with_filter_config(mut self, filter_config: FilterConfig) -> Self {
+        self.filter_config = Some(filter_config);
+        self
+    }
+
+    /// Enable enhanced filtering with default configuration.
+    pub fn with_enhanced_filtering(mut self) -> Self {
+        self.filter_config = Some(FilterConfig::default());
+        self
+    }
+
+    /// Enable enhanced filtering for source code only.
+    pub fn with_source_code_filtering(mut self) -> Self {
+        self.filter_config = Some(FilterConfig::source_code_only());
+        self
+    }
+
+    /// Enable enhanced filtering for text files only.
+    pub fn with_text_files_filtering(mut self) -> Self {
+        self.filter_config = Some(FilterConfig::text_files_only());
+        self
+    }
+
+    /// Check if enhanced filtering is enabled.
+    pub fn has_enhanced_filtering(&self) -> bool {
+        self.filter_config.is_some()
+    }
+
+    /// Get the filter configuration if available.
+    pub fn get_filter_config(&self) -> Option<&FilterConfig> {
+        self.filter_config.as_ref()
     }
 }

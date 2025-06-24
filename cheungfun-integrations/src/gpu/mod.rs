@@ -7,7 +7,7 @@
 use cheungfun_core::{CheungfunError, Result};
 
 #[cfg(any(feature = "gpu-cuda", feature = "gpu-metal"))]
-use candle_core::{Device, Tensor, DType};
+use candle_core::{DType, Device, Tensor};
 
 /// GPU-accelerated vector operations
 #[derive(Debug, Clone)]
@@ -90,18 +90,21 @@ impl GpuVectorOps {
         }
 
         // Convert to tensors on GPU
-        let tensor_a = Tensor::from_slice(a, (a.len(),), &self.device)
-            .map_err(|e| CheungfunError::Computation {
+        let tensor_a = Tensor::from_slice(a, (a.len(),), &self.device).map_err(|e| {
+            CheungfunError::Computation {
                 message: format!("Failed to create tensor A: {}", e),
-            })?;
+            }
+        })?;
 
-        let tensor_b = Tensor::from_slice(b, (b.len(),), &self.device)
-            .map_err(|e| CheungfunError::Computation {
+        let tensor_b = Tensor::from_slice(b, (b.len(),), &self.device).map_err(|e| {
+            CheungfunError::Computation {
                 message: format!("Failed to create tensor B: {}", e),
-            })?;
+            }
+        })?;
 
         // Calculate dot product
-        let dot_product = tensor_a.mul(&tensor_b)?
+        let dot_product = tensor_a
+            .mul(&tensor_b)?
             .sum_all()?
             .to_scalar::<f32>()
             .map_err(|e| CheungfunError::Computation {
@@ -109,7 +112,8 @@ impl GpuVectorOps {
             })?;
 
         // Calculate norms
-        let norm_a = tensor_a.sqr()?
+        let norm_a = tensor_a
+            .sqr()?
             .sum_all()?
             .sqrt()?
             .to_scalar::<f32>()
@@ -117,7 +121,8 @@ impl GpuVectorOps {
                 message: format!("Failed to compute norm A: {}", e),
             })?;
 
-        let norm_b = tensor_b.sqr()?
+        let norm_b = tensor_b
+            .sqr()?
             .sum_all()?
             .sqrt()?
             .to_scalar::<f32>()
@@ -169,10 +174,18 @@ impl GpuVectorOps {
 
     /// Batch cosine similarity calculation using GPU
     #[cfg(any(feature = "gpu-cuda", feature = "gpu-metal"))]
-    pub fn batch_cosine_similarity_f32(&self, vectors_a: &[Vec<f32>], vectors_b: &[Vec<f32>]) -> Result<Vec<f32>> {
+    pub fn batch_cosine_similarity_f32(
+        &self,
+        vectors_a: &[Vec<f32>],
+        vectors_b: &[Vec<f32>],
+    ) -> Result<Vec<f32>> {
         if vectors_a.len() != vectors_b.len() {
             return Err(CheungfunError::Validation {
-                message: format!("Batch sizes must match: {} vs {}", vectors_a.len(), vectors_b.len()),
+                message: format!(
+                    "Batch sizes must match: {} vs {}",
+                    vectors_a.len(),
+                    vectors_b.len()
+                ),
             });
         }
 
@@ -189,7 +202,8 @@ impl GpuVectorOps {
 
         if !self.gpu_available {
             // Fallback to CPU processing
-            return vectors_a.iter()
+            return vectors_a
+                .iter()
                 .zip(vectors_b.iter())
                 .map(|(a, b)| self.cosine_similarity_f32_cpu(a, b))
                 .map(Ok)
@@ -202,19 +216,22 @@ impl GpuVectorOps {
 
         // Create batch tensors
         let batch_size = vectors_a.len();
-        let tensor_a = Tensor::from_slice(&flat_a, (batch_size, dim), &self.device)
-            .map_err(|e| CheungfunError::Computation {
-                message: format!("Failed to create batch tensor A: {}", e),
+        let tensor_a =
+            Tensor::from_slice(&flat_a, (batch_size, dim), &self.device).map_err(|e| {
+                CheungfunError::Computation {
+                    message: format!("Failed to create batch tensor A: {}", e),
+                }
             })?;
 
-        let tensor_b = Tensor::from_slice(&flat_b, (batch_size, dim), &self.device)
-            .map_err(|e| CheungfunError::Computation {
-                message: format!("Failed to create batch tensor B: {}", e),
+        let tensor_b =
+            Tensor::from_slice(&flat_b, (batch_size, dim), &self.device).map_err(|e| {
+                CheungfunError::Computation {
+                    message: format!("Failed to create batch tensor B: {}", e),
+                }
             })?;
 
         // Calculate batch dot products
-        let dot_products = tensor_a.mul(&tensor_b)?
-            .sum(1)?; // Sum along dimension 1 (vector dimension)
+        let dot_products = tensor_a.mul(&tensor_b)?.sum(1)?; // Sum along dimension 1 (vector dimension)
 
         // Calculate batch norms
         let norms_a = tensor_a.sqr()?.sum(1)?.sqrt()?;
@@ -224,7 +241,8 @@ impl GpuVectorOps {
         let similarities = dot_products.div(&norms_a)?.div(&norms_b)?;
 
         // Convert back to Vec<f32>
-        let result: Vec<f32> = similarities.to_vec1()
+        let result: Vec<f32> = similarities
+            .to_vec1()
             .map_err(|e| CheungfunError::Computation {
                 message: format!("Failed to convert similarities to vector: {}", e),
             })?;
@@ -234,14 +252,23 @@ impl GpuVectorOps {
 
     /// CPU-only batch cosine similarity when GPU features are disabled
     #[cfg(not(any(feature = "gpu-cuda", feature = "gpu-metal")))]
-    pub fn batch_cosine_similarity_f32(&self, vectors_a: &[Vec<f32>], vectors_b: &[Vec<f32>]) -> Result<Vec<f32>> {
+    pub fn batch_cosine_similarity_f32(
+        &self,
+        vectors_a: &[Vec<f32>],
+        vectors_b: &[Vec<f32>],
+    ) -> Result<Vec<f32>> {
         if vectors_a.len() != vectors_b.len() {
             return Err(CheungfunError::Validation {
-                message: format!("Batch sizes must match: {} vs {}", vectors_a.len(), vectors_b.len()),
+                message: format!(
+                    "Batch sizes must match: {} vs {}",
+                    vectors_a.len(),
+                    vectors_b.len()
+                ),
             });
         }
 
-        vectors_a.iter()
+        vectors_a
+            .iter()
             .zip(vectors_b.iter())
             .map(|(a, b)| self.cosine_similarity_f32(a, b))
             .collect()
@@ -249,7 +276,11 @@ impl GpuVectorOps {
 
     /// One-to-many cosine similarity calculation using GPU
     #[cfg(any(feature = "gpu-cuda", feature = "gpu-metal"))]
-    pub fn one_to_many_cosine_similarity_f32(&self, query: &[f32], vectors: &[Vec<f32>]) -> Result<Vec<f32>> {
+    pub fn one_to_many_cosine_similarity_f32(
+        &self,
+        query: &[f32],
+        vectors: &[Vec<f32>],
+    ) -> Result<Vec<f32>> {
         if vectors.is_empty() {
             return Ok(Vec::new());
         }
@@ -263,17 +294,19 @@ impl GpuVectorOps {
 
         if !self.gpu_available {
             // Fallback to CPU processing
-            return vectors.iter()
+            return vectors
+                .iter()
                 .map(|v| self.cosine_similarity_f32_cpu(query, v))
                 .map(Ok)
                 .collect();
         }
 
         // Create query tensor
-        let query_tensor = Tensor::from_slice(query, (1, dim), &self.device)
-            .map_err(|e| CheungfunError::Computation {
+        let query_tensor = Tensor::from_slice(query, (1, dim), &self.device).map_err(|e| {
+            CheungfunError::Computation {
                 message: format!("Failed to create query tensor: {}", e),
-            })?;
+            }
+        })?;
 
         // Create batch tensor for all vectors
         let flat_vectors: Vec<f32> = vectors.iter().flatten().copied().collect();
@@ -284,8 +317,7 @@ impl GpuVectorOps {
             })?;
 
         // Calculate dot products (query @ vectors.T)
-        let dot_products = query_tensor.matmul(&vectors_tensor.t()?)?
-            .squeeze(0)?; // Remove batch dimension from query
+        let dot_products = query_tensor.matmul(&vectors_tensor.t()?)?.squeeze(0)?; // Remove batch dimension from query
 
         // Calculate norms
         let query_norm = query_tensor.sqr()?.sum(1)?.sqrt()?;
@@ -295,7 +327,8 @@ impl GpuVectorOps {
         let similarities = dot_products.div(&query_norm)?.div(&vector_norms)?;
 
         // Convert back to Vec<f32>
-        let result: Vec<f32> = similarities.to_vec1()
+        let result: Vec<f32> = similarities
+            .to_vec1()
             .map_err(|e| CheungfunError::Computation {
                 message: format!("Failed to convert similarities to vector: {}", e),
             })?;
@@ -305,8 +338,13 @@ impl GpuVectorOps {
 
     /// CPU-only one-to-many cosine similarity when GPU features are disabled
     #[cfg(not(any(feature = "gpu-cuda", feature = "gpu-metal")))]
-    pub fn one_to_many_cosine_similarity_f32(&self, query: &[f32], vectors: &[Vec<f32>]) -> Result<Vec<f32>> {
-        vectors.iter()
+    pub fn one_to_many_cosine_similarity_f32(
+        &self,
+        query: &[f32],
+        vectors: &[Vec<f32>],
+    ) -> Result<Vec<f32>> {
+        vectors
+            .iter()
             .map(|v| self.cosine_similarity_f32(query, v))
             .collect()
     }

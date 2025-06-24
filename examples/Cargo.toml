@@ -224,6 +224,13 @@ name = "metal_embedder_demo"
 path = "07_gpu_acceleration/metal_embedder_demo.rs"
 required-features = ["candle-metal"]
 
+# === File Filtering Examples ===
+# Enhanced file filtering demonstration
+[[bin]]
+name = "enhanced_file_filtering"
+path = "enhanced_file_filtering.rs"
+required-features = ["basic-examples"]
+
 # === Caching Examples ===
 # Caching functionality demonstration
 [[bin]]

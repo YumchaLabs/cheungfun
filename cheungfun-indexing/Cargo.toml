@@ -45,6 +45,10 @@ scraper = { workspace = true }
 reqwest = { workspace = true }
 url = { workspace = true }
 
+# File filtering and gitignore support
+ignore = "0.4"
+globset = "0.4"
+
 # Logging
 tracing = { workspace = true }
 

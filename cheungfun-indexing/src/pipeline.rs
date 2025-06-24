@@ -4,7 +4,10 @@ use async_trait::async_trait;
 use cheungfun_core::{
     Document, IndexingProgress, IndexingStats, Node, Result as CoreResult,
     cache::UnifiedCache,
-    traits::{Embedder, IndexingPipeline, Loader, NodeTransformer, PipelineCache, Transformer, VectorStore},
+    traits::{
+        Embedder, IndexingPipeline, Loader, NodeTransformer, PipelineCache, Transformer,
+        VectorStore,
+    },
 };
 use futures::future::join_all;
 use std::sync::Arc;
@@ -171,10 +174,12 @@ impl DefaultIndexingPipeline {
 
             if self.config.enable_caching && self.cache.is_some() {
                 // Use cache-aware embedding generation
-                self.generate_embeddings_with_cache(&mut nodes, embedder).await?;
+                self.generate_embeddings_with_cache(&mut nodes, embedder)
+                    .await?;
             } else {
                 // Direct embedding generation without cache
-                self.generate_embeddings_direct(&mut nodes, embedder).await?;
+                self.generate_embeddings_direct(&mut nodes, embedder)
+                    .await?;
             }
 
             info!("Generated embeddings for {} nodes", nodes.len());
@@ -266,7 +271,10 @@ impl DefaultIndexingPipeline {
                     None,
                 );
 
-                if let Err(e) = cache.put_embedding(&cache_key, embedding.clone(), ttl).await {
+                if let Err(e) = cache
+                    .put_embedding(&cache_key, embedding.clone(), ttl)
+                    .await
+                {
                     warn!("Failed to cache embedding for node {}: {}", node_index, e);
                 }
             }
@@ -287,9 +295,10 @@ impl DefaultIndexingPipeline {
         let texts: Vec<&str> = nodes.iter().map(|node| node.content.as_str()).collect();
 
         // Generate embeddings in batches
-        let embeddings = embedder.embed_batch(texts).await.map_err(|e| {
-            IndexingError::pipeline(format!("Embedding generation failed: {}", e))
-        })?;
+        let embeddings = embedder
+            .embed_batch(texts)
+            .await
+            .map_err(|e| IndexingError::pipeline(format!("Embedding generation failed: {}", e)))?;
 
         // Assign embeddings to nodes
         for (node, embedding) in nodes.iter_mut().zip(embeddings.into_iter()) {

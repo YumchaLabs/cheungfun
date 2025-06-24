@@ -41,8 +41,10 @@ impl SimdVectorOps {
     /// Get available CPU capabilities for SIMD operations
     #[cfg(feature = "simd")]
     pub fn get_capabilities(&self) -> String {
-        format!("SIMD enabled with SimSIMD - CPU features: {}",
-                std::env::consts::ARCH)
+        format!(
+            "SIMD enabled with SimSIMD - CPU features: {}",
+            std::env::consts::ARCH
+        )
     }
 
     #[cfg(not(feature = "simd"))]
@@ -226,10 +228,7 @@ impl SimdVectorOps {
     }
 
     fn euclidean_distance_squared_f32_scalar(&self, a: &[f32], b: &[f32]) -> f32 {
-        a.iter()
-            .zip(b.iter())
-            .map(|(x, y)| (x - y).powi(2))
-            .sum()
+        a.iter().zip(b.iter()).map(|(x, y)| (x - y).powi(2)).sum()
     }
 }
 

@@ -8,20 +8,22 @@
 //! - Format conversion
 //! - Audio processing operations
 
-use cheungfun_multimodal::processors::audio::{AudioLoader, AudioConverter, AudioFeatureExtractor, AudioProcessor};
-use cheungfun_multimodal::traits::{MediaProcessor, ProcessingOptions};
+use cheungfun_multimodal::processors::audio::{
+    AudioConverter, AudioFeatureExtractor, AudioLoader, AudioProcessor,
+};
 use cheungfun_multimodal::traits::media_processor::AudioProcessingOptions;
-use cheungfun_multimodal::types::{MediaFormat, MediaContent, MediaData, MediaMetadata};
+use cheungfun_multimodal::traits::{MediaProcessor, ProcessingOptions};
+use cheungfun_multimodal::types::{MediaContent, MediaData, MediaFormat, MediaMetadata};
 use std::collections::HashMap;
 
 #[tokio::main]
 async fn main() -> Result<(), Box<dyn std::error::Error>> {
     // Initialize logging
     tracing_subscriber::fmt::init();
-    
+
     println!("🎵 Cheungfun Audio Processing Example");
     println!("=====================================\n");
-    
+
     // Example 1: Create and configure audio loader
     println!("📁 Example 1: Audio Loader Configuration");
     let loader = AudioLoader::builder()
@@ -34,20 +36,23 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
             MediaFormat::Ogg,
         ])
         .build();
-    
+
     println!("✅ Audio loader configured:");
     println!("   - Max file size: 50MB");
     println!("   - Format validation: enabled");
     println!("   - Supported formats: MP3, WAV, FLAC, OGG");
-    
+
     // Example 2: Create dummy audio content for demonstration
     println!("\n🎧 Example 2: Creating Audio Content");
     let audio_content = create_dummy_wav_content();
-    
+
     println!("✅ Created dummy WAV audio content:");
     println!("   - Format: {}", audio_content.format);
-    println!("   - Size: {} bytes", audio_content.estimated_size().unwrap_or(0));
-    
+    println!(
+        "   - Size: {} bytes",
+        audio_content.estimated_size().unwrap_or(0)
+    );
+
     // Example 3: Audio feature extraction
     println!("\n🔍 Example 3: Audio Feature Extraction");
     let feature_extractor = AudioFeatureExtractor::builder()
@@ -55,7 +60,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         .extract_tempo_features(true)
         .extract_harmonic_features(true)
         .build();
-    
+
     match feature_extractor.extract_features(&audio_content).await {
         Ok(features) => {
             println!("✅ Extracted audio features:");
@@ -67,7 +72,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
             println!("❌ Failed to extract features: {}", e);
         }
     }
-    
+
     // Example 4: Audio format conversion
     println!("\n🔄 Example 4: Audio Format Conversion");
     let converter = AudioConverter::builder()
@@ -76,20 +81,29 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         .normalize_audio(true)
         .output_quality(0.9)
         .build();
-    
-    match converter.convert_format(&audio_content, MediaFormat::Mp3).await {
+
+    match converter
+        .convert_format(&audio_content, MediaFormat::Mp3)
+        .await
+    {
         Ok(converted_content) => {
             println!("✅ Converted audio format:");
             println!("   - Original format: {}", audio_content.format);
             println!("   - New format: {}", converted_content.format);
-            println!("   - Original size: {} bytes", audio_content.estimated_size().unwrap_or(0));
-            println!("   - New size: {} bytes", converted_content.estimated_size().unwrap_or(0));
+            println!(
+                "   - Original size: {} bytes",
+                audio_content.estimated_size().unwrap_or(0)
+            );
+            println!(
+                "   - New size: {} bytes",
+                converted_content.estimated_size().unwrap_or(0)
+            );
         }
         Err(e) => {
             println!("❌ Failed to convert format: {}", e);
         }
     }
-    
+
     // Example 5: Audio processing with options
     println!("\n⚙️  Example 5: Audio Processing with Options");
     let processor = AudioProcessor::builder()
@@ -97,7 +111,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         .default_sample_rate(48000)
         .normalize_audio(true)
         .build();
-    
+
     let processing_options = ProcessingOptions {
         target_format: Some(MediaFormat::Flac),
         quality: Some(0.95),
@@ -112,19 +126,21 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         }),
         ..Default::default()
     };
-    
+
     match processor.process(&audio_content, &processing_options).await {
         Ok(processed_content) => {
             println!("✅ Processed audio:");
             println!("   - Original format: {}", audio_content.format);
             println!("   - Processed format: {}", processed_content.format);
-            println!("   - Processing applied: sample rate conversion, mono conversion, normalization");
+            println!(
+                "   - Processing applied: sample rate conversion, mono conversion, normalization"
+            );
         }
         Err(e) => {
             println!("❌ Failed to process audio: {}", e);
         }
     }
-    
+
     // Example 6: Audio sample rate conversion
     println!("\n📊 Example 6: Sample Rate Conversion");
     match converter.convert_sample_rate(&audio_content, 22050).await {
@@ -137,7 +153,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
             println!("❌ Failed to convert sample rate: {}", e);
         }
     }
-    
+
     // Example 7: Channel conversion (stereo to mono)
     println!("\n🔊 Example 7: Channel Conversion");
     match converter.convert_channels(&audio_content, 1).await {
@@ -150,7 +166,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
             println!("❌ Failed to convert channels: {}", e);
         }
     }
-    
+
     // Example 8: Audio normalization
     println!("\n📈 Example 8: Audio Normalization");
     match converter.normalize_audio(&audio_content).await {
@@ -162,7 +178,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
             println!("❌ Failed to normalize audio: {}", e);
         }
     }
-    
+
     // Example 9: Audio trimming
     println!("\n✂️  Example 9: Audio Trimming");
     match converter.trim_audio(&audio_content, 5.0, Some(10.0)).await {
@@ -176,7 +192,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
             println!("❌ Failed to trim audio: {}", e);
         }
     }
-    
+
     // Example 10: Load from bytes
     println!("\n💾 Example 10: Loading Audio from Bytes");
     let audio_bytes = create_dummy_mp3_bytes();
@@ -184,17 +200,20 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         Ok(loaded_content) => {
             println!("✅ Loaded audio from bytes:");
             println!("   - Format: {}", loaded_content.format);
-            println!("   - Size: {} bytes", loaded_content.estimated_size().unwrap_or(0));
+            println!(
+                "   - Size: {} bytes",
+                loaded_content.estimated_size().unwrap_or(0)
+            );
         }
         Err(e) => {
             println!("❌ Failed to load from bytes: {}", e);
         }
     }
-    
+
     println!("\n🎉 Audio processing examples completed!");
     println!("\nNote: This example uses dummy audio data for demonstration.");
     println!("In a real application, you would load actual audio files.");
-    
+
     Ok(())
 }
 
@@ -202,12 +221,12 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
 fn create_dummy_wav_content() -> MediaContent {
     // Create a minimal WAV file header
     let mut wav_data = Vec::new();
-    
+
     // RIFF header
     wav_data.extend_from_slice(b"RIFF");
     wav_data.extend_from_slice(&[36, 0, 0, 0]); // File size - 8
     wav_data.extend_from_slice(b"WAVE");
-    
+
     // Format chunk
     wav_data.extend_from_slice(b"fmt ");
     wav_data.extend_from_slice(&[16, 0, 0, 0]); // Subchunk1Size
@@ -217,14 +236,14 @@ fn create_dummy_wav_content() -> MediaContent {
     wav_data.extend_from_slice(&[0x10, 0xB1, 2, 0]); // ByteRate
     wav_data.extend_from_slice(&[4, 0]); // BlockAlign
     wav_data.extend_from_slice(&[16, 0]); // BitsPerSample
-    
+
     // Data chunk
     wav_data.extend_from_slice(b"data");
     wav_data.extend_from_slice(&[0, 0, 0, 0]); // Subchunk2Size
-    
+
     let mut metadata = MediaMetadata::new();
     metadata.filename = Some("dummy.wav".to_string());
-    
+
     MediaContent {
         data: MediaData::Embedded(wav_data),
         format: MediaFormat::Wav,
@@ -239,12 +258,12 @@ fn create_dummy_wav_content() -> MediaContent {
 fn create_dummy_mp3_bytes() -> Vec<u8> {
     // Create a minimal MP3 frame header
     let mut mp3_data = Vec::new();
-    
+
     // MP3 frame sync + header
     mp3_data.extend_from_slice(&[0xFF, 0xFB, 0x90, 0x00]); // MP3 frame header
-    
+
     // Add some dummy data
     mp3_data.extend(vec![0; 1024]);
-    
+
     mp3_data
 }

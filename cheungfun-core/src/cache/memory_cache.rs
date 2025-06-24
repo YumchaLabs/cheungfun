@@ -113,7 +113,7 @@ impl MemoryCache {
             data_cache: Arc::new(RwLock::new(HashMap::new())),
             stats: Arc::new(RwLock::new(CacheStats::default())),
             default_ttl: Duration::from_secs(3600), // 1 hour default
-            max_size: 10000, // Default max 10k entries
+            max_size: 10000,                        // Default max 10k entries
         }
     }
 
@@ -155,31 +155,31 @@ impl MemoryCache {
     async fn cleanup_cache<T>(&self, cache: &Arc<RwLock<HashMap<String, CacheEntry<T>>>>) -> usize {
         let mut cache_guard = cache.write().await;
         let mut expired_keys = Vec::new();
-        
+
         // Find expired keys
         for (key, entry) in cache_guard.iter() {
             if entry.is_expired() {
                 expired_keys.push(key.clone());
             }
         }
-        
+
         // Remove expired entries
         for key in &expired_keys {
             cache_guard.remove(key);
         }
-        
+
         let removed_count = expired_keys.len();
         if removed_count > 0 {
             debug!("Cleaned up {} expired entries", removed_count);
         }
-        
+
         removed_count
     }
 
     /// Evict least recently used entries if cache is full.
     async fn evict_if_needed<T>(&self, cache: &Arc<RwLock<HashMap<String, CacheEntry<T>>>>) {
         let mut cache_guard = cache.write().await;
-        
+
         if cache_guard.len() >= self.max_size {
             // Simple eviction: remove oldest entry
             if let Some(oldest_key) = cache_guard
@@ -207,27 +207,32 @@ impl PipelineCache for MemoryCache {
 
     async fn get_embedding(&self, key: &str) -> std::result::Result<Option<Vec<f32>>, Self::Error> {
         debug!("Getting embedding from memory cache: {}", key);
-        
+
         let cache = self.embedding_cache.read().await;
-        
+
         if let Some(entry) = cache.get(key) {
             if entry.is_expired() {
                 self.record_miss().await;
                 debug!("Embedding cache entry expired: {}", key);
                 return Ok(None);
             }
-            
+
             self.record_hit().await;
             debug!("Embedding cache hit: {}", key);
             return Ok(Some(entry.data.clone()));
         }
-        
+
         self.record_miss().await;
         debug!("Embedding cache miss: {}", key);
         Ok(None)
     }
 
-    async fn put_embedding(&self, key: &str, embedding: Vec<f32>, ttl: Duration) -> std::result::Result<(), Self::Error> {
+    async fn put_embedding(
+        &self,
+        key: &str,
+        embedding: Vec<f32>,
+        ttl: Duration,
+    ) -> std::result::Result<(), Self::Error> {
         debug!("Storing embedding in memory cache: {}", key);
 
         self.evict_if_needed(&self.embedding_cache).await;
@@ -266,7 +271,12 @@ impl PipelineCache for MemoryCache {
         Ok(None)
     }
 
-    async fn put_nodes(&self, key: &str, nodes: Vec<Node>, ttl: Duration) -> std::result::Result<(), Self::Error> {
+    async fn put_nodes(
+        &self,
+        key: &str,
+        nodes: Vec<Node>,
+        ttl: Duration,
+    ) -> std::result::Result<(), Self::Error> {
         debug!("Storing nodes in memory cache: {}", key);
 
         self.evict_if_needed(&self.nodes_cache).await;
@@ -305,7 +315,12 @@ impl PipelineCache for MemoryCache {
         }
     }
 
-    async fn put_data_bytes(&self, key: &str, data_bytes: Vec<u8>, ttl: Duration) -> std::result::Result<(), Self::Error> {
+    async fn put_data_bytes(
+        &self,
+        key: &str,
+        data_bytes: Vec<u8>,
+        ttl: Duration,
+    ) -> std::result::Result<(), Self::Error> {
         debug!("Storing data bytes in memory cache: {}", key);
 
         self.evict_if_needed(&self.data_cache).await;
@@ -328,25 +343,25 @@ impl PipelineCache for MemoryCache {
             let cache = self.embedding_cache.read().await;
             cache.get(key).map_or(false, |entry| !entry.is_expired())
         };
-        
+
         if embedding_exists {
             return Ok(true);
         }
-        
+
         let nodes_exists = {
             let cache = self.nodes_cache.read().await;
             cache.get(key).map_or(false, |entry| !entry.is_expired())
         };
-        
+
         if nodes_exists {
             return Ok(true);
         }
-        
+
         let data_exists = {
             let cache = self.data_cache.read().await;
             cache.get(key).map_or(false, |entry| !entry.is_expired())
         };
-        
+
         Ok(data_exists)
     }
 
@@ -427,7 +442,7 @@ impl PipelineCache for MemoryCache {
 
     async fn health(&self) -> std::result::Result<CacheHealth, Self::Error> {
         let stats = self.stats().await?;
-        
+
         // Calculate usage ratio
         let total_entries = {
             let embedding_cache = self.embedding_cache.read().await;
@@ -435,9 +450,9 @@ impl PipelineCache for MemoryCache {
             let data_cache = self.data_cache.read().await;
             embedding_cache.len() + nodes_cache.len() + data_cache.len()
         };
-        
+
         let usage_ratio = (total_entries as f64 / (self.max_size * 3) as f64).min(1.0);
-        
+
         // Determine health status
         let health_status = if usage_ratio > 0.9 {
             HealthStatus::Warning
@@ -446,17 +461,17 @@ impl PipelineCache for MemoryCache {
         } else {
             HealthStatus::Healthy
         };
-        
+
         let mut messages = Vec::new();
         if usage_ratio > 0.8 {
             messages.push(format!("Cache usage is high: {:.1}%", usage_ratio * 100.0));
         }
-        
+
         let total_ops = stats.total_operations();
         if stats.hit_rate() < 50.0 && total_ops > 100 {
             messages.push(format!("Low cache hit rate: {:.1}%", stats.hit_rate()));
         }
-        
+
         Ok(CacheHealth {
             status: health_status,
             usage_ratio,

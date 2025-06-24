@@ -7,29 +7,29 @@
 //! - Speech-to-text conversion
 //! - Audio normalization and preprocessing
 
-use crate::traits::{MediaProcessor, ProcessingOptions, FeatureExtractor};
-use crate::types::{MediaContent, MediaFormat, ModalityType};
 use crate::error::Result;
+use crate::traits::{FeatureExtractor, MediaProcessor, ProcessingOptions};
+use crate::types::{MediaContent, MediaFormat, ModalityType};
 use async_trait::async_trait;
 use std::collections::HashMap;
 
-pub mod loader;
 pub mod converter;
 pub mod features;
+pub mod loader;
 
-pub use loader::*;
 pub use converter::*;
 pub use features::*;
+pub use loader::*;
 
 /// Audio processor for handling various audio formats and operations.
 #[derive(Debug, Clone)]
 pub struct AudioProcessor {
     /// Maximum audio duration for processing (in seconds)
     max_duration: Option<f32>,
-    
+
     /// Default sample rate for processing
     default_sample_rate: u32,
-    
+
     /// Whether to normalize audio levels
     normalize_audio: bool,
 }
@@ -43,7 +43,7 @@ impl AudioProcessor {
             normalize_audio: true,
         }
     }
-    
+
     /// Create a builder for configuring the processor.
     pub fn builder() -> AudioProcessorBuilder {
         AudioProcessorBuilder::new()
@@ -61,11 +61,11 @@ impl MediaProcessor for AudioProcessor {
     fn supported_input_modalities(&self) -> Vec<ModalityType> {
         vec![ModalityType::Audio]
     }
-    
+
     fn supported_output_modalities(&self) -> Vec<ModalityType> {
         vec![ModalityType::Audio]
     }
-    
+
     fn supported_input_formats(&self, modality: ModalityType) -> Vec<MediaFormat> {
         if modality == ModalityType::Audio {
             vec![
@@ -80,7 +80,7 @@ impl MediaProcessor for AudioProcessor {
             vec![]
         }
     }
-    
+
     fn supported_output_formats(&self, modality: ModalityType) -> Vec<MediaFormat> {
         if modality == ModalityType::Audio {
             vec![
@@ -92,8 +92,12 @@ impl MediaProcessor for AudioProcessor {
             vec![]
         }
     }
-    
-    async fn process(&self, content: &MediaContent, options: &ProcessingOptions) -> Result<MediaContent> {
+
+    async fn process(
+        &self,
+        content: &MediaContent,
+        options: &ProcessingOptions,
+    ) -> Result<MediaContent> {
         self.validate_input(content)?;
 
         #[cfg(feature = "audio-support")]
@@ -104,24 +108,43 @@ impl MediaProcessor for AudioProcessor {
             if let Some(target_format) = &options.target_format {
                 if target_format != &content.format {
                     let converter = AudioConverter::new();
-                    processed_content = converter.convert_format(&processed_content, target_format.clone()).await?;
+                    processed_content = converter
+                        .convert_format(&processed_content, target_format.clone())
+                        .await?;
                 }
             }
 
             // Apply sample rate conversion if specified
-            if let Some(sample_rate) = options.audio_options.as_ref().and_then(|opts| opts.target_sample_rate) {
+            if let Some(sample_rate) = options
+                .audio_options
+                .as_ref()
+                .and_then(|opts| opts.target_sample_rate)
+            {
                 let converter = AudioConverter::new();
-                processed_content = converter.convert_sample_rate(&processed_content, sample_rate).await?;
+                processed_content = converter
+                    .convert_sample_rate(&processed_content, sample_rate)
+                    .await?;
             }
 
             // Apply channel conversion if specified
-            if let Some(channels) = options.audio_options.as_ref().and_then(|opts| opts.target_channels) {
+            if let Some(channels) = options
+                .audio_options
+                .as_ref()
+                .and_then(|opts| opts.target_channels)
+            {
                 let converter = AudioConverter::new();
-                processed_content = converter.convert_channels(&processed_content, channels).await?;
+                processed_content = converter
+                    .convert_channels(&processed_content, channels)
+                    .await?;
             }
 
             // Apply normalization if requested
-            if self.normalize_audio || options.audio_options.as_ref().map_or(false, |opts| opts.normalize) {
+            if self.normalize_audio
+                || options
+                    .audio_options
+                    .as_ref()
+                    .map_or(false, |opts| opts.normalize)
+            {
                 let converter = AudioConverter::new();
                 processed_content = converter.normalize_audio(&processed_content).await?;
             }
@@ -132,7 +155,9 @@ impl MediaProcessor for AudioProcessor {
                     if let Some(start) = audio_opts.trim_start {
                         let duration = audio_opts.trim_duration.or(Some(max_duration));
                         let converter = AudioConverter::new();
-                        processed_content = converter.trim_audio(&processed_content, start, duration).await?;
+                        processed_content = converter
+                            .trim_audio(&processed_content, start, duration)
+                            .await?;
                     }
                 }
             }
@@ -142,11 +167,16 @@ impl MediaProcessor for AudioProcessor {
 
         #[cfg(not(feature = "audio-support"))]
         {
-            Err(crate::error::MultimodalError::feature_not_enabled("audio-support"))
+            Err(crate::error::MultimodalError::feature_not_enabled(
+                "audio-support",
+            ))
         }
     }
-    
-    async fn extract_features(&self, content: &MediaContent) -> Result<HashMap<String, serde_json::Value>> {
+
+    async fn extract_features(
+        &self,
+        content: &MediaContent,
+    ) -> Result<HashMap<String, serde_json::Value>> {
         #[cfg(feature = "audio-support")]
         {
             let extractor = AudioFeatureExtractor::new();
@@ -163,7 +193,7 @@ impl MediaProcessor for AudioProcessor {
             Ok(features)
         }
     }
-    
+
     async fn extract_text(&self, content: &MediaContent) -> Result<Option<String>> {
         #[cfg(feature = "audio-support")]
         {
@@ -199,7 +229,7 @@ impl FeatureExtractor for AudioProcessor {
             Ok(HashMap::new())
         }
     }
-    
+
     fn extractable_features(&self, modality: ModalityType) -> Vec<String> {
         if modality == ModalityType::Audio {
             vec![
@@ -220,7 +250,7 @@ impl FeatureExtractor for AudioProcessor {
             vec![]
         }
     }
-    
+
     async fn extract_feature(
         &self,
         content: &MediaContent,
@@ -248,31 +278,31 @@ impl AudioProcessorBuilder {
             normalize_audio: true,
         }
     }
-    
+
     /// Set maximum audio duration.
     pub fn max_duration(mut self, duration: f32) -> Self {
         self.max_duration = Some(duration);
         self
     }
-    
+
     /// Remove duration limits.
     pub fn unlimited_duration(mut self) -> Self {
         self.max_duration = None;
         self
     }
-    
+
     /// Set default sample rate.
     pub fn default_sample_rate(mut self, sample_rate: u32) -> Self {
         self.default_sample_rate = sample_rate;
         self
     }
-    
+
     /// Set whether to normalize audio levels.
     pub fn normalize_audio(mut self, normalize: bool) -> Self {
         self.normalize_audio = normalize;
         self
     }
-    
+
     /// Build the audio processor.
     pub fn build(self) -> AudioProcessor {
         AudioProcessor {
@@ -296,8 +326,11 @@ mod tests {
     #[test]
     fn test_audio_processor_creation() {
         let processor = AudioProcessor::new();
-        assert_eq!(processor.supported_input_modalities(), vec![ModalityType::Audio]);
-        
+        assert_eq!(
+            processor.supported_input_modalities(),
+            vec![ModalityType::Audio]
+        );
+
         let formats = processor.supported_input_formats(ModalityType::Audio);
         assert!(formats.contains(&MediaFormat::Mp3));
         assert!(formats.contains(&MediaFormat::Wav));
@@ -311,7 +344,7 @@ mod tests {
             .default_sample_rate(48000)
             .normalize_audio(false)
             .build();
-        
+
         assert_eq!(processor.max_duration, Some(300.0));
         assert_eq!(processor.default_sample_rate, 48000);
         assert!(!processor.normalize_audio);
@@ -321,7 +354,7 @@ mod tests {
     fn test_extractable_features() {
         let processor = AudioProcessor::new();
         let features = processor.extractable_features(ModalityType::Audio);
-        
+
         assert!(features.contains(&"duration".to_string()));
         assert!(features.contains(&"sample_rate".to_string()));
         assert!(features.contains(&"channels".to_string()));
@@ -333,10 +366,10 @@ mod tests {
             vec![0; 1024], // Dummy audio data
             MediaFormat::Wav,
         );
-        
+
         let processor = AudioProcessor::new();
         let features = processor.extract_features(&content).await.unwrap();
-        
+
         // Should at least have format information
         assert!(features.contains_key("format"));
     }

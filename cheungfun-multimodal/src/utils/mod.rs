@@ -3,17 +3,17 @@
 //! This module provides various utility functions for format detection,
 //! content validation, and common operations across different modalities.
 
-pub mod format_detection;
 pub mod conversion;
+pub mod format_detection;
 
 // Re-export commonly used utilities
-pub use format_detection::{detect_format, detect_modality_from_path};
+pub use conversion::{convert_from_base64, convert_to_base64, normalize_path};
 #[cfg(feature = "format-detection")]
 pub use format_detection::detect_format_from_bytes;
-pub use conversion::{convert_to_base64, convert_from_base64, normalize_path};
+pub use format_detection::{detect_format, detect_modality_from_path};
 
-use crate::types::{MediaContent, ModalityType};
 use crate::error::Result;
+use crate::types::{MediaContent, ModalityType};
 
 /// Validate media content for processing.
 pub fn validate_media_content(content: &MediaContent) -> Result<()> {
@@ -21,7 +21,9 @@ pub fn validate_media_content(content: &MediaContent) -> Result<()> {
     match &content.data {
         crate::types::MediaData::Embedded(data) => {
             if data.is_empty() {
-                return Err(crate::error::MultimodalError::validation("Embedded data is empty"));
+                return Err(crate::error::MultimodalError::validation(
+                    "Embedded data is empty",
+                ));
             }
         }
         crate::types::MediaData::FilePath(path) => {
@@ -36,7 +38,9 @@ pub fn validate_media_content(content: &MediaContent) -> Result<()> {
         }
         crate::types::MediaData::Base64(data) => {
             if data.is_empty() {
-                return Err(crate::error::MultimodalError::validation("Base64 data is empty"));
+                return Err(crate::error::MultimodalError::validation(
+                    "Base64 data is empty",
+                ));
             }
         }
     }
@@ -55,8 +59,8 @@ pub fn validate_media_content(content: &MediaContent) -> Result<()> {
 
 /// Calculate a checksum for media content.
 pub async fn calculate_checksum(content: &MediaContent) -> Result<String> {
-    use sha2::{Sha256, Digest};
-    
+    use sha2::{Digest, Sha256};
+
     let data = content.data.as_bytes().await?;
     let mut hasher = Sha256::new();
     hasher.update(&data);
@@ -105,10 +109,10 @@ pub fn create_content_id(content: &MediaContent) -> String {
     use std::hash::{Hash, Hasher};
 
     let mut hasher = DefaultHasher::new();
-    
+
     // Hash the format
     content.format.hash(&mut hasher);
-    
+
     // Hash metadata if available
     if let Some(ref filename) = content.metadata.filename {
         filename.hash(&mut hasher);
@@ -116,7 +120,7 @@ pub fn create_content_id(content: &MediaContent) -> String {
     if let Some(size) = content.metadata.size {
         size.hash(&mut hasher);
     }
-    
+
     // Hash a portion of the data for uniqueness
     match &content.data {
         crate::types::MediaData::Embedded(data) => {
@@ -160,27 +164,27 @@ pub fn mime_type_from_extension(extension: &str) -> Option<&'static str> {
         "svg" => Some("image/svg+xml"),
         "bmp" => Some("image/bmp"),
         "tiff" | "tif" => Some("image/tiff"),
-        
+
         "mp3" => Some("audio/mpeg"),
         "wav" => Some("audio/wav"),
         "flac" => Some("audio/flac"),
         "ogg" => Some("audio/ogg"),
         "m4a" => Some("audio/mp4"),
         "aac" => Some("audio/aac"),
-        
+
         "mp4" => Some("video/mp4"),
         "avi" => Some("video/x-msvideo"),
         "mkv" => Some("video/x-matroska"),
         "webm" => Some("video/webm"),
         "mov" => Some("video/quicktime"),
         "wmv" => Some("video/x-ms-wmv"),
-        
+
         "pdf" => Some("application/pdf"),
         "docx" => Some("application/vnd.openxmlformats-officedocument.wordprocessingml.document"),
         "doc" => Some("application/msword"),
         "pptx" => Some("application/vnd.openxmlformats-officedocument.presentationml.presentation"),
         "xlsx" => Some("application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"),
-        
+
         "txt" => Some("text/plain"),
         "md" => Some("text/markdown"),
         "html" | "htm" => Some("text/html"),
@@ -188,15 +192,15 @@ pub fn mime_type_from_extension(extension: &str) -> Option<&'static str> {
         "xml" => Some("application/xml"),
         "yaml" | "yml" => Some("application/x-yaml"),
         "csv" => Some("text/csv"),
-        
+
         _ => None,
     }
 }
 
 /// Performance monitoring utilities.
 pub mod performance {
-    use std::time::{Duration, Instant};
     use std::collections::HashMap;
+    use std::time::{Duration, Instant};
 
     /// Simple performance timer.
     #[derive(Debug)]
@@ -332,7 +336,10 @@ mod tests {
     #[test]
     fn test_sanitize_filename() {
         assert_eq!(sanitize_filename("normal_file.txt"), "normal_file.txt");
-        assert_eq!(sanitize_filename("file/with\\bad:chars"), "file_with_bad_chars");
+        assert_eq!(
+            sanitize_filename("file/with\\bad:chars"),
+            "file_with_bad_chars"
+        );
         assert_eq!(sanitize_filename("file<>|*?.txt"), "file_____.txt");
     }
 
@@ -355,13 +362,16 @@ mod tests {
     #[test]
     fn test_metrics_collector() {
         let mut collector = performance::MetricsCollector::new();
-        
+
         collector.record_timing("test_op", std::time::Duration::from_millis(100));
         collector.record_timing("test_op", std::time::Duration::from_millis(200));
         collector.increment_counter("test_counter");
         collector.increment_counter("test_counter");
 
-        assert_eq!(collector.average_timing("test_op"), Some(std::time::Duration::from_millis(150)));
+        assert_eq!(
+            collector.average_timing("test_op"),
+            Some(std::time::Duration::from_millis(150))
+        );
         assert_eq!(collector.counter_value("test_counter"), 2);
 
         let summary = collector.summary();

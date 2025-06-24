@@ -101,7 +101,7 @@ impl<T> CacheEntry<T> {
             .duration_since(UNIX_EPOCH)
             .unwrap_or_default()
             .as_secs();
-        
+
         Self {
             data,
             created_at,
@@ -115,7 +115,7 @@ impl<T> CacheEntry<T> {
             .duration_since(UNIX_EPOCH)
             .unwrap_or_default()
             .as_secs();
-        
+
         now > self.created_at + self.ttl_seconds
     }
 
@@ -125,7 +125,7 @@ impl<T> CacheEntry<T> {
             .duration_since(UNIX_EPOCH)
             .unwrap_or_default()
             .as_secs();
-        
+
         if self.is_expired() {
             Duration::ZERO
         } else {
@@ -145,31 +145,35 @@ impl FileCache {
     /// * `Err(error)` - Failed to create cache directory or initialize caches
     pub async fn new<P: AsRef<Path>>(cache_dir: P) -> Result<Self, CheungfunError> {
         let cache_dir = cache_dir.as_ref().to_path_buf();
-        
+
         // Create cache directory if it doesn't exist
         tokio::fs::create_dir_all(&cache_dir).await?;
-        
+
         // Create subdirectories for different cache types
         let embedding_dir = cache_dir.join("embeddings");
         let nodes_dir = cache_dir.join("nodes");
         let data_dir = cache_dir.join("data");
-        
+
         tokio::fs::create_dir_all(&embedding_dir).await?;
         tokio::fs::create_dir_all(&nodes_dir).await?;
         tokio::fs::create_dir_all(&data_dir).await?;
-        
+
         // Initialize disk caches
         let embedding_cache = DiskCache::new(&embedding_dir.to_string_lossy())
             .set_lifespan(3600) // Default 1 hour lifespan
             .set_refresh(true)
             .build()
-            .map_err(|e| CheungfunError::internal(format!("Failed to create embedding cache: {}", e)))?;
+            .map_err(|e| {
+                CheungfunError::internal(format!("Failed to create embedding cache: {}", e))
+            })?;
 
         let nodes_cache = DiskCache::new(&nodes_dir.to_string_lossy())
             .set_lifespan(3600)
             .set_refresh(true)
             .build()
-            .map_err(|e| CheungfunError::internal(format!("Failed to create nodes cache: {}", e)))?;
+            .map_err(|e| {
+                CheungfunError::internal(format!("Failed to create nodes cache: {}", e))
+            })?;
 
         let data_cache = DiskCache::new(&data_dir.to_string_lossy())
             .set_lifespan(3600)
@@ -186,7 +190,7 @@ impl FileCache {
             data_cache: Arc::new(RwLock::new(data_cache)),
             stats: Arc::new(RwLock::new(CacheStats::default())),
             default_ttl: Duration::from_secs(3600), // 1 hour default
-            max_size: 10000, // Default max 10k entries
+            max_size: 10000,                        // Default max 10k entries
         })
     }
 
@@ -231,22 +235,25 @@ impl FileCache {
     }
 
     /// Clean up expired entries from a specific cache.
-    async fn cleanup_cache<T>(&self, cache: &Arc<RwLock<DiskCache<String, CacheEntry<T>>>>) -> Result<usize, CheungfunError>
+    async fn cleanup_cache<T>(
+        &self,
+        cache: &Arc<RwLock<DiskCache<String, CacheEntry<T>>>>,
+    ) -> Result<usize, CheungfunError>
     where
         T: Clone + Serialize + for<'de> Deserialize<'de>,
     {
         let mut cache_guard = cache.write().await;
         let mut expired_keys: Vec<String> = Vec::new();
-        
+
         // Note: DiskCache doesn't support iteration, so we'll skip cleanup for now
         // This is a limitation of the current cached crate implementation
         // In a production system, you might want to implement a custom cleanup mechanism
-        
+
         let removed_count = expired_keys.len();
         if removed_count > 0 {
             debug!("Cleaned up {} expired entries", removed_count);
         }
-        
+
         Ok(removed_count)
     }
 }
@@ -257,9 +264,9 @@ impl PipelineCache for FileCache {
 
     async fn get_embedding(&self, key: &str) -> std::result::Result<Option<Vec<f32>>, Self::Error> {
         debug!("Getting embedding from file cache: {}", key);
-        
+
         let cache = self.embedding_cache.read().await;
-        
+
         match cache.cache_get(&key.to_string()) {
             Ok(Some(entry)) => {
                 if entry.is_expired() {
@@ -279,13 +286,18 @@ impl PipelineCache for FileCache {
                 warn!("Cache error: {}", e);
             }
         }
-        
+
         self.record_miss().await;
         debug!("Embedding cache miss: {}", key);
         Ok(None)
     }
 
-    async fn put_embedding(&self, key: &str, embedding: Vec<f32>, ttl: Duration) -> std::result::Result<(), Self::Error> {
+    async fn put_embedding(
+        &self,
+        key: &str,
+        embedding: Vec<f32>,
+        ttl: Duration,
+    ) -> std::result::Result<(), Self::Error> {
         debug!("Storing embedding in file cache: {}", key);
 
         let entry = CacheEntry::new(embedding, ttl);
@@ -330,7 +342,12 @@ impl PipelineCache for FileCache {
         Ok(None)
     }
 
-    async fn put_nodes(&self, key: &str, nodes: Vec<Node>, ttl: Duration) -> std::result::Result<(), Self::Error> {
+    async fn put_nodes(
+        &self,
+        key: &str,
+        nodes: Vec<Node>,
+        ttl: Duration,
+    ) -> std::result::Result<(), Self::Error> {
         debug!("Storing nodes in file cache: {}", key);
 
         let entry = CacheEntry::new(nodes, ttl);
@@ -375,7 +392,12 @@ impl PipelineCache for FileCache {
         }
     }
 
-    async fn put_data_bytes(&self, key: &str, data_bytes: Vec<u8>, ttl: Duration) -> std::result::Result<(), Self::Error> {
+    async fn put_data_bytes(
+        &self,
+        key: &str,
+        data_bytes: Vec<u8>,
+        ttl: Duration,
+    ) -> std::result::Result<(), Self::Error> {
         debug!("Storing data bytes in file cache: {}", key);
 
         let entry = CacheEntry::new(data_bytes, ttl);
@@ -426,7 +448,7 @@ impl PipelineCache for FileCache {
 
     async fn remove(&self, key: &str) -> std::result::Result<(), Self::Error> {
         debug!("Removing cache entry: {}", key);
-        
+
         // Remove from all cache types
         {
             let mut cache = self.embedding_cache.write().await;
@@ -442,44 +464,44 @@ impl PipelineCache for FileCache {
             let mut cache = self.data_cache.write().await;
             let _ = cache.cache_remove(&key.to_string());
         }
-        
+
         Ok(())
     }
 
     async fn clear(&self) -> std::result::Result<(), Self::Error> {
         info!("Clearing all cache entries");
-        
+
         // Note: DiskCache doesn't support cache_clear operation
         // In a production system, you might want to implement this by
         // removing the cache directory and recreating it
         warn!("Clear operation not fully supported for DiskCache - some entries may persist");
-        
+
         // Reset stats
         {
             let mut stats = self.stats.write().await;
             *stats = CacheStats::default();
         }
-        
+
         Ok(())
     }
 
     async fn cleanup(&self) -> std::result::Result<usize, Self::Error> {
         debug!("Cleaning up expired cache entries");
-        
+
         let embedding_removed = self.cleanup_cache(&self.embedding_cache).await?;
         let nodes_removed = self.cleanup_cache(&self.nodes_cache).await?;
         let data_removed = self.cleanup_cache(&self.data_cache).await?;
-        
+
         let total_removed = embedding_removed + nodes_removed + data_removed;
-        
+
         if total_removed > 0 {
             info!("Cleaned up {} expired cache entries", total_removed);
-            
+
             // Update stats
             let mut stats = self.stats.write().await;
             stats.expired_entries += total_removed;
         }
-        
+
         Ok(total_removed)
     }
 
@@ -490,7 +512,7 @@ impl PipelineCache for FileCache {
 
     async fn health(&self) -> std::result::Result<CacheHealth, Self::Error> {
         let cache_stats = self.stats().await?;
-        
+
         // Calculate usage ratio (simplified - based on total operations)
         let total_ops = cache_stats.total_operations();
         let usage_ratio = if total_ops > 0 {
@@ -514,7 +536,10 @@ impl PipelineCache for FileCache {
         }
 
         if cache_stats.hit_rate() < 50.0 && total_ops > 100 {
-            messages.push(format!("Low cache hit rate: {:.1}%", cache_stats.hit_rate()));
+            messages.push(format!(
+                "Low cache hit rate: {:.1}%",
+                cache_stats.hit_rate()
+            ));
         }
 
         Ok(CacheHealth {

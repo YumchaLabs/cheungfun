@@ -9,16 +9,15 @@ pub mod multimodal_embedder;
 
 // Re-export commonly used traits and types
 pub use cross_modal_retriever::{
-    CrossModalQuery, CrossModalRetriever, CrossModalRetrievalOptions,
-    HybridMultimodalRetriever, HybridRetrievalOptions, QueryContent,
-    QueryExpansionOptions, ScoredMultimodalNode, SimilarityBasedRetriever,
-    FusionStrategy,
+    CrossModalQuery, CrossModalRetrievalOptions, CrossModalRetriever, FusionStrategy,
+    HybridMultimodalRetriever, HybridRetrievalOptions, QueryContent, QueryExpansionOptions,
+    ScoredMultimodalNode, SimilarityBasedRetriever,
 };
 
 pub use media_processor::{
-    BoundingBox, CompressionSettings, ContentAnalysis, ContentAnalyzer,
-    ContentCategory, ConversionOptions, DetectedEntity, FeatureExtractor,
-    FormatConverter, MediaProcessor, ProcessingOptions, TimeRange,
+    BoundingBox, CompressionSettings, ContentAnalysis, ContentAnalyzer, ContentCategory,
+    ConversionOptions, DetectedEntity, FeatureExtractor, FormatConverter, MediaProcessor,
+    ProcessingOptions, TimeRange,
 };
 
 pub use multimodal_embedder::{
@@ -130,7 +129,12 @@ pub trait MetricsCollector {
     }
 
     /// Record a timing metric.
-    fn record_timing(&self, name: &str, duration: std::time::Duration, tags: Option<&[(&str, &str)]>) {
+    fn record_timing(
+        &self,
+        name: &str,
+        duration: std::time::Duration,
+        tags: Option<&[(&str, &str)]>,
+    ) {
         self.record_metric(name, duration.as_secs_f64(), tags);
     }
 
@@ -259,7 +263,10 @@ pub mod utils {
     }
 
     /// Estimate processing time for a modality and content size.
-    pub fn estimate_processing_time(modality: ModalityType, content_size: u64) -> std::time::Duration {
+    pub fn estimate_processing_time(
+        modality: ModalityType,
+        content_size: u64,
+    ) -> std::time::Duration {
         let base_time_ms = match modality {
             ModalityType::Text => 10,
             ModalityType::Image => 100,
@@ -315,9 +322,18 @@ mod tests {
     fn test_optimal_batch_size() {
         use crate::types::ModalityType;
 
-        assert_eq!(utils::optimal_batch_size_for_modality(ModalityType::Text), 64);
-        assert_eq!(utils::optimal_batch_size_for_modality(ModalityType::Image), 16);
-        assert_eq!(utils::optimal_batch_size_for_modality(ModalityType::Video), 8);
+        assert_eq!(
+            utils::optimal_batch_size_for_modality(ModalityType::Text),
+            64
+        );
+        assert_eq!(
+            utils::optimal_batch_size_for_modality(ModalityType::Image),
+            16
+        );
+        assert_eq!(
+            utils::optimal_batch_size_for_modality(ModalityType::Video),
+            8
+        );
     }
 
     #[test]

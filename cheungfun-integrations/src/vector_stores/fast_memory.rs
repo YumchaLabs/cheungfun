@@ -6,16 +6,16 @@
 //! - Manual vectorization
 //! - Minimal overhead
 
+use async_trait::async_trait;
 use std::collections::HashMap;
 use std::sync::{Arc, RwLock};
-use uuid::Uuid;
-use async_trait::async_trait;
 use tracing::{debug, info};
+use uuid::Uuid;
 
 use cheungfun_core::{
-    traits::{VectorStore, DistanceMetric},
+    CheungfunError, Result,
+    traits::{DistanceMetric, VectorStore},
     types::{Node, Query, ScoredNode},
-    Result, CheungfunError,
 };
 
 /// Fast in-memory vector store with real optimizations
@@ -23,11 +23,11 @@ use cheungfun_core::{
 pub struct FastInMemoryVectorStore {
     dimension: usize,
     distance_metric: DistanceMetric,
-    
+
     // Optimized storage: separate vectors for better cache locality
     nodes: Arc<RwLock<HashMap<Uuid, Node>>>,
     vectors: Arc<RwLock<Vec<(Uuid, Vec<f32>)>>>, // Flat vector storage
-    
+
     // Performance counters (minimal overhead)
     search_count: Arc<RwLock<u64>>,
 }
@@ -75,18 +75,18 @@ impl FastInMemoryVectorStore {
 
         for i in 0..chunks {
             let base = i * 4;
-            
+
             // Unrolled loop for better performance
             let a0 = a[base];
             let a1 = a[base + 1];
             let a2 = a[base + 2];
             let a3 = a[base + 3];
-            
+
             let b0 = b[base];
             let b1 = b[base + 1];
             let b2 = b[base + 2];
             let b3 = b[base + 3];
-            
+
             dot_product += a0 * b0 + a1 * b1 + a2 * b2 + a3 * b3;
             norm_a += a0 * a0 + a1 * a1 + a2 * a2 + a3 * a3;
             norm_b += b0 * b0 + b1 * b1 + b2 * b2 + b3 * b3;
@@ -231,18 +231,19 @@ impl VectorStore for FastInMemoryVectorStore {
 
     async fn search(&self, query: &Query) -> Result<Vec<ScoredNode>> {
         let start_time = std::time::Instant::now();
-        
+
         debug!(
             "Searching FastInMemoryVectorStore with query: '{}', top_k: {}",
             query.text, query.top_k
         );
 
-        let query_embedding = query
-            .embedding
-            .as_ref()
-            .ok_or_else(|| CheungfunError::Validation {
-                message: "Query must have an embedding for vector search".to_string(),
-            })?;
+        let query_embedding =
+            query
+                .embedding
+                .as_ref()
+                .ok_or_else(|| CheungfunError::Validation {
+                    message: "Query must have an embedding for vector search".to_string(),
+                })?;
 
         self.validate_vector(query_embedding)?;
 
@@ -297,7 +298,10 @@ impl VectorStore for FastInMemoryVectorStore {
     }
 
     async fn get(&self, node_ids: Vec<Uuid>) -> Result<Vec<Option<Node>>> {
-        debug!("Getting {} nodes from FastInMemoryVectorStore", node_ids.len());
+        debug!(
+            "Getting {} nodes from FastInMemoryVectorStore",
+            node_ids.len()
+        );
 
         let node_storage = self.nodes.read().unwrap();
         let results = node_ids
@@ -322,7 +326,7 @@ impl VectorStore for FastInMemoryVectorStore {
                 let embedding_clone = embedding.clone();
 
                 node_storage.insert(node_id, node);
-                
+
                 // Update vector in the flat storage
                 if let Some(pos) = vector_storage.iter().position(|(id, _)| *id == node_id) {
                     vector_storage[pos] = (node_id, embedding_clone);
@@ -341,7 +345,10 @@ impl VectorStore for FastInMemoryVectorStore {
     }
 
     async fn delete(&self, node_ids: Vec<Uuid>) -> Result<()> {
-        debug!("Deleting {} nodes from FastInMemoryVectorStore", node_ids.len());
+        debug!(
+            "Deleting {} nodes from FastInMemoryVectorStore",
+            node_ids.len()
+        );
 
         let mut node_storage = self.nodes.write().unwrap();
         let mut vector_storage = self.vectors.write().unwrap();
@@ -368,7 +375,10 @@ impl VectorStore for FastInMemoryVectorStore {
             });
         }
 
-        debug!("FastInMemoryVectorStore health check passed: {} nodes", node_count);
+        debug!(
+            "FastInMemoryVectorStore health check passed: {} nodes",
+            node_count
+        );
         Ok(())
     }
 }

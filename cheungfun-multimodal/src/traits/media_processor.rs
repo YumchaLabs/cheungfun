@@ -3,8 +3,8 @@
 //! This module defines traits for processing media content including
 //! format conversion, feature extraction, and content analysis.
 
-use crate::types::{MediaContent, MediaFormat, ModalityType};
 use crate::error::Result;
+use crate::types::{MediaContent, MediaFormat, ModalityType};
 use async_trait::async_trait;
 use std::collections::HashMap;
 
@@ -37,7 +37,11 @@ pub trait MediaProcessor: Send + Sync + std::fmt::Debug {
     /// # Returns
     ///
     /// The processed media content.
-    async fn process(&self, content: &MediaContent, options: &ProcessingOptions) -> Result<MediaContent>;
+    async fn process(
+        &self,
+        content: &MediaContent,
+        options: &ProcessingOptions,
+    ) -> Result<MediaContent>;
 
     /// Process multiple media contents in batch.
     async fn process_batch(
@@ -53,7 +57,10 @@ pub trait MediaProcessor: Send + Sync + std::fmt::Debug {
     }
 
     /// Extract features from media content.
-    async fn extract_features(&self, content: &MediaContent) -> Result<HashMap<String, serde_json::Value>>;
+    async fn extract_features(
+        &self,
+        content: &MediaContent,
+    ) -> Result<HashMap<String, serde_json::Value>>;
 
     /// Extract text content from media (if applicable).
     async fn extract_text(&self, content: &MediaContent) -> Result<Option<String>>;
@@ -62,10 +69,22 @@ pub trait MediaProcessor: Send + Sync + std::fmt::Debug {
     fn metadata(&self) -> HashMap<String, serde_json::Value> {
         let mut metadata = HashMap::new();
         metadata.insert("name".to_string(), self.name().into());
-        metadata.insert("supported_input_modalities".to_string(), 
-                        self.supported_input_modalities().iter().map(|m| m.to_string()).collect::<Vec<_>>().into());
-        metadata.insert("supported_output_modalities".to_string(), 
-                        self.supported_output_modalities().iter().map(|m| m.to_string()).collect::<Vec<_>>().into());
+        metadata.insert(
+            "supported_input_modalities".to_string(),
+            self.supported_input_modalities()
+                .iter()
+                .map(|m| m.to_string())
+                .collect::<Vec<_>>()
+                .into(),
+        );
+        metadata.insert(
+            "supported_output_modalities".to_string(),
+            self.supported_output_modalities()
+                .iter()
+                .map(|m| m.to_string())
+                .collect::<Vec<_>>()
+                .into(),
+        );
         metadata
     }
 
@@ -83,16 +102,21 @@ pub trait MediaProcessor: Send + Sync + std::fmt::Debug {
     fn validate_input(&self, content: &MediaContent) -> Result<()> {
         let modality = content.modality_type();
         if !self.supported_input_modalities().contains(&modality) {
-            return Err(crate::error::MultimodalError::unsupported_modality(modality.to_string()));
+            return Err(crate::error::MultimodalError::unsupported_modality(
+                modality.to_string(),
+            ));
         }
-        
-        if !self.supported_input_formats(modality).contains(&content.format) {
+
+        if !self
+            .supported_input_formats(modality)
+            .contains(&content.format)
+        {
             return Err(crate::error::MultimodalError::unsupported_format(
                 content.format.to_string(),
                 modality.to_string(),
             ));
         }
-        
+
         Ok(())
     }
 }
@@ -452,7 +476,6 @@ pub struct ContentCategory {
 #[cfg(test)]
 mod tests {
     use super::*;
-
 
     #[test]
     fn test_processing_options_default() {
