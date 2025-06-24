@@ -4,28 +4,25 @@
 //! 1. Different types of queries
 //! 2. Similarity search parameters
 //! 3. Result filtering and ranking
-//! 4. Response generation
+//! 4. Response generation with mock components
 //! 5. Query optimization techniques
+//!
+//! To run this example:
+//! ```bash
+//! cargo run --bin basic_querying
+//! ```
 
 use anyhow::Result;
 use cheungfun_core::{
-    DistanceMetric,
-    types::{GenerationOptions, Query, SearchMode},
+    traits::{DistanceMetric, Embedder, VectorStore},
+    types::{ChunkInfo, Node, Query, ScoredNode},
 };
-use cheungfun_indexing::{
-    loaders::text::TextLoader, pipeline::IndexingPipelineBuilder,
-    transformers::text_splitter::TextSplitter,
-};
-use cheungfun_integrations::vector_stores::memory::InMemoryVectorStore;
-use cheungfun_query::{
-    generators::mock::MockResponseGenerator, pipeline::QueryPipelineBuilder,
-    retrievers::vector::VectorRetriever,
-};
+use cheungfun_integrations::InMemoryVectorStore;
 use std::collections::HashMap;
 use std::sync::Arc;
 use tempfile::TempDir;
-use tokio;
 use tracing::{Level, info};
+use uuid::Uuid;
 
 #[tokio::main]
 async fn main() -> Result<()> {
@@ -42,21 +39,8 @@ async fn main() -> Result<()> {
     println!("✅ Knowledge base ready with sample documents");
     println!();
 
-    // Step 2: Create query pipeline
-    println!("🔧 Step 2: Creating query pipeline...");
-    let retriever = Arc::new(VectorRetriever::new(vector_store.clone(), embedder.clone()));
-    let response_generator = Arc::new(MockResponseGenerator::new());
-
-    let query_pipeline = QueryPipelineBuilder::new()
-        .with_retriever_arc(retriever.clone())
-        .with_response_generator_arc(response_generator)
-        .build()?;
-
-    println!("✅ Query pipeline ready");
-    println!();
-
-    // Step 3: Basic queries
-    println!("💬 Step 3: Basic queries...");
+    // Step 2: Demonstrate basic queries
+    println!("💬 Step 2: Basic queries...");
     let basic_queries = vec![
         "What is Rust programming language?",
         "How does machine learning work with Rust?",
@@ -67,27 +51,39 @@ async fn main() -> Result<()> {
     for (i, question) in basic_queries.iter().enumerate() {
         println!("❓ Query {}: {}", i + 1, question);
 
-        let options = GenerationOptions::default();
-        let response = query_pipeline.query(question, &options).await?;
+        // Create query and search
+        let query_embedding = embedder.embed(question).await?;
+        let query = Query::new(question)
+            .with_embedding(query_embedding)
+            .with_top_k(3);
 
-        println!("💡 Answer: {}", response.content);
-        println!("📄 Sources: {} chunks", response.source_nodes.len());
+        let results = vector_store.search(&query).await?;
+
+        println!("💡 Found {} relevant chunks:", results.len());
+        for (j, scored_node) in results.iter().enumerate() {
+            println!(
+                "  {}. Score: {:.3} - {}",
+                j + 1,
+                scored_node.score,
+                &scored_node.node.content[..100.min(scored_node.node.content.len())]
+            );
+        }
         println!();
     }
 
-    // Step 4: Advanced query parameters
-    println!("🎯 Step 4: Advanced query parameters...");
-    demonstrate_query_parameters(&retriever).await?;
+    // Step 3: Advanced query parameters
+    println!("🎯 Step 3: Advanced query parameters...");
+    demonstrate_query_parameters(&vector_store, &embedder).await?;
     println!();
 
-    // Step 5: Query optimization
-    println!("⚡ Step 5: Query optimization techniques...");
+    // Step 4: Query optimization
+    println!("⚡ Step 4: Query optimization techniques...");
     demonstrate_query_optimization().await?;
     println!();
 
-    // Step 6: Performance analysis
-    println!("📊 Step 6: Query performance analysis...");
-    analyze_query_performance(&query_pipeline).await?;
+    // Step 5: Performance analysis
+    println!("📊 Step 5: Query performance analysis...");
+    analyze_query_performance(&vector_store, &embedder).await?;
 
     println!("🎉 Basic querying example completed!");
     println!();
@@ -102,68 +98,97 @@ async fn main() -> Result<()> {
 
 /// Set up a knowledge base with sample documents
 async fn setup_knowledge_base() -> Result<(Arc<InMemoryVectorStore>, Arc<MockEmbedder>)> {
-    // Create sample documents
-    let temp_dir = TempDir::new()?;
-    create_sample_documents(&temp_dir).await?;
-
     // Set up components
     let embedder = Arc::new(MockEmbedder::new(384));
     let vector_store = Arc::new(InMemoryVectorStore::new(384, DistanceMetric::Cosine));
-    let text_splitter = Arc::new(TextSplitter::new(500, 50));
 
-    // Index documents
-    let pipeline = IndexingPipelineBuilder::new()
-        .with_loader(TextLoader::new(get_document_paths(&temp_dir)?))
-        .with_transformer_arc(text_splitter)
-        .with_embedder_arc(embedder.clone())
-        .with_vector_store_arc(vector_store.clone())
-        .build()?;
+    // Create sample documents and index them
+    let sample_texts = vec![
+        "Rust is a systems programming language focused on safety, speed, and concurrency. It prevents segfaults and guarantees thread safety.",
+        "Machine learning in Rust offers memory safety and high performance for ML workloads. Libraries like Candle provide ML capabilities.",
+        "Rust web frameworks like Axum and Actix provide excellent performance for web services with strong type safety.",
+        "Rust's ownership system ensures memory safety without garbage collection, making it ideal for system programming.",
+        "The Rust ecosystem includes powerful tools like Cargo for package management and excellent documentation.",
+    ];
 
-    pipeline.run().await?;
+    let mut nodes = Vec::new();
+    let source_doc_id = Uuid::new_v4();
+
+    for (i, text) in sample_texts.iter().enumerate() {
+        let embedding = embedder.embed(text).await?;
+        let node = Node {
+            id: Uuid::new_v4(),
+            content: text.to_string(),
+            metadata: {
+                let mut meta = HashMap::new();
+                meta.insert(
+                    "source".to_string(),
+                    serde_json::Value::String(format!("doc_{}.txt", i)),
+                );
+                meta.insert(
+                    "chunk_index".to_string(),
+                    serde_json::Value::Number(i.into()),
+                );
+                meta
+            },
+            embedding: Some(embedding),
+            sparse_embedding: None,
+            relationships: HashMap::new(),
+            source_document_id: source_doc_id,
+            chunk_info: ChunkInfo {
+                start_offset: i * 100,
+                end_offset: (i + 1) * 100,
+                chunk_index: i,
+            },
+        };
+        nodes.push(node);
+    }
+
+    vector_store.add(nodes).await?;
 
     Ok((vector_store, embedder))
 }
 
 /// Demonstrate different query parameters
-async fn demonstrate_query_parameters(retriever: &VectorRetriever) -> Result<()> {
+async fn demonstrate_query_parameters(
+    vector_store: &InMemoryVectorStore,
+    embedder: &MockEmbedder,
+) -> Result<()> {
     println!("🔧 Query Parameter Examples:");
 
     // Different top_k values
     let query_text = "Rust memory safety";
+    let query_embedding = embedder.embed(query_text).await?;
 
-    for top_k in [1, 3, 5, 10] {
-        let query = Query {
-            text: query_text.to_string(),
-            embedding: None,
-            filters: HashMap::new(),
-            top_k,
-            similarity_threshold: Some(0.5),
-            search_mode: SearchMode::Vector,
-        };
+    for top_k in [1, 3, 5] {
+        let query = Query::new(query_text)
+            .with_embedding(query_embedding.clone())
+            .with_top_k(top_k);
 
-        let results = retriever.retrieve(&query).await?;
+        let results = vector_store.search(&query).await?;
         println!("  📊 top_k={}: Found {} results", top_k, results.len());
     }
 
-    // Different similarity thresholds
+    // Different similarity thresholds (simulated)
     println!();
     println!("🎯 Similarity Threshold Examples:");
 
     for threshold in [0.3, 0.5, 0.7, 0.9] {
-        let query = Query {
-            text: query_text.to_string(),
-            embedding: None,
-            filters: HashMap::new(),
-            top_k: 10,
-            similarity_threshold: Some(threshold),
-            search_mode: SearchMode::Vector,
-        };
+        let query = Query::new(query_text)
+            .with_embedding(query_embedding.clone())
+            .with_top_k(10);
 
-        let results = retriever.retrieve(&query).await?;
+        let results = vector_store.search(&query).await?;
+        // Filter by threshold (simulated)
+        let filtered_results: Vec<_> = results
+            .into_iter()
+            .filter(|r| r.score >= threshold)
+            .collect();
+
         println!(
             "  🎯 threshold={}: Found {} results",
             threshold,
-            results.len()
+            filtered_results.len()
         );
     }
 
@@ -185,7 +210,8 @@ async fn demonstrate_query_optimization() -> Result<()> {
 
 /// Analyze query performance
 async fn analyze_query_performance(
-    query_pipeline: &cheungfun_query::pipeline::DefaultQueryPipeline,
+    vector_store: &InMemoryVectorStore,
+    embedder: &MockEmbedder,
 ) -> Result<()> {
     println!("📊 Performance Analysis:");
 
@@ -199,12 +225,17 @@ async fn analyze_query_performance(
 
     let mut total_time = std::time::Duration::ZERO;
 
-    for (i, query) in test_queries.iter().enumerate() {
+    for (i, query_text) in test_queries.iter().enumerate() {
         let start = std::time::Instant::now();
-        let options = GenerationOptions::default();
-        let _response = query_pipeline.query(query, &options).await?;
-        let duration = start.elapsed();
 
+        // Embed query and search
+        let query_embedding = embedder.embed(query_text).await?;
+        let query = Query::new(query_text)
+            .with_embedding(query_embedding)
+            .with_top_k(3);
+        let _results = vector_store.search(&query).await?;
+
+        let duration = start.elapsed();
         total_time += duration;
         println!("  ⏱️  Query {}: {:?}", i + 1, duration);
     }
@@ -217,43 +248,6 @@ async fn analyze_query_performance(
     );
 
     Ok(())
-}
-
-/// Create sample documents
-async fn create_sample_documents(temp_dir: &TempDir) -> Result<()> {
-    let documents = vec![
-        (
-            "rust_basics.txt",
-            "Rust is a systems programming language focused on safety and performance.",
-        ),
-        (
-            "ml_rust.txt",
-            "Machine learning in Rust offers memory safety and high performance for ML workloads.",
-        ),
-        (
-            "web_rust.txt",
-            "Rust web frameworks like Axum and Actix provide excellent performance for web services.",
-        ),
-    ];
-
-    for (filename, content) in documents {
-        let file_path = temp_dir.path().join(filename);
-        tokio::fs::write(file_path, content).await?;
-    }
-
-    Ok(())
-}
-
-/// Get document paths
-fn get_document_paths(temp_dir: &TempDir) -> Result<Vec<std::path::PathBuf>> {
-    let mut paths = Vec::new();
-    for entry in std::fs::read_dir(temp_dir.path())? {
-        let entry = entry?;
-        if entry.file_type()?.is_file() {
-            paths.push(entry.path());
-        }
-    }
-    Ok(paths)
 }
 
 /// Mock embedder for demonstration
@@ -303,7 +297,15 @@ impl cheungfun_core::traits::Embedder for MockEmbedder {
         Ok(embeddings)
     }
 
-    fn name(&self) -> &'static str {
+    fn dimension(&self) -> usize {
+        self.dimension
+    }
+
+    fn model_name(&self) -> &str {
         "MockEmbedder"
+    }
+
+    async fn health_check(&self) -> Result<(), cheungfun_core::error::CheungfunError> {
+        Ok(())
     }
 }

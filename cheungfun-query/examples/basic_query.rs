@@ -3,6 +3,21 @@
 //! This example demonstrates how to set up and use the basic query engine
 //! components for a simple RAG application with real siumai integration.
 //!
+//! To run this example:
+//! ```bash
+//! # With OpenAI (recommended)
+//! export OPENAI_API_KEY="your-openai-api-key"
+//! cargo run --example basic_query --features siumai
+//!
+//! # With Anthropic
+//! export ANTHROPIC_API_KEY="your-anthropic-api-key"
+//! cargo run --example basic_query --features siumai
+//!
+//! # With Ollama (local)
+//! export OLLAMA_BASE_URL="http://localhost:11434"
+//! cargo run --example basic_query --features siumai
+//! ```
+//!
 //! # Environment Variables
 //!
 //! Set the following environment variables to use real LLM providers:
@@ -10,7 +25,7 @@
 //! - `ANTHROPIC_API_KEY`: For Anthropic models
 //! - `OLLAMA_BASE_URL`: For Ollama (defaults to http://localhost:11434)
 //!
-//! If no API keys are provided, the example will use a mock implementation.
+//! If no API keys are provided, the example will fail with helpful error messages.
 
 use std::collections::HashMap;
 use std::sync::Arc;

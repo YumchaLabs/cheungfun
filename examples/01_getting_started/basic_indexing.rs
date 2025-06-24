@@ -3,26 +3,24 @@
 //! This example demonstrates:
 //! 1. Loading documents from various sources
 //! 2. Text splitting and chunking strategies
-//! 3. Embedding generation
+//! 3. Embedding generation with mock embedder
 //! 4. Vector storage
 //! 5. Monitoring the indexing process
+//!
+//! To run this example:
+//! ```bash
+//! cargo run --bin basic_indexing
+//! ```
 
 use anyhow::Result;
 use cheungfun_core::{
-    DistanceMetric,
-    types::{ChunkInfo, Document},
+    traits::{DistanceMetric, Embedder, VectorStore},
+    types::{ChunkInfo, Node},
 };
-use cheungfun_indexing::{
-    loaders::text::TextLoader, pipeline::IndexingPipelineBuilder,
-    transformers::text_splitter::TextSplitter,
-};
-use cheungfun_integrations::{
-    embedders::api::{ApiEmbedder, ApiEmbedderConfig},
-    vector_stores::memory::InMemoryVectorStore,
-};
+use cheungfun_integrations::InMemoryVectorStore;
+use std::collections::HashMap;
 use std::sync::Arc;
 use tempfile::TempDir;
-use tokio;
 use tracing::{Level, info};
 use uuid::Uuid;
 
@@ -41,54 +39,48 @@ async fn main() -> Result<()> {
     println!("✅ Created sample documents in temporary directory");
     println!();
 
-    // Step 2: Configure text splitting
-    println!("✂️  Step 2: Configuring text splitting...");
+    // Step 2: Set up embedder
+    println!("🧠 Step 2: Setting up embedder...");
+    let embedder = Arc::new(create_embedder().await?);
+    println!("✅ Embedder ready: {}", embedder.model_name());
+    println!();
+
+    // Step 3: Configure text splitting and indexing strategies
+    println!("✂️  Step 3: Configuring text splitting strategies...");
 
     // Different chunking strategies for different use cases
     let strategies = vec![
-        ("Small Chunks (200 chars)", TextSplitter::new(200, 20)),
-        ("Medium Chunks (500 chars)", TextSplitter::new(500, 50)),
-        ("Large Chunks (1000 chars)", TextSplitter::new(1000, 100)),
+        ("Small Chunks (200 chars)", 200, 20),
+        ("Medium Chunks (500 chars)", 500, 50),
+        ("Large Chunks (1000 chars)", 1000, 100),
     ];
 
-    for (name, splitter) in &strategies {
+    for (name, chunk_size, overlap) in &strategies {
         println!(
             "  📏 {}: chunk_size={}, overlap={}",
-            name,
-            splitter.chunk_size(),
-            splitter.overlap()
+            name, chunk_size, overlap
         );
     }
     println!();
 
-    // Step 3: Set up embedder
-    println!("🧠 Step 3: Setting up embedder...");
-    let embedder = Arc::new(create_embedder().await?);
-    println!("✅ Embedder ready: {}", embedder.name());
-    println!();
-
     // Step 4: Index with different strategies
-    for (strategy_name, text_splitter) in strategies {
+    for (strategy_name, chunk_size, overlap) in strategies {
         println!("🔄 Processing with {}...", strategy_name);
 
         // Create vector store for this strategy
         let vector_store = Arc::new(InMemoryVectorStore::new(384, DistanceMetric::Cosine));
 
-        // Create indexing pipeline
-        let pipeline = IndexingPipelineBuilder::new()
-            .with_loader(TextLoader::new(get_document_paths(&temp_dir)?))
-            .with_transformer_arc(Arc::new(text_splitter))
-            .with_embedder_arc(embedder.clone())
-            .with_vector_store_arc(vector_store.clone())
-            .build()?;
-
-        // Run indexing and measure time
+        // Process documents with this strategy
         let start_time = std::time::Instant::now();
-        pipeline.run().await?;
+        let chunk_count = process_documents_with_strategy(
+            &temp_dir,
+            chunk_size,
+            overlap,
+            embedder.clone(),
+            vector_store.clone(),
+        )
+        .await?;
         let duration = start_time.elapsed();
-
-        // Get statistics (mock implementation)
-        let chunk_count = get_chunk_count(&vector_store).await?;
 
         println!("  ✅ Completed in {:?}", duration);
         println!("  📊 Generated {} chunks", chunk_count);
@@ -240,11 +232,87 @@ async fn create_embedder() -> Result<MockEmbedder> {
     Ok(MockEmbedder::new(384))
 }
 
-/// Get chunk count from vector store (mock implementation)
-async fn get_chunk_count(vector_store: &InMemoryVectorStore) -> Result<usize> {
-    // In a real implementation, you'd query the vector store
-    // For this example, we'll return a mock count
-    Ok(42) // Mock value
+/// Process documents with a specific chunking strategy
+async fn process_documents_with_strategy(
+    temp_dir: &TempDir,
+    chunk_size: usize,
+    overlap: usize,
+    embedder: Arc<MockEmbedder>,
+    vector_store: Arc<InMemoryVectorStore>,
+) -> Result<usize> {
+    let document_paths = get_document_paths(temp_dir)?;
+    let mut total_chunks = 0;
+
+    for path in document_paths {
+        // Read document content
+        let content = tokio::fs::read_to_string(&path).await?;
+
+        // Split into chunks
+        let chunks = split_text(&content, chunk_size, overlap);
+
+        // Create nodes and embed them
+        let mut nodes = Vec::new();
+        let source_doc_id = Uuid::new_v4();
+
+        for (i, chunk) in chunks.iter().enumerate() {
+            let embedding = embedder.embed(chunk).await?;
+            let node = Node {
+                id: Uuid::new_v4(),
+                content: chunk.clone(),
+                metadata: {
+                    let mut meta = HashMap::new();
+                    meta.insert(
+                        "source".to_string(),
+                        serde_json::Value::String(
+                            path.file_name().unwrap().to_string_lossy().to_string(),
+                        ),
+                    );
+                    meta.insert(
+                        "chunk_index".to_string(),
+                        serde_json::Value::Number(i.into()),
+                    );
+                    meta
+                },
+                embedding: Some(embedding),
+                sparse_embedding: None,
+                relationships: HashMap::new(),
+                source_document_id: source_doc_id,
+                chunk_info: ChunkInfo {
+                    start_offset: i * (chunk_size - overlap),
+                    end_offset: i * (chunk_size - overlap) + chunk.len(),
+                    chunk_index: i,
+                },
+            };
+            nodes.push(node);
+        }
+
+        // Add nodes to vector store
+        vector_store.add(nodes).await?;
+        total_chunks += chunks.len();
+    }
+
+    Ok(total_chunks)
+}
+
+/// Simple text splitting function
+fn split_text(text: &str, chunk_size: usize, overlap: usize) -> Vec<String> {
+    let mut chunks = Vec::new();
+    let chars: Vec<char> = text.chars().collect();
+    let mut start = 0;
+
+    while start < chars.len() {
+        let end = (start + chunk_size).min(chars.len());
+        let chunk: String = chars[start..end].iter().collect();
+        chunks.push(chunk.trim().to_string());
+
+        if end >= chars.len() {
+            break;
+        }
+
+        start += chunk_size - overlap;
+    }
+
+    chunks.into_iter().filter(|c| !c.is_empty()).collect()
 }
 
 /// Demonstrate advanced indexing features
@@ -309,7 +377,15 @@ impl cheungfun_core::traits::Embedder for MockEmbedder {
         Ok(embeddings)
     }
 
-    fn name(&self) -> &'static str {
+    fn dimension(&self) -> usize {
+        self.dimension
+    }
+
+    fn model_name(&self) -> &str {
         "MockEmbedder"
+    }
+
+    async fn health_check(&self) -> Result<(), cheungfun_core::error::CheungfunError> {
+        Ok(())
     }
 }
