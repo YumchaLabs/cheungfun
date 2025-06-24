@@ -81,7 +81,7 @@ async fn demo_file_cache() -> Result<(), Box<dyn std::error::Error>> {
     info!("\n💾 Demo 2: File Cache");
 
     let cache_dir = "./demo_cache";
-    let cache = FileCache::new(cache_dir).await?;
+    let cache = FileCache::with_default_config(cache_dir).await?;
 
     info!("Cache directory: {}", cache.cache_dir().display());
 

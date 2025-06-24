@@ -114,7 +114,7 @@ async fn demo_pipeline_with_file_cache() -> Result<(), Box<dyn std::error::Error
 
     let documents = create_sample_documents();
     let cache_dir = "./pipeline_cache";
-    let cache = Arc::new(FileCache::new(cache_dir).await?)
+    let cache = Arc::new(FileCache::with_default_config(cache_dir).await?)
         as Arc<dyn PipelineCache<Error = cheungfun_core::CheungfunError>>;
 
     let config = PipelineConfig {
@@ -173,11 +173,11 @@ async fn demo_cache_performance_comparison() -> Result<(), Box<dyn std::error::E
                 >),
         ),
         (
-            "File Cache",
-            Some(Arc::new(FileCache::new("./comparison_cache").await?)
-                as Arc<
-                    dyn PipelineCache<Error = cheungfun_core::CheungfunError>,
-                >),
+            "Enhanced File Cache",
+            Some(
+                Arc::new(FileCache::with_default_config("./comparison_cache").await?)
+                    as Arc<dyn PipelineCache<Error = cheungfun_core::CheungfunError>>,
+            ),
         ),
     ];
 

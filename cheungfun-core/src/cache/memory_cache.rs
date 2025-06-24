@@ -483,4 +483,136 @@ impl PipelineCache for MemoryCache {
             messages,
         })
     }
+
+    async fn get_embeddings_batch(
+        &self,
+        keys: &[&str],
+    ) -> std::result::Result<Vec<Option<Vec<f32>>>, Self::Error> {
+        debug!("Getting {} embeddings from memory cache", keys.len());
+
+        let cache = self.embedding_cache.read().await;
+        let mut results = Vec::with_capacity(keys.len());
+        let mut hits = 0;
+        let mut misses = 0;
+
+        for key in keys {
+            if let Some(entry) = cache.get(*key) {
+                if entry.is_expired() {
+                    misses += 1;
+                    debug!("Embedding cache entry expired: {}", key);
+                    results.push(None);
+                } else {
+                    hits += 1;
+                    debug!("Embedding cache hit: {}", key);
+                    results.push(Some(entry.data.clone()));
+                }
+            } else {
+                misses += 1;
+                debug!("Embedding cache miss: {}", key);
+                results.push(None);
+            }
+        }
+
+        // Update stats
+        let mut stats = self.stats.write().await;
+        stats.hits += hits;
+        stats.misses += misses;
+
+        debug!("Batch embedding cache: {} hits, {} misses", hits, misses);
+
+        Ok(results)
+    }
+
+    async fn put_embeddings_batch(
+        &self,
+        items: &[(&str, Vec<f32>, Duration)],
+    ) -> std::result::Result<(), Self::Error> {
+        debug!("Storing {} embeddings in memory cache", items.len());
+
+        let mut entries_added = 0;
+
+        for (key, embedding, ttl) in items {
+            // Use existing eviction logic
+            self.evict_if_needed(&self.embedding_cache).await;
+
+            let entry = CacheEntry::new(embedding.clone(), *ttl);
+            let mut cache = self.embedding_cache.write().await;
+            cache.insert((*key).to_string(), entry);
+            entries_added += 1;
+        }
+
+        // Update stats
+        let mut stats = self.stats.write().await;
+        stats.total_entries += entries_added;
+
+        debug!("Batch embedding cache: {} entries added", entries_added);
+
+        Ok(())
+    }
+
+    async fn get_nodes_batch(
+        &self,
+        keys: &[&str],
+    ) -> std::result::Result<Vec<Option<Vec<Node>>>, Self::Error> {
+        debug!("Getting {} node collections from memory cache", keys.len());
+
+        let cache = self.nodes_cache.read().await;
+        let mut results = Vec::with_capacity(keys.len());
+        let mut hits = 0;
+        let mut misses = 0;
+
+        for key in keys {
+            if let Some(entry) = cache.get(*key) {
+                if entry.is_expired() {
+                    misses += 1;
+                    debug!("Nodes cache entry expired: {}", key);
+                    results.push(None);
+                } else {
+                    hits += 1;
+                    debug!("Nodes cache hit: {}", key);
+                    results.push(Some(entry.data.clone()));
+                }
+            } else {
+                misses += 1;
+                debug!("Nodes cache miss: {}", key);
+                results.push(None);
+            }
+        }
+
+        // Update stats
+        let mut stats = self.stats.write().await;
+        stats.hits += hits;
+        stats.misses += misses;
+
+        debug!("Batch nodes cache: {} hits, {} misses", hits, misses);
+
+        Ok(results)
+    }
+
+    async fn put_nodes_batch(
+        &self,
+        items: &[(&str, Vec<Node>, Duration)],
+    ) -> std::result::Result<(), Self::Error> {
+        debug!("Storing {} node collections in memory cache", items.len());
+
+        let mut entries_added = 0;
+
+        for (key, nodes, ttl) in items {
+            // Use existing eviction logic
+            self.evict_if_needed(&self.nodes_cache).await;
+
+            let entry = CacheEntry::new(nodes.clone(), *ttl);
+            let mut cache = self.nodes_cache.write().await;
+            cache.insert((*key).to_string(), entry);
+            entries_added += 1;
+        }
+
+        // Update stats
+        let mut stats = self.stats.write().await;
+        stats.total_entries += entries_added;
+
+        debug!("Batch nodes cache: {} entries added", entries_added);
+
+        Ok(())
+    }
 }

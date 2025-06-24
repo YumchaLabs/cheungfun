@@ -45,6 +45,10 @@ tracing = { workspace = true }
 # Caching
 cached = { workspace = true }
 
+# Performance optimization
+rayon = { workspace = true }
+num_cpus = { workspace = true }
+
 [dev-dependencies]
 # Testing utilities
 tokio-test = "0.4"

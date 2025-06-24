@@ -45,6 +45,51 @@ pub trait PipelineCache: Send + Sync + std::fmt::Debug {
         ttl: Duration,
     ) -> std::result::Result<(), Self::Error>;
 
+    /// Get multiple cached embedding vectors in batch.
+    ///
+    /// This method is more efficient than calling `get_embedding` multiple times
+    /// as it can optimize the retrieval process.
+    ///
+    /// # Arguments
+    /// * `keys` - The cache keys for the embeddings
+    ///
+    /// # Returns
+    /// * `Ok(embeddings)` - Vector of optional embeddings, in the same order as keys
+    /// * `Err(error)` - If there was an error accessing the cache
+    async fn get_embeddings_batch(
+        &self,
+        keys: &[&str],
+    ) -> std::result::Result<Vec<Option<Vec<f32>>>, Self::Error> {
+        // Default implementation: call get_embedding for each key
+        let mut results = Vec::with_capacity(keys.len());
+        for key in keys {
+            results.push(self.get_embedding(key).await?);
+        }
+        Ok(results)
+    }
+
+    /// Store multiple embedding vectors in the cache in batch.
+    ///
+    /// This method is more efficient than calling `put_embedding` multiple times
+    /// as it can optimize the storage process.
+    ///
+    /// # Arguments
+    /// * `items` - Vector of (key, embedding, ttl) tuples
+    ///
+    /// # Returns
+    /// * `Ok(())` - If all embeddings were stored successfully
+    /// * `Err(error)` - If there was an error storing any embedding
+    async fn put_embeddings_batch(
+        &self,
+        items: &[(&str, Vec<f32>, Duration)],
+    ) -> std::result::Result<(), Self::Error> {
+        // Default implementation: call put_embedding for each item
+        for (key, embedding, ttl) in items {
+            self.put_embedding(key, embedding.clone(), *ttl).await?;
+        }
+        Ok(())
+    }
+
     /// Get cached nodes (processed document chunks).
     ///
     /// # Arguments
@@ -68,6 +113,51 @@ pub trait PipelineCache: Send + Sync + std::fmt::Debug {
         nodes: Vec<Node>,
         ttl: Duration,
     ) -> std::result::Result<(), Self::Error>;
+
+    /// Get multiple cached node collections in batch.
+    ///
+    /// This method is more efficient than calling `get_nodes` multiple times
+    /// as it can optimize the retrieval process.
+    ///
+    /// # Arguments
+    /// * `keys` - The cache keys for the node collections
+    ///
+    /// # Returns
+    /// * `Ok(node_collections)` - Vector of optional node collections, in the same order as keys
+    /// * `Err(error)` - If there was an error accessing the cache
+    async fn get_nodes_batch(
+        &self,
+        keys: &[&str],
+    ) -> std::result::Result<Vec<Option<Vec<Node>>>, Self::Error> {
+        // Default implementation: call get_nodes for each key
+        let mut results = Vec::with_capacity(keys.len());
+        for key in keys {
+            results.push(self.get_nodes(key).await?);
+        }
+        Ok(results)
+    }
+
+    /// Store multiple node collections in the cache in batch.
+    ///
+    /// This method is more efficient than calling `put_nodes` multiple times
+    /// as it can optimize the storage process.
+    ///
+    /// # Arguments
+    /// * `items` - Vector of (key, nodes, ttl) tuples
+    ///
+    /// # Returns
+    /// * `Ok(())` - If all node collections were stored successfully
+    /// * `Err(error)` - If there was an error storing any node collection
+    async fn put_nodes_batch(
+        &self,
+        items: &[(&str, Vec<Node>, Duration)],
+    ) -> std::result::Result<(), Self::Error> {
+        // Default implementation: call put_nodes for each item
+        for (key, nodes, ttl) in items {
+            self.put_nodes(key, nodes.clone(), *ttl).await?;
+        }
+        Ok(())
+    }
 
     /// Get arbitrary serializable data from the cache as bytes.
     ///
@@ -361,5 +451,132 @@ impl CacheKeyGenerator {
         serialized.hash(&mut hasher);
 
         Ok(format!("{}:{:x}", prefix, hasher.finish()))
+    }
+}
+
+/// Configuration for cache behavior and performance tuning.
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct CacheConfig {
+    /// Default TTL for cache entries
+    pub default_ttl: Duration,
+    /// Maximum number of entries per cache type
+    pub max_entries: usize,
+    /// Whether to enable cache compression
+    pub enable_compression: bool,
+    /// Cache eviction policy
+    pub eviction_policy: EvictionPolicy,
+    /// Batch operation size for bulk operations
+    pub batch_size: usize,
+    /// Whether to enable cache statistics
+    pub enable_stats: bool,
+    /// Cache warming configuration
+    pub warming_config: Option<CacheWarmingConfig>,
+}
+
+impl Default for CacheConfig {
+    fn default() -> Self {
+        Self {
+            default_ttl: Duration::from_secs(3600), // 1 hour
+            max_entries: 10000,
+            enable_compression: false,
+            eviction_policy: EvictionPolicy::Lru,
+            batch_size: 100,
+            enable_stats: true,
+            warming_config: None,
+        }
+    }
+}
+
+impl CacheConfig {
+    /// Create a new cache configuration with default values.
+    #[must_use]
+    pub fn new() -> Self {
+        Self::default()
+    }
+
+    /// Set the default TTL for cache entries.
+    #[must_use]
+    pub fn with_default_ttl(mut self, ttl: Duration) -> Self {
+        self.default_ttl = ttl;
+        self
+    }
+
+    /// Set the maximum number of entries per cache type.
+    #[must_use]
+    pub fn with_max_entries(mut self, max_entries: usize) -> Self {
+        self.max_entries = max_entries;
+        self
+    }
+
+    /// Enable or disable cache compression.
+    #[must_use]
+    pub fn with_compression(mut self, enable: bool) -> Self {
+        self.enable_compression = enable;
+        self
+    }
+
+    /// Set the cache eviction policy.
+    #[must_use]
+    pub fn with_eviction_policy(mut self, policy: EvictionPolicy) -> Self {
+        self.eviction_policy = policy;
+        self
+    }
+
+    /// Set the batch operation size.
+    #[must_use]
+    pub fn with_batch_size(mut self, batch_size: usize) -> Self {
+        self.batch_size = batch_size;
+        self
+    }
+
+    /// Enable or disable cache statistics.
+    #[must_use]
+    pub fn with_stats(mut self, enable: bool) -> Self {
+        self.enable_stats = enable;
+        self
+    }
+
+    /// Set cache warming configuration.
+    #[must_use]
+    pub fn with_warming_config(mut self, config: CacheWarmingConfig) -> Self {
+        self.warming_config = Some(config);
+        self
+    }
+}
+
+/// Cache eviction policies.
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+pub enum EvictionPolicy {
+    /// Least Recently Used
+    Lru,
+    /// Least Frequently Used
+    Lfu,
+    /// First In, First Out
+    Fifo,
+    /// Time-based expiration only
+    Ttl,
+}
+
+/// Configuration for cache warming (pre-loading frequently used data).
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct CacheWarmingConfig {
+    /// Whether to enable cache warming on startup
+    pub enable_on_startup: bool,
+    /// Patterns for keys to warm up
+    pub key_patterns: Vec<String>,
+    /// Maximum time to spend on warming
+    pub max_warming_time: Duration,
+    /// Number of concurrent warming operations
+    pub warming_concurrency: usize,
+}
+
+impl Default for CacheWarmingConfig {
+    fn default() -> Self {
+        Self {
+            enable_on_startup: false,
+            key_patterns: Vec::new(),
+            max_warming_time: Duration::from_secs(60),
+            warming_concurrency: 4,
+        }
     }
 }

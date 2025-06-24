@@ -3,8 +3,12 @@
 //! This module provides various cache implementations that can be used
 //! across different components of the RAG pipeline.
 
+pub mod adapter;
 pub mod file_cache;
 pub mod memory_cache;
+pub mod monitoring;
+pub mod performance;
+pub mod pipeline_integration;
 
 use async_trait::async_trait;
 use std::time::Duration;
@@ -13,8 +17,22 @@ use crate::traits::{CacheHealth, CacheStats, PipelineCache};
 use crate::{CheungfunError, Node};
 
 // Re-export cache implementations
-pub use file_cache::FileCache;
+pub use adapter::{AdaptableEmbeddingCache, CacheAdapterConfig, EmbeddingCacheAdapter};
+pub use file_cache::{CacheUsageStats, CompactionStats, FileCache, FileCacheConfig};
 pub use memory_cache::MemoryCache;
+pub use monitoring::{
+    AggregatedMetrics, Alert, AlertSeverity, AlertThresholds, AlertType, Anomaly, CacheMonitor,
+    ErrorMetrics, MetricsSample, MonitoringConfig, MonitoringStatus, PerformanceRecommendation,
+    RecommendationPriority, RecommendationType, ResponseTimeMetrics, TrendAnalysis, TrendDirection,
+};
+pub use performance::{
+    CacheEfficiencyReport, ParallelStrategy, PerformanceCache, PerformanceCacheConfig,
+    PerformanceMetrics,
+};
+pub use pipeline_integration::{
+    CacheWarmer, EmbeddingCacheOps, NodeCacheOps, PipelineCacheConfig, PipelineCacheManager,
+    PipelineCacheStats,
+};
 
 /// Unified cache enum that can hold different cache implementations.
 ///
@@ -24,7 +42,7 @@ pub use memory_cache::MemoryCache;
 pub enum UnifiedCache {
     /// Memory-based cache
     Memory(MemoryCache),
-    /// File-based cache
+    /// Enhanced file-based cache
     File(FileCache),
 }
 
@@ -130,6 +148,46 @@ impl PipelineCache for UnifiedCache {
             UnifiedCache::File(cache) => cache.health().await,
         }
     }
+
+    async fn get_embeddings_batch(
+        &self,
+        keys: &[&str],
+    ) -> std::result::Result<Vec<Option<Vec<f32>>>, Self::Error> {
+        match self {
+            UnifiedCache::Memory(cache) => cache.get_embeddings_batch(keys).await,
+            UnifiedCache::File(cache) => cache.get_embeddings_batch(keys).await,
+        }
+    }
+
+    async fn put_embeddings_batch(
+        &self,
+        items: &[(&str, Vec<f32>, Duration)],
+    ) -> std::result::Result<(), Self::Error> {
+        match self {
+            UnifiedCache::Memory(cache) => cache.put_embeddings_batch(items).await,
+            UnifiedCache::File(cache) => cache.put_embeddings_batch(items).await,
+        }
+    }
+
+    async fn get_nodes_batch(
+        &self,
+        keys: &[&str],
+    ) -> std::result::Result<Vec<Option<Vec<Node>>>, Self::Error> {
+        match self {
+            UnifiedCache::Memory(cache) => cache.get_nodes_batch(keys).await,
+            UnifiedCache::File(cache) => cache.get_nodes_batch(keys).await,
+        }
+    }
+
+    async fn put_nodes_batch(
+        &self,
+        items: &[(&str, Vec<Node>, Duration)],
+    ) -> std::result::Result<(), Self::Error> {
+        match self {
+            UnifiedCache::Memory(cache) => cache.put_nodes_batch(items).await,
+            UnifiedCache::File(cache) => cache.put_nodes_batch(items).await,
+        }
+    }
 }
 
 impl UnifiedCache {
@@ -145,19 +203,18 @@ impl UnifiedCache {
         UnifiedCache::Memory(MemoryCache::with_config(default_ttl, max_size))
     }
 
-    /// Create a new file cache.
+    /// Create a new enhanced file cache with default configuration.
     pub async fn file<P: AsRef<std::path::Path>>(cache_dir: P) -> Result<Self, CheungfunError> {
-        Ok(UnifiedCache::File(FileCache::new(cache_dir).await?))
+        Ok(UnifiedCache::File(
+            FileCache::with_default_config(cache_dir).await?,
+        ))
     }
 
-    /// Create a new file cache with custom configuration.
+    /// Create a new enhanced file cache with custom configuration.
     pub async fn file_with_config<P: AsRef<std::path::Path>>(
         cache_dir: P,
-        default_ttl: Duration,
-        max_size: usize,
+        config: FileCacheConfig,
     ) -> Result<Self, CheungfunError> {
-        Ok(UnifiedCache::File(
-            FileCache::with_config(cache_dir, default_ttl, max_size).await?,
-        ))
+        Ok(UnifiedCache::File(FileCache::new(cache_dir, config).await?))
     }
 }
