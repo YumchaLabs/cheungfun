@@ -180,8 +180,7 @@ impl LlmFactoryRegistry {
 
         let factory = self.factories.get(provider).ok_or_else(|| {
             crate::CheungfunError::configuration(format!(
-                "No factory registered for LLM provider: {}",
-                provider
+                "No factory registered for LLM provider: {provider}"
             ))
         })?;
 
@@ -210,7 +209,7 @@ impl LlmFactoryRegistry {
 
         self.factories
             .get(provider)
-            .map_or(false, |factory| factory.can_create(config))
+            .is_some_and(|factory| factory.can_create(config))
     }
 
     /// Get all registered LLM providers.
@@ -248,8 +247,7 @@ impl LlmFactoryRegistry {
 
         let factory = self.factories.get(provider).ok_or_else(|| {
             crate::CheungfunError::configuration(format!(
-                "No factory registered for LLM provider: {}",
-                provider
+                "No factory registered for LLM provider: {provider}"
             ))
         })?;
 
@@ -285,7 +283,7 @@ impl LlmFactoryRegistry {
 /// Siumai-based LLM factory implementation.
 ///
 /// This factory creates LLM clients using the siumai crate, which provides
-/// a unified interface for multiple LLM providers including OpenAI, Anthropic,
+/// a unified interface for multiple LLM providers including `OpenAI`, Anthropic,
 /// Google Gemini, Ollama, and others.
 ///
 /// # Examples

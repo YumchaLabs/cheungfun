@@ -18,7 +18,7 @@ pub struct FileFilter {
 }
 
 impl FileFilter {
-    /// Create a new FileFilter with the given configuration.
+    /// Create a new `FileFilter` with the given configuration.
     pub fn new<P: AsRef<Path>>(base_dir: P, config: FilterConfig) -> FilterResult<Self> {
         let base_dir = base_dir.as_ref();
 
@@ -62,7 +62,7 @@ impl FileFilter {
         })
     }
 
-    /// Create a FileFilter with additional ignore files.
+    /// Create a `FileFilter` with additional ignore files.
     pub fn with_ignore_files<P: AsRef<Path>>(
         base_dir: P,
         config: FilterConfig,
@@ -116,6 +116,7 @@ impl FileFilter {
     }
 
     /// Check if a file should be included based on all filtering rules.
+    #[must_use]
     pub fn should_include_file(&self, path: &Path) -> bool {
         // Check if it's a file (not a directory)
         if path.is_dir() {
@@ -127,6 +128,7 @@ impl FileFilter {
     }
 
     /// Check if a directory should be traversed.
+    #[must_use]
     pub fn should_traverse_directory(&self, path: &Path) -> bool {
         // Check if it's a directory
         if !path.is_dir() {
@@ -237,16 +239,15 @@ impl FileFilter {
 
     /// Check if a file matches the extension filters.
     fn check_file_extension(&self, path: &Path) -> bool {
-        let extension = match path.extension().and_then(|e| e.to_str()) {
-            Some(ext) => ext.to_lowercase(),
-            None => {
-                // No extension - check if we have an include list
-                if self.config.include_extensions.is_some() {
-                    debug!("Excluding file without extension: {}", path.display());
-                    return false;
-                }
-                return true;
+        let extension = if let Some(ext) = path.extension().and_then(|e| e.to_str()) {
+            ext.to_lowercase()
+        } else {
+            // No extension - check if we have an include list
+            if self.config.include_extensions.is_some() {
+                debug!("Excluding file without extension: {}", path.display());
+                return false;
             }
+            return true;
         };
 
         // Check exclude list first
@@ -278,21 +279,23 @@ impl FileFilter {
     fn is_hidden(&self, path: &Path) -> bool {
         path.file_name()
             .and_then(|name| name.to_str())
-            .map(|name| name.starts_with('.'))
-            .unwrap_or(false)
+            .is_some_and(|name| name.starts_with('.'))
     }
 
     /// Get the filter configuration.
+    #[must_use]
     pub fn config(&self) -> &FilterConfig {
         &self.config
     }
 
     /// Check if gitignore filtering is enabled.
+    #[must_use]
     pub fn has_gitignore(&self) -> bool {
         self.gitignore_matcher.is_some()
     }
 
     /// Check if glob pattern filtering is enabled.
+    #[must_use]
     pub fn has_glob_patterns(&self) -> bool {
         self.glob_matcher.is_some()
     }

@@ -8,14 +8,11 @@ use crate::{
     types::{AgentCapabilities, AgentConfig, AgentId, AgentMessage, AgentResponse, ExecutionStats},
 };
 use async_trait::async_trait;
-use cheungfun_core::{
-    traits::{ResponseGenerator, Retriever},
-    types::{GenerationOptions, Query, QueryResponse, ScoredNode},
-};
+
 use cheungfun_query::engine::{QueryEngine, QueryEngineOptions};
 use chrono::Utc;
 use std::{collections::HashMap, sync::Arc, time::Instant};
-use tracing::{debug, error, info, warn};
+use tracing::{debug, info};
 use uuid::Uuid;
 
 /// RAG-enhanced agent that integrates with Cheungfun's query system
@@ -92,6 +89,7 @@ pub struct RagAgentStats {
 
 impl RagAgent {
     /// Create a new RAG agent
+    #[must_use]
     pub fn new(
         config: AgentConfig,
         query_engine: Arc<QueryEngine>,
@@ -108,6 +106,7 @@ impl RagAgent {
     }
 
     /// Create RAG agent with custom RAG configuration
+    #[must_use]
     pub fn with_rag_config(
         config: AgentConfig,
         query_engine: Arc<QueryEngine>,
@@ -125,6 +124,7 @@ impl RagAgent {
     }
 
     /// Get RAG configuration
+    #[must_use]
     pub fn rag_config(&self) -> &RagAgentConfig {
         &self.rag_config
     }
@@ -201,7 +201,7 @@ impl RagAgent {
             tokens_used: query_response
                 .query_metadata
                 .get("tokens_used")
-                .and_then(|v| v.as_u64())
+                .and_then(serde_json::Value::as_u64)
                 .map(|v| v as usize),
             custom_metrics: {
                 let mut metrics = HashMap::new();
@@ -266,7 +266,7 @@ impl RagAgent {
             || query_lower.contains("why")
             || query_lower.contains("when")
             || query_lower.contains("where")
-            || query_lower.contains("?")
+            || query_lower.contains('?')
         {
             return true;
         }
@@ -425,8 +425,8 @@ mod tests {
 
     #[test]
     fn test_should_use_rag_heuristics() {
-        let config = AgentConfig::default();
-        let tool_registry = Arc::new(ToolRegistry::new());
+        let _config = AgentConfig::default();
+        let _tool_registry = Arc::new(ToolRegistry::new());
 
         // This would require mock query engine and retriever
         // For now, we'll test the heuristics logic conceptually

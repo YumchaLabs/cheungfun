@@ -103,17 +103,20 @@ impl Query {
     }
 
     /// Create a builder for constructing queries with fluent API.
+    #[must_use]
     pub fn builder() -> QueryBuilder {
         QueryBuilder::new()
     }
 
     /// Set the number of results to return.
+    #[must_use]
     pub fn with_top_k(mut self, top_k: usize) -> Self {
         self.top_k = top_k;
         self
     }
 
     /// Set the search mode.
+    #[must_use]
     pub fn with_search_mode(mut self, search_mode: SearchMode) -> Self {
         self.search_mode = search_mode;
         self
@@ -130,33 +133,39 @@ impl Query {
     }
 
     /// Set the similarity threshold.
+    #[must_use]
     pub fn with_similarity_threshold(mut self, threshold: f32) -> Self {
         self.similarity_threshold = Some(threshold);
         self
     }
 
     /// Set the pre-computed embedding.
+    #[must_use]
     pub fn with_embedding(mut self, embedding: Vec<f32>) -> Self {
         self.embedding = Some(embedding);
         self
     }
 
     /// Check if the query has filters.
+    #[must_use]
     pub fn has_filters(&self) -> bool {
         !self.filters.is_empty()
     }
 
     /// Check if the query has a pre-computed embedding.
+    #[must_use]
     pub fn has_embedding(&self) -> bool {
         self.embedding.is_some()
     }
 
     /// Check if the query uses hybrid search.
+    #[must_use]
     pub fn is_hybrid(&self) -> bool {
         matches!(self.search_mode, SearchMode::Hybrid { .. })
     }
 
     /// Get the hybrid search alpha value, if applicable.
+    #[must_use]
     pub fn hybrid_alpha(&self) -> Option<f32> {
         match self.search_mode {
             SearchMode::Hybrid { alpha } => Some(alpha),
@@ -175,6 +184,7 @@ impl SearchMode {
     /// # Panics
     ///
     /// Panics if alpha is not in the range [0.0, 1.0].
+    #[must_use]
     pub fn hybrid(alpha: f32) -> Self {
         assert!(
             (0.0..=1.0).contains(&alpha),
@@ -184,16 +194,19 @@ impl SearchMode {
     }
 
     /// Check if this is vector search mode.
+    #[must_use]
     pub fn is_vector(&self) -> bool {
         matches!(self, Self::Vector)
     }
 
     /// Check if this is keyword search mode.
+    #[must_use]
     pub fn is_keyword(&self) -> bool {
         matches!(self, Self::Keyword)
     }
 
     /// Check if this is hybrid search mode.
+    #[must_use]
     pub fn is_hybrid(&self) -> bool {
         matches!(self, Self::Hybrid { .. })
     }
@@ -212,6 +225,7 @@ pub struct QueryBuilder {
 
 impl QueryBuilder {
     /// Create a new query builder.
+    #[must_use]
     pub fn new() -> Self {
         Self::default()
     }
@@ -223,6 +237,7 @@ impl QueryBuilder {
     }
 
     /// Set the pre-computed embedding.
+    #[must_use]
     pub fn embedding(mut self, embedding: Vec<f32>) -> Self {
         self.embedding = Some(embedding);
         self
@@ -239,18 +254,21 @@ impl QueryBuilder {
     }
 
     /// Set the number of results to return.
+    #[must_use]
     pub fn top_k(mut self, top_k: usize) -> Self {
         self.top_k = Some(top_k);
         self
     }
 
     /// Set the similarity threshold.
+    #[must_use]
     pub fn similarity_threshold(mut self, threshold: f32) -> Self {
         self.similarity_threshold = Some(threshold);
         self
     }
 
     /// Set the search mode.
+    #[must_use]
     pub fn search_mode(mut self, search_mode: SearchMode) -> Self {
         self.search_mode = Some(search_mode);
         self
@@ -261,6 +279,7 @@ impl QueryBuilder {
     /// # Panics
     ///
     /// Panics if text is not set.
+    #[must_use]
     pub fn build(self) -> Query {
         Query {
             text: self.text.expect("Query text is required"),
@@ -318,6 +337,6 @@ mod tests {
     #[test]
     #[should_panic(expected = "Alpha must be between 0.0 and 1.0")]
     fn test_invalid_hybrid_alpha() {
-        SearchMode::hybrid(1.5);
+        let _ = SearchMode::hybrid(1.5);
     }
 }

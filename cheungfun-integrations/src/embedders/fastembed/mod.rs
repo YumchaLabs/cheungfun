@@ -1,6 +1,6 @@
 //! FastEmbed-based embedding implementation.
 //!
-//! This module provides a simple, fast, and reliable embedding solution using FastEmbed.
+//! This module provides a simple, fast, and reliable embedding solution using `FastEmbed`.
 //! It focuses on ease of use while maintaining high performance for production workloads.
 //!
 //! # Quick Start

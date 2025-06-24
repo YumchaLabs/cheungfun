@@ -178,6 +178,7 @@ impl CheungfunError {
     ///
     /// Returns `true` for transient errors that might succeed on retry,
     /// such as network timeouts or rate limits.
+    #[must_use]
     pub fn is_retryable(&self) -> bool {
         matches!(self, Self::Timeout { .. } | Self::RateLimit | Self::Io(_))
     }
@@ -186,6 +187,7 @@ impl CheungfunError {
     ///
     /// Returns `true` for errors caused by invalid input or configuration
     /// that won't be fixed by retrying.
+    #[must_use]
     pub fn is_client_error(&self) -> bool {
         matches!(
             self,

@@ -1,10 +1,9 @@
 // Rerankers Implementation
 
-use super::*;
+use super::{AdvancedQuery, ExternalCache, Reranker, VectorStore};
 use anyhow::{Context, Result};
 use async_trait::async_trait;
 use cheungfun_core::{ResponseGenerator, ScoredNode};
-use serde::{Deserialize, Serialize};
 use std::sync::Arc;
 use std::time::Duration;
 use tracing::{debug, info, warn};
@@ -43,18 +42,21 @@ impl LLMReranker {
     }
 
     /// Sets the prompt template.
+    #[must_use]
     pub fn with_prompt_template(mut self, template: String) -> Self {
         self.prompt_template = template;
         self
     }
 
     /// Sets the number of items to output.
+    #[must_use]
     pub fn with_top_n(mut self, top_n: usize) -> Self {
         self.top_n = top_n;
         self
     }
 
     /// Sets the batch size.
+    #[must_use]
     pub fn with_batch_size(mut self, batch_size: usize) -> Self {
         self.batch_size = batch_size;
         self
@@ -259,7 +261,7 @@ impl Reranker for LLMReranker {
     }
 
     fn estimated_rerank_time(&self, nodes_count: usize) -> Option<Duration> {
-        let batches = (nodes_count + self.batch_size - 1) / self.batch_size;
+        let batches = nodes_count.div_ceil(self.batch_size);
         Some(Duration::from_secs(batches as u64 * 5)) // Estimate 5 seconds per batch.
     }
 }
@@ -291,12 +293,14 @@ impl ModelReranker {
     }
 
     /// Sets the number of items to output.
+    #[must_use]
     pub fn with_top_n(mut self, top_n: usize) -> Self {
         self.top_n = top_n;
         self
     }
 
     /// Sets the batch size.
+    #[must_use]
     pub fn with_batch_size(mut self, batch_size: usize) -> Self {
         self.batch_size = batch_size;
         self
@@ -336,7 +340,7 @@ impl Reranker for ModelReranker {
             .map(|node| self.truncate_text(&node.node.content))
             .collect();
 
-        let documents_ref: Vec<&str> = documents.iter().map(|s| s.as_str()).collect();
+        let documents_ref: Vec<&str> = documents.iter().map(std::string::String::as_str).collect();
 
         // Calculate relevance scores in batches.
         let mut all_scores = Vec::new();
@@ -379,7 +383,7 @@ impl Reranker for ModelReranker {
     }
 
     fn estimated_rerank_time(&self, nodes_count: usize) -> Option<Duration> {
-        let batches = (nodes_count + self.batch_size - 1) / self.batch_size;
+        let batches = nodes_count.div_ceil(self.batch_size);
         Some(Duration::from_millis(batches as u64 * 100)) // Estimate 100ms per batch.
     }
 }
@@ -426,6 +430,7 @@ pub enum ScoreRerankStrategy {
 }
 
 impl ScoreReranker {
+    #[must_use]
     pub fn new(strategy: ScoreRerankStrategy) -> Self {
         Self {
             strategy,
@@ -433,6 +438,7 @@ impl ScoreReranker {
         }
     }
 
+    #[must_use]
     pub fn with_top_n(mut self, top_n: usize) -> Self {
         self.top_n = top_n;
         self
@@ -575,7 +581,7 @@ impl ScoreReranker {
 }
 
 // Default LLM reranking prompt template
-const DEFAULT_LLM_RERANK_PROMPT: &str = r#"
+const DEFAULT_LLM_RERANK_PROMPT: &str = r"
 Given a query and a list of documents, please rank the documents by their relevance to the query.
 Provide a ranking from most relevant to least relevant.
 
@@ -591,4 +597,4 @@ Provide your ranking in the format:
 ...
 
 Ranking:
-"#;
+";

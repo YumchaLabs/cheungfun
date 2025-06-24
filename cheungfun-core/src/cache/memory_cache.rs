@@ -1,6 +1,6 @@
 //! In-memory cache implementation.
 //!
-//! This module provides a simple in-memory cache that implements the PipelineCache trait.
+//! This module provides a simple in-memory cache that implements the `PipelineCache` trait.
 //! It's useful for testing and scenarios where persistence is not required.
 
 use async_trait::async_trait;
@@ -106,6 +106,7 @@ impl<T> CacheEntry<T> {
 
 impl MemoryCache {
     /// Create a new memory cache with default configuration.
+    #[must_use]
     pub fn new() -> Self {
         Self {
             embedding_cache: Arc::new(RwLock::new(HashMap::new())),
@@ -122,6 +123,7 @@ impl MemoryCache {
     /// # Arguments
     /// * `default_ttl` - Default TTL for cache entries
     /// * `max_size` - Maximum number of entries per cache type
+    #[must_use]
     pub fn with_config(default_ttl: Duration, max_size: usize) -> Self {
         Self {
             embedding_cache: Arc::new(RwLock::new(HashMap::new())),
@@ -341,7 +343,7 @@ impl PipelineCache for MemoryCache {
         // Check all cache types
         let embedding_exists = {
             let cache = self.embedding_cache.read().await;
-            cache.get(key).map_or(false, |entry| !entry.is_expired())
+            cache.get(key).is_some_and(|entry| !entry.is_expired())
         };
 
         if embedding_exists {
@@ -350,7 +352,7 @@ impl PipelineCache for MemoryCache {
 
         let nodes_exists = {
             let cache = self.nodes_cache.read().await;
-            cache.get(key).map_or(false, |entry| !entry.is_expired())
+            cache.get(key).is_some_and(|entry| !entry.is_expired())
         };
 
         if nodes_exists {
@@ -359,7 +361,7 @@ impl PipelineCache for MemoryCache {
 
         let data_exists = {
             let cache = self.data_cache.read().await;
-            cache.get(key).map_or(false, |entry| !entry.is_expired())
+            cache.get(key).is_some_and(|entry| !entry.is_expired())
         };
 
         Ok(data_exists)

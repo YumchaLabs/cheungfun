@@ -1,6 +1,6 @@
 //! Vector store implementations.
 //!
-//! This module provides concrete implementations of the VectorStore trait
+//! This module provides concrete implementations of the `VectorStore` trait
 //! for different storage backends.
 
 pub mod fast_memory;

@@ -105,6 +105,7 @@ impl Default for SiumaiGeneratorConfig {
 
 impl SiumaiGenerator {
     /// Create a new Siumai generator.
+    #[must_use]
     pub fn new(client: Siumai) -> Self {
         Self {
             client,
@@ -113,11 +114,13 @@ impl SiumaiGenerator {
     }
 
     /// Create a new Siumai generator with custom configuration.
+    #[must_use]
     pub fn with_config(client: Siumai, config: SiumaiGeneratorConfig) -> Self {
         Self { client, config }
     }
 
     /// Create a builder for constructing Siumai generators.
+    #[must_use]
     pub fn builder() -> SiumaiGeneratorBuilder {
         SiumaiGeneratorBuilder::new()
     }
@@ -134,7 +137,7 @@ impl SiumaiGenerator {
             .as_ref()
             .unwrap_or(&self.config.default_system_prompt);
 
-        let mut prompt = format!("{}\n\n", system_prompt);
+        let mut prompt = format!("{system_prompt}\n\n");
 
         if !context_nodes.is_empty() {
             prompt.push_str("Context:\n");
@@ -143,14 +146,14 @@ impl SiumaiGenerator {
 
                 if self.config.include_citations || options.include_citations {
                     if let Some(source) = scored_node.node.metadata.get("source") {
-                        prompt.push_str(&format!("   Source: {}\n", source));
+                        prompt.push_str(&format!("   Source: {source}\n"));
                     }
                 }
                 prompt.push('\n');
             }
         }
 
-        prompt.push_str(&format!("Question: {}\n\nAnswer:", query));
+        prompt.push_str(&format!("Question: {query}\n\nAnswer:"));
         prompt
     }
 
@@ -196,7 +199,7 @@ impl ResponseGenerator for SiumaiGenerator {
                 .chat(messages)
                 .await
                 .map_err(|e| cheungfun_core::CheungfunError::Llm {
-                    message: format!("Siumai generation failed: {}", e),
+                    message: format!("Siumai generation failed: {e}"),
                 })?;
 
         // Extract content
@@ -267,7 +270,7 @@ impl ResponseGenerator for SiumaiGenerator {
         // Generate streaming response
         let stream = self.client.chat_stream(messages, None).await.map_err(|e| {
             cheungfun_core::CheungfunError::Llm {
-                message: format!("Siumai streaming failed: {}", e),
+                message: format!("Siumai streaming failed: {e}"),
             }
         })?;
 
@@ -275,7 +278,7 @@ impl ResponseGenerator for SiumaiGenerator {
         let content_stream = stream.map(|result| {
             result
                 .map_err(|e| cheungfun_core::CheungfunError::Llm {
-                    message: format!("Stream error: {}", e),
+                    message: format!("Stream error: {e}"),
                 })
                 .map(|chunk| {
                     // Extract content from stream chunk based on siumai API
@@ -301,7 +304,7 @@ impl ResponseGenerator for SiumaiGenerator {
             .chat(test_messages)
             .await
             .map_err(|e| cheungfun_core::CheungfunError::Llm {
-                message: format!("Health check failed: {}", e),
+                message: format!("Health check failed: {e}"),
             })?;
 
         Ok(())
@@ -350,17 +353,20 @@ impl std::fmt::Debug for SiumaiGeneratorBuilder {
 
 impl SiumaiGeneratorBuilder {
     /// Create a new builder.
+    #[must_use]
     pub fn new() -> Self {
         Self::default()
     }
 
     /// Set the Siumai client.
+    #[must_use]
     pub fn client(mut self, client: Siumai) -> Self {
         self.client = Some(client);
         self
     }
 
     /// Set the configuration.
+    #[must_use]
     pub fn config(mut self, config: SiumaiGeneratorConfig) -> Self {
         self.config = Some(config);
         self

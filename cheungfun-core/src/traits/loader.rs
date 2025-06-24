@@ -173,6 +173,7 @@ pub struct LoadingStats {
 
 impl LoadingStats {
     /// Create new loading statistics.
+    #[must_use]
     pub fn new() -> Self {
         Self {
             documents_loaded: 0,
@@ -185,6 +186,7 @@ impl LoadingStats {
     }
 
     /// Calculate the success rate as a percentage.
+    #[must_use]
     pub fn success_rate(&self) -> f64 {
         let total = self.documents_loaded + self.documents_failed;
         if total == 0 {
@@ -195,6 +197,7 @@ impl LoadingStats {
     }
 
     /// Check if the loading operation was successful.
+    #[must_use]
     pub fn is_successful(&self) -> bool {
         self.documents_loaded > 0 && self.documents_failed == 0
     }

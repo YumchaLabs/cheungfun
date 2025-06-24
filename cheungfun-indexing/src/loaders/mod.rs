@@ -18,10 +18,11 @@ use cheungfun_core::Document;
 
 /// Utility functions for document loading.
 pub mod utils {
-    use super::*;
+    use super::{Document, IndexingError, Result};
     use std::path::Path;
 
     /// Detect the content type of a file based on its extension.
+    #[must_use]
     pub fn detect_content_type(path: &Path) -> Option<String> {
         let extension = path.extension()?.to_str()?.to_lowercase();
 
@@ -44,6 +45,7 @@ pub mod utils {
     }
 
     /// Check if a file type is supported for text extraction.
+    #[must_use]
     pub fn is_supported_file_type(path: &Path) -> bool {
         detect_content_type(path).is_some()
     }
@@ -60,10 +62,11 @@ pub mod utils {
     pub async fn read_text_file(path: &Path) -> Result<String> {
         tokio::fs::read_to_string(path)
             .await
-            .map_err(|e| IndexingError::Io(e))
+            .map_err(IndexingError::Io)
     }
 
     /// Create a document from file content with basic metadata.
+    #[must_use]
     pub fn create_document_from_file(
         content: String,
         path: &Path,
@@ -184,82 +187,96 @@ impl Default for LoaderConfig {
 
 impl LoaderConfig {
     /// Create a new loader configuration.
+    #[must_use]
     pub fn new() -> Self {
         Self::default()
     }
 
     /// Set the maximum file size.
+    #[must_use]
     pub fn with_max_file_size(mut self, size: u64) -> Self {
         self.max_file_size = Some(size);
         self
     }
 
     /// Set included file extensions.
+    #[must_use]
     pub fn with_include_extensions(mut self, extensions: Vec<String>) -> Self {
         self.include_extensions = Some(extensions);
         self
     }
 
     /// Set excluded file extensions.
+    #[must_use]
     pub fn with_exclude_extensions(mut self, extensions: Vec<String>) -> Self {
         self.exclude_extensions = extensions;
         self
     }
 
     /// Set whether to follow symbolic links.
+    #[must_use]
     pub fn with_follow_symlinks(mut self, follow: bool) -> Self {
         self.follow_symlinks = follow;
         self
     }
 
     /// Set maximum directory traversal depth.
+    #[must_use]
     pub fn with_max_depth(mut self, depth: usize) -> Self {
         self.max_depth = Some(depth);
         self
     }
 
     /// Set whether to continue on errors.
+    #[must_use]
     pub fn with_continue_on_error(mut self, continue_on_error: bool) -> Self {
         self.continue_on_error = continue_on_error;
         self
     }
 
     /// Set timeout for file operations.
+    #[must_use]
     pub fn with_timeout(mut self, seconds: u64) -> Self {
         self.timeout_seconds = Some(seconds);
         self
     }
 
     /// Set enhanced filter configuration.
+    #[must_use]
     pub fn with_filter_config(mut self, filter_config: FilterConfig) -> Self {
         self.filter_config = Some(filter_config);
         self
     }
 
     /// Enable enhanced filtering with default configuration.
+    #[must_use]
     pub fn with_enhanced_filtering(mut self) -> Self {
         self.filter_config = Some(FilterConfig::default());
         self
     }
 
     /// Enable enhanced filtering for source code only.
+    #[must_use]
     pub fn with_source_code_filtering(mut self) -> Self {
         self.filter_config = Some(FilterConfig::source_code_only());
         self
     }
 
     /// Enable enhanced filtering for text files only.
+    #[must_use]
     pub fn with_text_files_filtering(mut self) -> Self {
         self.filter_config = Some(FilterConfig::text_files_only());
         self
     }
 
     /// Check if enhanced filtering is enabled.
+    #[must_use]
     pub fn has_enhanced_filtering(&self) -> bool {
         self.filter_config.is_some()
     }
 
     /// Get the filter configuration if available.
+    #[must_use]
     pub fn get_filter_config(&self) -> Option<&FilterConfig> {
         self.filter_config.as_ref()
     }

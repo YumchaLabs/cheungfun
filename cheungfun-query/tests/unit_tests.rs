@@ -199,7 +199,7 @@ fn test_response_utils_extract_main_points() {
     let points = response_utils::extract_main_points(content);
 
     // Should filter out very short and very long sentences
-    assert!(points.len() >= 1);
+    assert!(!points.is_empty());
     for point in &points {
         assert!(point.len() >= 20);
         assert!(point.len() <= 200);
@@ -216,7 +216,7 @@ fn test_response_utils_quality_score() {
     };
 
     let score = response_utils::calculate_response_quality(&response, &[]);
-    assert!(score >= 0.0 && score <= 1.0);
+    assert!((0.0..=1.0).contains(&score));
 }
 
 #[test]

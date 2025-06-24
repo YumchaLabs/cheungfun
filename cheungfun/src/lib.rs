@@ -1,7 +1,7 @@
 //! # Cheungfun - Rust RAG Framework
 //!
 //! Cheungfun is a high-performance RAG (Retrieval-Augmented Generation) framework
-//! built in Rust, inspired by LlamaIndex and Swiftide. It provides type-safe,
+//! built in Rust, inspired by `LlamaIndex` and Swiftide. It provides type-safe,
 //! async-first components for building AI applications.
 //!
 //! ## Quick Start

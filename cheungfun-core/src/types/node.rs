@@ -140,6 +140,7 @@ impl Node {
     }
 
     /// Create a builder for constructing nodes with fluent API.
+    #[must_use]
     pub fn builder() -> NodeBuilder {
         NodeBuilder::new()
     }
@@ -155,12 +156,14 @@ impl Node {
     }
 
     /// Set the dense embedding for this node.
+    #[must_use]
     pub fn with_embedding(mut self, embedding: Vec<f32>) -> Self {
         self.embedding = Some(embedding);
         self
     }
 
     /// Set the sparse embedding for this node.
+    #[must_use]
     pub fn with_sparse_embedding(mut self, sparse_embedding: HashMap<u32, f32>) -> Self {
         self.sparse_embedding = Some(sparse_embedding);
         self
@@ -178,6 +181,7 @@ impl Node {
     }
 
     /// Get metadata value by key.
+    #[must_use]
     pub fn get_metadata(&self, key: &str) -> Option<&serde_json::Value> {
         self.metadata.get(key)
     }
@@ -188,26 +192,31 @@ impl Node {
     }
 
     /// Check if the node has a dense embedding.
+    #[must_use]
     pub fn has_embedding(&self) -> bool {
         self.embedding.is_some()
     }
 
     /// Check if the node has a sparse embedding.
+    #[must_use]
     pub fn has_sparse_embedding(&self) -> bool {
         self.sparse_embedding.is_some()
     }
 
     /// Get the size of the chunk in characters.
+    #[must_use]
     pub fn size(&self) -> usize {
         self.content.len()
     }
 
     /// Check if the node content is empty.
+    #[must_use]
     pub fn is_empty(&self) -> bool {
         self.content.is_empty()
     }
 
-    /// Get the chunk size (end_offset - start_offset).
+    /// Get the chunk size (`end_offset` - `start_offset`).
+    #[must_use]
     pub fn chunk_size(&self) -> usize {
         self.chunk_info.end_offset - self.chunk_info.start_offset
     }
@@ -215,16 +224,19 @@ impl Node {
 
 impl ScoredNode {
     /// Create a new scored node.
+    #[must_use]
     pub fn new(node: Node, score: f32) -> Self {
         Self { node, score }
     }
 
     /// Get the node ID.
+    #[must_use]
     pub fn id(&self) -> Uuid {
         self.node.id
     }
 
     /// Get the node content.
+    #[must_use]
     pub fn content(&self) -> &str {
         &self.node.content
     }
@@ -232,6 +244,7 @@ impl ScoredNode {
 
 impl ChunkInfo {
     /// Create new chunk information.
+    #[must_use]
     pub fn new(start_offset: usize, end_offset: usize, chunk_index: usize) -> Self {
         Self {
             start_offset,
@@ -241,6 +254,7 @@ impl ChunkInfo {
     }
 
     /// Get the size of the chunk.
+    #[must_use]
     pub fn size(&self) -> usize {
         self.end_offset - self.start_offset
     }
@@ -261,6 +275,7 @@ pub struct NodeBuilder {
 
 impl NodeBuilder {
     /// Create a new node builder.
+    #[must_use]
     pub fn new() -> Self {
         Self {
             id: None,
@@ -275,6 +290,7 @@ impl NodeBuilder {
     }
 
     /// Set the node ID.
+    #[must_use]
     pub fn id(mut self, id: Uuid) -> Self {
         self.id = Some(id);
         self
@@ -297,12 +313,14 @@ impl NodeBuilder {
     }
 
     /// Set the node embedding.
+    #[must_use]
     pub fn embedding(mut self, embedding: Vec<f32>) -> Self {
         self.embedding = Some(embedding);
         self
     }
 
     /// Set the sparse embedding.
+    #[must_use]
     pub fn sparse_embedding(mut self, sparse_embedding: HashMap<u32, f32>) -> Self {
         self.sparse_embedding = Some(sparse_embedding);
         self
@@ -316,12 +334,14 @@ impl NodeBuilder {
     }
 
     /// Set the source document ID.
+    #[must_use]
     pub fn source_document_id(mut self, id: Uuid) -> Self {
         self.source_document_id = Some(id);
         self
     }
 
     /// Set the chunk information.
+    #[must_use]
     pub fn chunk_info(mut self, chunk_info: ChunkInfo) -> Self {
         self.chunk_info = Some(chunk_info);
         self
@@ -331,7 +351,7 @@ impl NodeBuilder {
     ///
     /// # Panics
     ///
-    /// Panics if required fields (content, source_document_id, chunk_info) are not set.
+    /// Panics if required fields (content, `source_document_id`, `chunk_info`) are not set.
     pub fn build(self) -> Node {
         Node {
             id: self.id.unwrap_or_else(Uuid::new_v4),

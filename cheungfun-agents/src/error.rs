@@ -224,6 +224,7 @@ impl AgentError {
     }
 
     /// Check if this is a retryable error
+    #[must_use]
     pub fn is_retryable(&self) -> bool {
         matches!(
             self,
@@ -236,6 +237,7 @@ impl AgentError {
     }
 
     /// Get the error category for logging/metrics
+    #[must_use]
     pub fn category(&self) -> &'static str {
         match self {
             Self::Core(_) => "core",

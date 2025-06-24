@@ -1,14 +1,13 @@
 // Query Transformers Implementation
 
-use super::*;
+use super::{AdvancedQuery, ExternalCache, HashMap, QueryTransformer, VectorStore};
 use anyhow::{Context, Result};
 use async_trait::async_trait;
 use cheungfun_core::ResponseGenerator;
-use serde::{Deserialize, Serialize};
 use std::sync::Arc;
 use tracing::{debug, info, warn};
 
-/// HyDE (Hypothetical Document Embeddings) query transformer.
+/// `HyDE` (Hypothetical Document Embeddings) query transformer.
 #[derive(Debug)]
 pub struct HyDETransformer {
     /// LLM client.
@@ -24,7 +23,7 @@ pub struct HyDETransformer {
 }
 
 impl HyDETransformer {
-    /// Creates a new HyDE transformer.
+    /// Creates a new `HyDE` transformer.
     pub fn new(llm_client: Arc<dyn ResponseGenerator>) -> Self {
         Self {
             llm_client,
@@ -36,18 +35,21 @@ impl HyDETransformer {
     }
 
     /// Sets the prompt template.
+    #[must_use]
     pub fn with_prompt_template(mut self, template: String) -> Self {
         self.prompt_template = template;
         self
     }
 
     /// Sets whether to include the original query.
+    #[must_use]
     pub fn with_include_original(mut self, include: bool) -> Self {
         self.include_original = include;
         self
     }
 
     /// Sets the number of hypothetical documents.
+    #[must_use]
     pub fn with_num_hypothetical_docs(mut self, num: usize) -> Self {
         self.num_hypothetical_docs = num;
         self
@@ -183,12 +185,14 @@ impl SubquestionTransformer {
     }
 
     /// Sets the number of subquestions.
+    #[must_use]
     pub fn with_num_subquestions(mut self, num: usize) -> Self {
         self.num_subquestions = num;
         self
     }
 
     /// Sets the prompt template.
+    #[must_use]
     pub fn with_prompt_template(mut self, template: String) -> Self {
         self.prompt_template = template;
         self
@@ -312,8 +316,15 @@ pub struct QueryExpansionTransformer {
     pub max_expansions: usize,
 }
 
+impl Default for QueryExpansionTransformer {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
 impl QueryExpansionTransformer {
     /// Creates a new query expansion transformer.
+    #[must_use]
     pub fn new() -> Self {
         Self {
             expansion_dict: HashMap::new(),
@@ -372,19 +383,19 @@ impl QueryTransformer for QueryExpansionTransformer {
 }
 
 // Default prompt templates
-const DEFAULT_HYDE_PROMPT: &str = r#"
+const DEFAULT_HYDE_PROMPT: &str = r"
 Please write a passage to answer the question: {query}
 
 The passage should be informative and directly address the question. 
 Write as if you are providing a comprehensive answer based on reliable sources.
 
 Passage:
-"#;
+";
 
-const DEFAULT_SUBQUESTION_PROMPT: &str = r#"
+const DEFAULT_SUBQUESTION_PROMPT: &str = r"
 Given the following complex question, break it down into {num_questions} simpler, more specific sub-questions that would help answer the original question comprehensively.
 
 Original question: {query}
 
 Please provide {num_questions} sub-questions, each on a new line:
-"#;
+";

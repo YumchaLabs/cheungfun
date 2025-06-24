@@ -103,12 +103,14 @@ impl LlmConfig {
     }
 
     /// Set the temperature.
+    #[must_use]
     pub fn with_temperature(mut self, temperature: f32) -> Self {
         self.temperature = Some(temperature);
         self
     }
 
     /// Set the maximum tokens.
+    #[must_use]
     pub fn with_max_tokens(mut self, max_tokens: usize) -> Self {
         self.max_tokens = Some(max_tokens);
         self
@@ -121,18 +123,21 @@ impl LlmConfig {
     }
 
     /// Set the timeout.
+    #[must_use]
     pub fn with_timeout(mut self, timeout_seconds: u64) -> Self {
         self.timeout_seconds = Some(timeout_seconds);
         self
     }
 
     /// Set the maximum retries.
+    #[must_use]
     pub fn with_max_retries(mut self, max_retries: usize) -> Self {
         self.max_retries = Some(max_retries);
         self
     }
 
     /// Enable streaming.
+    #[must_use]
     pub fn with_streaming(mut self, stream: bool) -> Self {
         self.stream = stream;
         self
@@ -149,36 +154,43 @@ impl LlmConfig {
     }
 
     /// Get the effective temperature (with default).
+    #[must_use]
     pub fn effective_temperature(&self) -> f32 {
         self.temperature.unwrap_or(0.7)
     }
 
     /// Get the effective max tokens (with default).
+    #[must_use]
     pub fn effective_max_tokens(&self) -> usize {
         self.max_tokens.unwrap_or(1000)
     }
 
     /// Get the effective timeout (with default).
+    #[must_use]
     pub fn effective_timeout(&self) -> u64 {
         self.timeout_seconds.unwrap_or(60)
     }
 
     /// Get the effective max retries (with default).
+    #[must_use]
     pub fn effective_max_retries(&self) -> usize {
         self.max_retries.unwrap_or(3)
     }
 
     /// Check if this is a local model.
+    #[must_use]
     pub fn is_local(&self) -> bool {
         self.provider == "local" || self.base_url.is_some()
     }
 
     /// Check if this is a remote API model.
+    #[must_use]
     pub fn is_remote(&self) -> bool {
         !self.is_local()
     }
 
     /// Check if API key is required.
+    #[must_use]
     pub fn requires_api_key(&self) -> bool {
         !self.is_local() && !matches!(self.provider.as_str(), "local" | "ollama")
     }
@@ -240,6 +252,7 @@ impl LlmConfig {
     }
 
     /// Get connection information for logging (without sensitive data).
+    #[must_use]
     pub fn connection_info(&self) -> HashMap<String, String> {
         let mut info = HashMap::new();
         info.insert("provider".to_string(), self.provider.clone());

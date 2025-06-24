@@ -19,7 +19,7 @@ pub struct GlobMatcher {
 }
 
 impl GlobMatcher {
-    /// Create a new GlobMatcher with the given patterns.
+    /// Create a new `GlobMatcher` with the given patterns.
     pub fn new(
         exclude_patterns: &[String],
         include_patterns: &[String],
@@ -50,32 +50,30 @@ impl GlobMatcher {
         })
     }
 
-    /// Create a GlobMatcher with only exclude patterns.
+    /// Create a `GlobMatcher` with only exclude patterns.
     pub fn exclude_only(patterns: &[String], case_sensitive: bool) -> FilterResult<Self> {
         Self::new(patterns, &[], case_sensitive)
     }
 
-    /// Create a GlobMatcher with only include patterns.
+    /// Create a `GlobMatcher` with only include patterns.
     pub fn include_only(patterns: &[String], case_sensitive: bool) -> FilterResult<Self> {
         Self::new(&[], patterns, case_sensitive)
     }
 
-    /// Build a GlobSet from patterns.
+    /// Build a `GlobSet` from patterns.
     fn build_glob_set(patterns: &[String], case_sensitive: bool) -> FilterResult<GlobSet> {
         let mut builder = GlobSetBuilder::new();
 
         for pattern in patterns {
             let glob = if case_sensitive {
-                GlobBuilder::new(pattern).build().map_err(|e| {
-                    FilterError::InvalidGlob(format!("Pattern '{}': {}", pattern, e))
-                })?
+                GlobBuilder::new(pattern)
+                    .build()
+                    .map_err(|e| FilterError::InvalidGlob(format!("Pattern '{pattern}': {e}")))?
             } else {
                 GlobBuilder::new(pattern)
                     .case_insensitive(true)
                     .build()
-                    .map_err(|e| {
-                        FilterError::InvalidGlob(format!("Pattern '{}': {}", pattern, e))
-                    })?
+                    .map_err(|e| FilterError::InvalidGlob(format!("Pattern '{pattern}': {e}")))?
             };
 
             builder.add(glob);
@@ -83,10 +81,11 @@ impl GlobMatcher {
 
         builder
             .build()
-            .map_err(|e| FilterError::InvalidGlob(format!("Failed to build glob set: {}", e)))
+            .map_err(|e| FilterError::InvalidGlob(format!("Failed to build glob set: {e}")))
     }
 
     /// Check if a path matches any exclude pattern.
+    #[must_use]
     pub fn is_excluded(&self, path: &Path) -> bool {
         if let Some(ref exclude_set) = self.exclude_set {
             exclude_set.is_match(path)
@@ -96,6 +95,7 @@ impl GlobMatcher {
     }
 
     /// Check if a path matches any include pattern.
+    #[must_use]
     pub fn is_included(&self, path: &Path) -> bool {
         if let Some(ref include_set) = self.include_set {
             include_set.is_match(path)
@@ -110,6 +110,7 @@ impl GlobMatcher {
     /// 1. If there are include patterns, the path must match at least one
     /// 2. If the path matches any exclude pattern, it's excluded
     /// 3. Include patterns override exclude patterns
+    #[must_use]
     pub fn matches(&self, path: &Path) -> bool {
         // Check if explicitly included (overrides exclude)
         if let Some(ref include_set) = self.include_set {
@@ -166,11 +167,13 @@ impl GlobMatcher {
     }
 
     /// Get whether the matcher is case sensitive.
+    #[must_use]
     pub fn is_case_sensitive(&self) -> bool {
         self.case_sensitive
     }
 
     /// Check if the matcher has any patterns.
+    #[must_use]
     pub fn has_patterns(&self) -> bool {
         self.exclude_set.is_some() || self.include_set.is_some()
     }

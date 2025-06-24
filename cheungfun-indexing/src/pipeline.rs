@@ -103,6 +103,7 @@ pub struct DefaultIndexingPipeline {
 
 impl DefaultIndexingPipeline {
     /// Create a new pipeline builder.
+    #[must_use]
     pub fn builder() -> PipelineBuilder {
         PipelineBuilder::new()
     }
@@ -244,7 +245,7 @@ impl DefaultIndexingPipeline {
             cache_hits,
             cache_misses,
             if cache_hits + cache_misses > 0 {
-                (cache_hits as f64 / (cache_hits + cache_misses) as f64) * 100.0
+                (f64::from(cache_hits) / f64::from(cache_hits + cache_misses)) * 100.0
             } else {
                 0.0
             }
@@ -254,9 +255,12 @@ impl DefaultIndexingPipeline {
         if !texts_to_embed.is_empty() {
             debug!("Generating {} new embeddings", texts_to_embed.len());
 
-            let text_refs: Vec<&str> = texts_to_embed.iter().map(|s| s.as_str()).collect();
+            let text_refs: Vec<&str> = texts_to_embed
+                .iter()
+                .map(std::string::String::as_str)
+                .collect();
             let new_embeddings = embedder.embed_batch(text_refs).await.map_err(|e| {
-                IndexingError::pipeline(format!("Embedding generation failed: {}", e))
+                IndexingError::pipeline(format!("Embedding generation failed: {e}"))
             })?;
 
             // Store new embeddings in cache and assign to nodes
@@ -298,7 +302,7 @@ impl DefaultIndexingPipeline {
         let embeddings = embedder
             .embed_batch(texts)
             .await
-            .map_err(|e| IndexingError::pipeline(format!("Embedding generation failed: {}", e)))?;
+            .map_err(|e| IndexingError::pipeline(format!("Embedding generation failed: {e}")))?;
 
         // Assign embeddings to nodes
         for (node, embedding) in nodes.iter_mut().zip(embeddings.into_iter()) {
@@ -314,7 +318,7 @@ impl DefaultIndexingPipeline {
             info!("Storing {} nodes in vector store", nodes.len());
 
             let node_ids = vector_store.add(nodes).await.map_err(|e| {
-                IndexingError::pipeline(format!("Vector store operation failed: {}", e))
+                IndexingError::pipeline(format!("Vector store operation failed: {e}"))
             })?;
 
             info!("Stored {} nodes in vector store", node_ids.len());
@@ -343,7 +347,7 @@ impl DefaultIndexingPipeline {
         // Process documents in batches
         let batches: Vec<Vec<Document>> = documents
             .chunks(self.config.batch_size)
-            .map(|chunk| chunk.to_vec())
+            .map(<[cheungfun_core::Document]>::to_vec)
             .collect();
 
         info!(
@@ -563,6 +567,7 @@ pub struct PipelineBuilder {
 
 impl PipelineBuilder {
     /// Create a new pipeline builder.
+    #[must_use]
     pub fn new() -> Self {
         Self::default()
     }
@@ -598,12 +603,14 @@ impl PipelineBuilder {
     }
 
     /// Set the cache for embeddings and processed nodes.
+    #[must_use]
     pub fn with_cache(mut self, cache: UnifiedCache) -> Self {
         self.cache = Some(cache);
         self
     }
 
     /// Set the pipeline configuration.
+    #[must_use]
     pub fn with_config(mut self, config: PipelineConfig) -> Self {
         self.config = Some(config);
         self

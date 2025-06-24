@@ -225,7 +225,7 @@ impl Default for ProcessingOptions {
 }
 
 /// Audio-specific processing options.
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, Default)]
 pub struct AudioProcessingOptions {
     /// Target sample rate (Hz).
     pub target_sample_rate: Option<u32>,
@@ -247,20 +247,6 @@ pub struct AudioProcessingOptions {
 
     /// Whether to enable speech-to-text extraction.
     pub extract_speech: bool,
-}
-
-impl Default for AudioProcessingOptions {
-    fn default() -> Self {
-        Self {
-            target_sample_rate: None,
-            target_channels: None,
-            normalize: false,
-            trim_start: None,
-            trim_duration: None,
-            target_bitrate: None,
-            extract_speech: false,
-        }
-    }
 }
 
 /// Image-specific processing options.
@@ -299,7 +285,7 @@ impl Default for ImageProcessingOptions {
 }
 
 /// Video-specific processing options.
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, Default)]
 pub struct VideoProcessingOptions {
     /// Target width in pixels.
     pub target_width: Option<u32>,
@@ -324,21 +310,6 @@ pub struct VideoProcessingOptions {
 
     /// Whether to extract audio track.
     pub extract_audio: bool,
-}
-
-impl Default for VideoProcessingOptions {
-    fn default() -> Self {
-        Self {
-            target_width: None,
-            target_height: None,
-            target_fps: None,
-            extract_frames: false,
-            frame_interval: None,
-            trim_start: None,
-            trim_duration: None,
-            extract_audio: false,
-        }
-    }
 }
 
 /// Options for format conversion operations.

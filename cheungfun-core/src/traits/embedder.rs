@@ -278,6 +278,7 @@ pub struct EmbeddingStats {
 
 impl EmbeddingStats {
     /// Create new embedding statistics.
+    #[must_use]
     pub fn new() -> Self {
         Self {
             texts_embedded: 0,
@@ -291,6 +292,7 @@ impl EmbeddingStats {
     }
 
     /// Calculate the success rate as a percentage.
+    #[must_use]
     pub fn success_rate(&self) -> f64 {
         let total = self.texts_embedded + self.embeddings_failed;
         if total == 0 {
@@ -309,12 +311,13 @@ impl EmbeddingStats {
     }
 
     /// Calculate tokens per second if token count is available.
+    #[must_use]
     pub fn tokens_per_second(&self) -> Option<f64> {
         if let Some(tokens) = self.tokens_processed {
-            if !self.duration.is_zero() {
-                Some(tokens as f64 / self.duration.as_secs_f64())
-            } else {
+            if self.duration.is_zero() {
                 None
+            } else {
+                Some(tokens as f64 / self.duration.as_secs_f64())
             }
         } else {
             None

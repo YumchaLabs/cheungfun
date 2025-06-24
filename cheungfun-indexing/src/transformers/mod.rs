@@ -54,6 +54,7 @@ impl Default for SplitterConfig {
 
 impl SplitterConfig {
     /// Create a new splitter configuration.
+    #[must_use]
     pub fn new(chunk_size: usize, chunk_overlap: usize) -> Self {
         Self {
             chunk_size,
@@ -63,36 +64,42 @@ impl SplitterConfig {
     }
 
     /// Set the minimum chunk size.
+    #[must_use]
     pub fn with_min_chunk_size(mut self, size: usize) -> Self {
         self.min_chunk_size = Some(size);
         self
     }
 
     /// Set the maximum chunk size.
+    #[must_use]
     pub fn with_max_chunk_size(mut self, size: usize) -> Self {
         self.max_chunk_size = Some(size);
         self
     }
 
     /// Set whether to respect sentence boundaries.
+    #[must_use]
     pub fn with_respect_sentence_boundaries(mut self, respect: bool) -> Self {
         self.respect_sentence_boundaries = respect;
         self
     }
 
     /// Set whether to respect paragraph boundaries.
+    #[must_use]
     pub fn with_respect_paragraph_boundaries(mut self, respect: bool) -> Self {
         self.respect_paragraph_boundaries = respect;
         self
     }
 
     /// Set custom separators.
+    #[must_use]
     pub fn with_separators(mut self, separators: Vec<String>) -> Self {
         self.separators = separators;
         self
     }
 
     /// Set whether to keep separators in chunks.
+    #[must_use]
     pub fn with_keep_separators(mut self, keep: bool) -> Self {
         self.keep_separators = keep;
         self
@@ -134,29 +141,34 @@ impl Default for MetadataConfig {
 
 impl MetadataConfig {
     /// Create a new metadata configuration.
+    #[must_use]
     pub fn new() -> Self {
         Self::default()
     }
 
     /// Enable title extraction.
+    #[must_use]
     pub fn with_title_extraction(mut self, extract: bool) -> Self {
         self.extract_title = extract;
         self
     }
 
     /// Enable language detection.
+    #[must_use]
     pub fn with_language_detection(mut self, extract: bool) -> Self {
         self.extract_language = extract;
         self
     }
 
     /// Enable statistics extraction.
+    #[must_use]
     pub fn with_statistics(mut self, extract: bool) -> Self {
         self.extract_statistics = extract;
         self
     }
 
     /// Enable keyword extraction.
+    #[must_use]
     pub fn with_keyword_extraction(mut self, extract: bool, max_keywords: usize) -> Self {
         self.extract_keywords = extract;
         self.max_keywords = max_keywords;
@@ -164,6 +176,7 @@ impl MetadataConfig {
     }
 
     /// Enable entity extraction.
+    #[must_use]
     pub fn with_entity_extraction(mut self, extract: bool) -> Self {
         self.extract_entities = extract;
         self
@@ -175,6 +188,7 @@ pub mod utils {
     use regex::Regex;
 
     /// Clean and normalize text content.
+    #[must_use]
     pub fn clean_text(text: &str) -> String {
         // Remove excessive whitespace
         let whitespace_regex = Regex::new(r"\s+").unwrap();
@@ -188,6 +202,7 @@ pub mod utils {
     }
 
     /// Extract title from text content (first line or heading).
+    #[must_use]
     pub fn extract_title(text: &str) -> Option<String> {
         let lines: Vec<&str> = text.lines().collect();
 
@@ -217,6 +232,7 @@ pub mod utils {
     }
 
     /// Calculate basic text statistics.
+    #[must_use]
     pub fn calculate_statistics(
         text: &str,
     ) -> std::collections::HashMap<String, serde_json::Value> {
@@ -261,6 +277,7 @@ pub mod utils {
     }
 
     /// Check if text appears to be in a specific language (basic heuristics).
+    #[must_use]
     pub fn detect_language_simple(text: &str) -> Option<String> {
         // Very basic language detection based on common words
         let text_lower = text.to_lowercase();

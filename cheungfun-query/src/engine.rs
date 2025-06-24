@@ -112,6 +112,7 @@ impl QueryEngine {
     }
 
     /// Create a builder for constructing query engines.
+    #[must_use]
     pub fn builder() -> QueryEngineBuilder {
         QueryEngineBuilder::new()
     }
@@ -233,16 +234,19 @@ impl QueryEngine {
     }
 
     /// Get the retriever used by this engine.
+    #[must_use]
     pub fn retriever(&self) -> &Arc<dyn Retriever> {
         &self.retriever
     }
 
     /// Get the generator used by this engine.
+    #[must_use]
     pub fn generator(&self) -> &Arc<dyn ResponseGenerator> {
         &self.generator
     }
 
     /// Get the configuration of this engine.
+    #[must_use]
     pub fn config(&self) -> &QueryEngineConfig {
         &self.config
     }
@@ -273,17 +277,20 @@ pub struct QueryEngineOptions {
 
 impl QueryEngineOptions {
     /// Create new query engine options.
+    #[must_use]
     pub fn new() -> Self {
         Self::default()
     }
 
     /// Set the number of context nodes to retrieve.
+    #[must_use]
     pub fn with_top_k(mut self, top_k: usize) -> Self {
         self.top_k = Some(top_k);
         self
     }
 
     /// Set the search mode.
+    #[must_use]
     pub fn with_search_mode(mut self, search_mode: cheungfun_core::types::SearchMode) -> Self {
         self.search_mode = Some(search_mode);
         self
@@ -300,6 +307,7 @@ impl QueryEngineOptions {
     }
 
     /// Set generation options.
+    #[must_use]
     pub fn with_generation_options(mut self, options: GenerationOptions) -> Self {
         self.generation_options = Some(options);
         self
@@ -316,6 +324,7 @@ pub struct QueryEngineBuilder {
 
 impl QueryEngineBuilder {
     /// Create a new builder.
+    #[must_use]
     pub fn new() -> Self {
         Self::default()
     }
@@ -333,6 +342,7 @@ impl QueryEngineBuilder {
     }
 
     /// Set the configuration.
+    #[must_use]
     pub fn config(mut self, config: QueryEngineConfig) -> Self {
         self.config = Some(config);
         self

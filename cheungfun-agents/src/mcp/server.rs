@@ -109,21 +109,25 @@ impl McpServer {
     }
 
     /// Check if server is running
+    #[must_use]
     pub fn is_running(&self) -> bool {
         self.running
     }
 
     /// Get server information
+    #[must_use]
     pub fn server_info(&self) -> &ServerInfo {
         &self.server_info
     }
 
     /// Get server statistics
+    #[must_use]
     pub fn stats(&self) -> ServerStats {
         self.handler.stats.clone()
     }
 
     /// Get available tools
+    #[must_use]
     pub fn available_tools(&self) -> Vec<String> {
         self.handler.tool_registry.tool_names()
     }
@@ -151,6 +155,7 @@ impl McpServer {
     }
 
     /// Get server status
+    #[must_use]
     pub fn status(&self) -> McpServerStatus {
         let stats = self.stats();
         let tools = self.available_tools();
@@ -181,93 +186,83 @@ pub struct McpServerStatus {
 }
 
 impl ServerHandler for McpServerHandler {
-    fn list_tools(
+    async fn list_tools(
         &self,
         _request: Option<rmcp::model::PaginatedRequestParamInner>,
         _context: RequestContext<RoleServer>,
-    ) -> impl std::future::Future<
-        Output = std::result::Result<ListToolsResult, rmcp::model::ErrorData>,
-    > + Send
-    + '_ {
-        async move {
-            debug!("Handling list_tools request");
+    ) -> std::result::Result<ListToolsResult, rmcp::model::ErrorData> {
+        debug!("Handling list_tools request");
 
-            let schemas = self.tool_registry.schemas();
-            let tools: Vec<RmcpTool> = schemas
-                .into_iter()
-                .map(|schema| RmcpTool {
-                    name: schema.name.into(),
-                    description: schema.description.into(),
-                    input_schema: Arc::new(schema.input_schema.as_object().unwrap().clone()),
-                })
-                .collect();
-
-            debug!("Returning {} tools", tools.len());
-
-            Ok(ListToolsResult {
-                tools,
-                next_cursor: None,
+        let schemas = self.tool_registry.schemas();
+        let tools: Vec<RmcpTool> = schemas
+            .into_iter()
+            .map(|schema| RmcpTool {
+                name: schema.name.into(),
+                description: schema.description.into(),
+                input_schema: Arc::new(schema.input_schema.as_object().unwrap().clone()),
             })
-        }
+            .collect();
+
+        debug!("Returning {} tools", tools.len());
+
+        Ok(ListToolsResult {
+            tools,
+            next_cursor: None,
+        })
     }
 
-    fn call_tool(
+    async fn call_tool(
         &self,
         request: CallToolRequestParam,
         _context: RequestContext<RoleServer>,
-    ) -> impl std::future::Future<
-        Output = std::result::Result<CallToolResult, rmcp::model::ErrorData>,
-    > + Send
-    + '_ {
-        async move {
-            debug!("Handling call_tool request for: {}", request.name);
+    ) -> std::result::Result<CallToolResult, rmcp::model::ErrorData> {
+        debug!("Handling call_tool request for: {}", request.name);
 
-            // Create tool context
-            let context =
-                ToolContext::new().with_data("mcp_request".to_string(), serde_json::json!(true));
+        // Create tool context
+        let context =
+            ToolContext::new().with_data("mcp_request".to_string(), serde_json::json!(true));
 
-            // Execute the tool
-            match self
-                .tool_registry
-                .execute(
-                    &request.name,
-                    serde_json::Value::Object(request.arguments.unwrap_or_default()),
-                    &context,
-                )
-                .await
-            {
-                Ok(result) => {
-                    if result.success {
-                        debug!("Tool '{}' executed successfully", request.name);
+        // Execute the tool
+        match self
+            .tool_registry
+            .execute(
+                &request.name,
+                serde_json::Value::Object(request.arguments.unwrap_or_default()),
+                &context,
+            )
+            .await
+        {
+            Ok(result) => {
+                if result.success {
+                    debug!("Tool '{}' executed successfully", request.name);
 
-                        Ok(CallToolResult {
-                            content: vec![Content::text(result.content)],
-                            is_error: Some(false),
-                        })
-                    } else {
-                        warn!(
-                            "Tool '{}' execution failed: {:?}",
-                            request.name, result.error
-                        );
+                    Ok(CallToolResult {
+                        content: vec![Content::text(result.content)],
+                        is_error: Some(false),
+                    })
+                } else {
+                    warn!(
+                        "Tool '{}' execution failed: {:?}",
+                        request.name, result.error
+                    );
 
-                        Ok(CallToolResult {
-                            content: vec![Content::text(
-                                result.error.unwrap_or_else(|| "Unknown error".to_string()),
-                            )],
-                            is_error: Some(true),
-                        })
-                    }
-                }
-                Err(e) => {
-                    error!("Tool '{}' execution error: {}", request.name, e);
-
-                    // Convert AgentError to ErrorData
-                    Err(rmcp::model::ErrorData {
-                        code: rmcp::model::ErrorCode::INTERNAL_ERROR,
-                        message: e.to_string().into(),
-                        data: None,
+                    Ok(CallToolResult {
+                        content: vec![Content::text(
+                            result.error.unwrap_or_else(|| "Unknown error".to_string()),
+                        )],
+                        is_error: Some(true),
                     })
                 }
+            }
+            Err(e) => {
+                error!("Tool '{}' execution error: {}", request.name, e);
+
+                // Convert AgentError to ErrorData
+                Err(rmcp::model::ErrorData {
+                    code: rmcp::model::ErrorCode::INTERNAL_ERROR,
+                    message: e.to_string().into(),
+                    data: None,
+                })
             }
         }
     }
@@ -314,6 +309,7 @@ impl Default for McpServerBuilder {
 
 impl McpServerBuilder {
     /// Create a new MCP server builder
+    #[must_use]
     pub fn new() -> Self {
         Self {
             name: None,
@@ -336,6 +332,7 @@ impl McpServerBuilder {
     }
 
     /// Use existing tool registry
+    #[must_use]
     pub fn tool_registry(mut self, registry: Arc<ToolRegistry>) -> Self {
         self.tool_registry = Some(registry);
         self
@@ -348,6 +345,7 @@ impl McpServerBuilder {
     }
 
     /// Add multiple tools
+    #[must_use]
     pub fn tools(mut self, tools: Vec<Arc<dyn Tool>>) -> Self {
         self.tools.extend(tools);
         self

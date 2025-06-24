@@ -55,11 +55,13 @@ impl Default for QueryOptimizerConfig {
 
 impl QueryOptimizer {
     /// Create a new query optimizer.
+    #[must_use]
     pub fn new() -> Self {
         Self::default()
     }
 
     /// Create a new query optimizer with custom configuration.
+    #[must_use]
     pub fn with_config(config: QueryOptimizerConfig) -> Self {
         Self { config }
     }
@@ -179,11 +181,13 @@ impl Default for ResponsePostProcessorConfig {
 
 impl ResponsePostProcessor {
     /// Create a new response post-processor.
+    #[must_use]
     pub fn new() -> Self {
         Self::default()
     }
 
     /// Create a new response post-processor with custom configuration.
+    #[must_use]
     pub fn with_config(config: ResponsePostProcessorConfig) -> Self {
         Self { config }
     }
@@ -265,7 +269,7 @@ impl ResponsePostProcessor {
         // Basic formatting: ensure proper spacing and line breaks
         let formatted = content
             .lines()
-            .map(|line| line.trim())
+            .map(str::trim)
             .filter(|line| !line.is_empty())
             .collect::<Vec<_>>()
             .join("\n\n");
@@ -286,7 +290,7 @@ impl ResponsePostProcessor {
         // Simple confidence calculation based on average source scores
         let avg_score = source_nodes
             .iter()
-            .map(|node| node.score as f64)
+            .map(|node| f64::from(node.score))
             .sum::<f64>()
             / source_nodes.len() as f64;
 
@@ -301,6 +305,7 @@ impl ResponsePostProcessor {
 pub mod query_utils {
 
     /// Extract keywords from a query text.
+    #[must_use]
     pub fn extract_keywords(text: &str) -> Vec<String> {
         // Simple keyword extraction: split by whitespace and remove punctuation
         text.split_whitespace()
@@ -315,6 +320,7 @@ pub mod query_utils {
     }
 
     /// Calculate text similarity between two strings.
+    #[must_use]
     pub fn calculate_text_similarity(text1: &str, text2: &str) -> f32 {
         // Simple Jaccard similarity based on word overlap
         let words1: std::collections::HashSet<_> = extract_keywords(text1).into_iter().collect();
@@ -335,6 +341,7 @@ pub mod query_utils {
     }
 
     /// Truncate text to a maximum length while preserving word boundaries.
+    #[must_use]
     pub fn truncate_text(text: &str, max_length: usize) -> String {
         if text.len() <= max_length {
             return text.to_string();
@@ -344,16 +351,17 @@ pub mod query_utils {
         if let Some(last_space) = truncated.rfind(' ') {
             format!("{}...", &truncated[..last_space])
         } else {
-            format!("{}...", truncated)
+            format!("{truncated}...")
         }
     }
 }
 
 /// Utility functions for response processing.
 pub mod response_utils {
-    use super::*;
+    use super::{GeneratedResponse, ScoredNode};
 
     /// Extract the main points from a response.
+    #[must_use]
     pub fn extract_main_points(content: &str) -> Vec<String> {
         // Simple extraction: split by sentences and filter by length
         content
@@ -364,6 +372,7 @@ pub mod response_utils {
     }
 
     /// Calculate response quality score based on various factors.
+    #[must_use]
     pub fn calculate_response_quality(
         response: &GeneratedResponse,
         source_nodes: &[ScoredNode],
@@ -436,6 +445,7 @@ struct CacheEntry {
 
 impl QueryCache {
     /// Create a new query cache with default TTL.
+    #[must_use]
     pub fn new(default_ttl: Duration) -> Self {
         Self {
             cache: std::sync::RwLock::new(HashMap::new()),

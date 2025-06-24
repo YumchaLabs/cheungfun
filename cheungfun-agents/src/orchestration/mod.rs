@@ -120,6 +120,7 @@ pub struct WorkflowResult {
 
 impl AgentOrchestrator {
     /// Create a new agent orchestrator
+    #[must_use]
     pub fn new() -> Self {
         Self {
             agents: HashMap::new(),
@@ -130,6 +131,7 @@ impl AgentOrchestrator {
     }
 
     /// Create orchestrator with custom configuration
+    #[must_use]
     pub fn with_config(config: OrchestratorConfig) -> Self {
         Self {
             agents: HashMap::new(),
@@ -145,8 +147,7 @@ impl AgentOrchestrator {
 
         if self.agents.contains_key(&agent_id) {
             return Err(AgentError::orchestration(format!(
-                "Agent with ID {} is already registered",
-                agent_id
+                "Agent with ID {agent_id} is already registered"
             )));
         }
 
@@ -163,18 +164,19 @@ impl AgentOrchestrator {
             Ok(())
         } else {
             Err(AgentError::orchestration(format!(
-                "Agent with ID {} not found",
-                agent_id
+                "Agent with ID {agent_id} not found"
             )))
         }
     }
 
     /// Get an agent by ID
+    #[must_use]
     pub fn get_agent(&self, agent_id: &AgentId) -> Option<&Arc<dyn Agent>> {
         self.agents.get(agent_id)
     }
 
     /// List all registered agents
+    #[must_use]
     pub fn list_agents(&self) -> Vec<&Arc<dyn Agent>> {
         self.agents.values().collect()
     }
@@ -211,13 +213,12 @@ impl AgentOrchestrator {
         self.stats.active_workflows = self.workflows.len();
 
         // Update statistics
-        match &result {
-            Ok(workflow_result) => self.update_workflow_stats(workflow_result, start_time),
-            Err(_) => {
-                // Handle error case for stats
-                self.stats.total_workflows += 1;
-                self.stats.failed_workflows += 1;
-            }
+        if let Ok(workflow_result) = &result {
+            self.update_workflow_stats(workflow_result, start_time)
+        } else {
+            // Handle error case for stats
+            self.stats.total_workflows += 1;
+            self.stats.failed_workflows += 1;
         }
 
         result
@@ -257,7 +258,7 @@ impl AgentOrchestrator {
                         ))
                     })?;
 
-                    let task = self.create_task_from_step(step, &workflow.context())?;
+                    let task = self.create_task_from_step(step, workflow.context())?;
                     let agent_clone = Arc::clone(agent);
 
                     step_futures
@@ -314,7 +315,7 @@ impl AgentOrchestrator {
                                 ),
                                 task_results,
                                 context: workflow.context().clone(),
-                                error: Some(format!("Step '{}' failed: {}", step_id, e)),
+                                error: Some(format!("Step '{step_id}' failed: {e}")),
                             });
                         }
                     }
@@ -400,7 +401,7 @@ impl AgentOrchestrator {
 
         // Add step-specific configuration
         for (key, value) in &step.config {
-            task.add_context_variable(format!("step_{}", key), value.clone());
+            task.add_context_variable(format!("step_{key}"), value.clone());
         }
 
         Ok(task)
@@ -436,11 +437,13 @@ impl AgentOrchestrator {
     }
 
     /// Get orchestrator statistics
+    #[must_use]
     pub fn stats(&self) -> &OrchestratorStats {
         &self.stats
     }
 
     /// Get orchestrator configuration
+    #[must_use]
     pub fn config(&self) -> &OrchestratorConfig {
         &self.config
     }
@@ -451,6 +454,7 @@ impl AgentOrchestrator {
     }
 
     /// Get active workflows
+    #[must_use]
     pub fn active_workflows(&self) -> Vec<&Workflow> {
         self.workflows.values().collect()
     }
@@ -463,8 +467,7 @@ impl AgentOrchestrator {
             Ok(())
         } else {
             Err(AgentError::orchestration(format!(
-                "Workflow {} not found or not active",
-                workflow_id
+                "Workflow {workflow_id} not found or not active"
             )))
         }
     }

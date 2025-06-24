@@ -246,6 +246,7 @@ impl AgentMessage {
     }
 
     /// Add a tool call to this message
+    #[must_use]
     pub fn with_tool_call(mut self, tool_call: ToolCall) -> Self {
         self.tool_calls.push(tool_call);
         self

@@ -180,8 +180,7 @@ impl EmbedderFactoryRegistry {
 
         let factory = self.factories.get(embedder_type).ok_or_else(|| {
             crate::CheungfunError::configuration(format!(
-                "No factory registered for embedder type: {}",
-                embedder_type
+                "No factory registered for embedder type: {embedder_type}"
             ))
         })?;
 
@@ -210,7 +209,7 @@ impl EmbedderFactoryRegistry {
 
         self.factories
             .get(embedder_type)
-            .map_or(false, |factory| factory.can_create(config))
+            .is_some_and(|factory| factory.can_create(config))
     }
 
     /// Get all registered embedder types.
@@ -248,8 +247,7 @@ impl EmbedderFactoryRegistry {
 
         let factory = self.factories.get(embedder_type).ok_or_else(|| {
             crate::CheungfunError::configuration(format!(
-                "No factory registered for embedder type: {}",
-                embedder_type
+                "No factory registered for embedder type: {embedder_type}"
             ))
         })?;
 

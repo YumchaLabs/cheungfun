@@ -31,6 +31,7 @@ impl Default for AgentBuilder {
 
 impl AgentBuilder {
     /// Create a new agent builder
+    #[must_use]
     pub fn new() -> Self {
         Self {
             name: None,
@@ -65,48 +66,56 @@ impl AgentBuilder {
     }
 
     /// Set agent capabilities
+    #[must_use]
     pub fn capabilities(mut self, capabilities: AgentCapabilities) -> Self {
         self.capabilities = capabilities;
         self
     }
 
     /// Enable tool support
+    #[must_use]
     pub fn with_tools(mut self) -> Self {
         self.capabilities.supports_tools = true;
         self
     }
 
     /// Enable streaming support
+    #[must_use]
     pub fn with_streaming(mut self) -> Self {
         self.capabilities.supports_streaming = true;
         self
     }
 
     /// Enable conversation support
+    #[must_use]
     pub fn with_conversation(mut self) -> Self {
         self.capabilities.supports_conversation = true;
         self
     }
 
     /// Enable file operations
+    #[must_use]
     pub fn with_files(mut self) -> Self {
         self.capabilities.supports_files = true;
         self
     }
 
     /// Enable web access
+    #[must_use]
     pub fn with_web(mut self) -> Self {
         self.capabilities.supports_web = true;
         self
     }
 
     /// Enable code execution
+    #[must_use]
     pub fn with_code_execution(mut self) -> Self {
         self.capabilities.supports_code_execution = true;
         self
     }
 
     /// Set maximum context length
+    #[must_use]
     pub fn max_context_length(mut self, length: usize) -> Self {
         self.capabilities.max_context_length = Some(length);
         self
@@ -137,18 +146,21 @@ impl AgentBuilder {
     }
 
     /// Set maximum execution time
+    #[must_use]
     pub fn max_execution_time_ms(mut self, ms: u64) -> Self {
         self.max_execution_time_ms = Some(ms);
         self
     }
 
     /// Set maximum tool calls per task
+    #[must_use]
     pub fn max_tool_calls(mut self, count: usize) -> Self {
         self.max_tool_calls = Some(count);
         self
     }
 
     /// Enable verbose logging
+    #[must_use]
     pub fn verbose(mut self) -> Self {
         self.verbose = true;
         self
@@ -168,6 +180,7 @@ impl AgentBuilder {
     }
 
     /// Add multiple tools
+    #[must_use]
     pub fn tools(mut self, tools: Vec<Arc<dyn Tool>>) -> Self {
         self.tools.extend(tools);
         if !self.tools.is_empty() {
@@ -177,6 +190,7 @@ impl AgentBuilder {
     }
 
     /// Use an existing tool registry
+    #[must_use]
     pub fn tool_registry(mut self, registry: Arc<ToolRegistry>) -> Self {
         self.tool_registry = Some(registry);
         self.capabilities.supports_tools = true;
@@ -282,6 +296,7 @@ impl AgentBuilder {
 /// Convenience functions for common agent configurations
 impl AgentBuilder {
     /// Create a basic assistant agent
+    #[must_use]
     pub fn assistant() -> Self {
         Self::new()
             .name("assistant")
@@ -291,6 +306,7 @@ impl AgentBuilder {
     }
 
     /// Create a research agent with web and search capabilities
+    #[must_use]
     pub fn researcher() -> Self {
         Self::new()
             .name("researcher")
@@ -302,6 +318,7 @@ impl AgentBuilder {
     }
 
     /// Create a file management agent
+    #[must_use]
     pub fn file_manager() -> Self {
         Self::new()
             .name("file_manager")
@@ -311,6 +328,7 @@ impl AgentBuilder {
     }
 
     /// Create a code assistant agent
+    #[must_use]
     pub fn code_assistant() -> Self {
         Self::new()
             .name("code_assistant")
@@ -323,6 +341,7 @@ impl AgentBuilder {
     }
 
     /// Create a web agent for web scraping and API calls
+    #[must_use]
     pub fn web_agent() -> Self {
         Self::new()
             .name("web_agent")

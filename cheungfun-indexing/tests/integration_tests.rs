@@ -4,7 +4,6 @@ use cheungfun_core::{ChunkInfo, Document, Node};
 use cheungfun_indexing::prelude::*;
 use std::fs;
 use tempfile::TempDir;
-use tokio;
 
 /// Create a temporary directory with test files.
 fn create_test_directory() -> (TempDir, Vec<String>) {
@@ -94,7 +93,7 @@ async fn test_text_splitter() {
 #[tokio::test]
 async fn test_metadata_extractor() {
     let content = "# Test Document\n\nThis is a test document with some content.\nIt has multiple paragraphs and sentences.";
-    let mut node = Node::new(
+    let node = Node::new(
         content.to_string(),
         uuid::Uuid::new_v4(),
         ChunkInfo {

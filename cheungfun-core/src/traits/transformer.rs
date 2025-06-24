@@ -237,6 +237,7 @@ pub struct TransformStats {
 
 impl TransformStats {
     /// Create new transformation statistics.
+    #[must_use]
     pub fn new() -> Self {
         Self {
             documents_processed: 0,
@@ -250,6 +251,7 @@ impl TransformStats {
     }
 
     /// Calculate the success rate as a percentage.
+    #[must_use]
     pub fn success_rate(&self) -> f64 {
         if self.documents_processed == 0 {
             0.0
@@ -260,6 +262,7 @@ impl TransformStats {
     }
 
     /// Calculate the average number of nodes per document.
+    #[must_use]
     pub fn avg_nodes_per_document(&self) -> f64 {
         if self.documents_processed == 0 {
             0.0

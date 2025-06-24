@@ -21,6 +21,7 @@ pub struct SearchTool {
 
 impl SearchTool {
     /// Create a new search tool with default settings
+    #[must_use]
     pub fn new() -> Self {
         Self {
             name: "search".to_string(),
@@ -30,6 +31,7 @@ impl SearchTool {
     }
 
     /// Create a search tool with custom limits
+    #[must_use]
     pub fn with_limits(default_top_k: usize, max_top_k: usize) -> Self {
         Self {
             name: "search".to_string(),
@@ -245,8 +247,7 @@ impl SearchTool {
         let total_results = limited_results.len();
 
         let content = format!(
-            "Found {} results for query: '{}' using {} search",
-            total_results, query, search_type
+            "Found {total_results} results for query: '{query}' using {search_type} search"
         );
 
         Ok(ToolResult::success(content)
@@ -261,6 +262,7 @@ impl SearchTool {
 
     /// Integration point for actual RAG system
     /// This method would be called by the agent when setting up the search tool
+    #[must_use]
     pub fn with_retriever(self, _retriever: Box<dyn std::any::Any + Send + Sync>) -> Self {
         // In the real implementation, this would store a reference to the retriever
         // For now, we just return self

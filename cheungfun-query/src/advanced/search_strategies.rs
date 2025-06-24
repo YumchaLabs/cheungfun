@@ -1,6 +1,9 @@
 // Search Strategies Implementation
 
-use super::*;
+use super::{
+    AdvancedQuery, DistanceMetric, FusionAlgorithm, FusionMethod, NormalizationMethod, RerankModel,
+    ResponseGenerator, SearchMode, SearchStrategy,
+};
 use anyhow::{Context, Result};
 use async_trait::async_trait;
 use cheungfun_core::{ScoredNode, VectorStore};
@@ -101,6 +104,7 @@ pub struct VectorSearchStrategy {
 }
 
 impl VectorSearchStrategy {
+    #[must_use]
     pub fn new(config: VectorSearchConfig) -> Self {
         Self { config }
     }
@@ -170,6 +174,7 @@ pub struct KeywordSearchStrategy {
 }
 
 impl KeywordSearchStrategy {
+    #[must_use]
     pub fn new(config: KeywordSearchConfig) -> Self {
         Self { config }
     }
@@ -227,7 +232,7 @@ impl SearchStrategy for KeywordSearchStrategy {
         });
         // A simple deduplication by node ID
         let mut seen = std::collections::HashSet::new();
-        all_results.retain(|node| seen.insert(node.node.id.clone()));
+        all_results.retain(|node| seen.insert(node.node.id));
         all_results.truncate(query.search_params.top_k);
 
         info!("Keyword search returned {} results", all_results.len());
@@ -266,6 +271,7 @@ pub struct HybridSearchStrategy {
 }
 
 impl HybridSearchStrategy {
+    #[must_use]
     pub fn new(
         vector_config: VectorSearchConfig,
         keyword_config: KeywordSearchConfig,
@@ -278,6 +284,7 @@ impl HybridSearchStrategy {
         }
     }
 
+    #[must_use]
     pub fn builder() -> HybridSearchStrategyBuilder {
         HybridSearchStrategyBuilder::new()
     }
@@ -308,7 +315,7 @@ impl HybridSearchStrategy {
         vector_results: Vec<ScoredNode>,
         keyword_results: Vec<ScoredNode>,
     ) -> Vec<ScoredNode> {
-        use crate::advanced::fusion::{FusionAlgorithmFactory, ReciprocalRankFusion};
+        use crate::advanced::fusion::ReciprocalRankFusion;
 
         match &self.fusion_config.method {
             FusionMethod::ReciprocalRankFusion { k } => {
@@ -348,7 +355,7 @@ impl HybridSearchStrategy {
                 .unwrap_or(std::cmp::Ordering::Equal)
         });
         let mut seen = std::collections::HashSet::new();
-        combined.retain(|node| seen.insert(node.node.id.clone()));
+        combined.retain(|node| seen.insert(node.node.id));
         combined.truncate(self.fusion_config.final_top_k);
         combined
     }
@@ -369,7 +376,7 @@ impl HybridSearchStrategy {
                 .unwrap_or(std::cmp::Ordering::Equal)
         });
         let mut seen = std::collections::HashSet::new();
-        combined.retain(|node| seen.insert(node.node.id.clone()));
+        combined.retain(|node| seen.insert(node.node.id));
         combined.truncate(self.fusion_config.final_top_k);
         combined
     }
@@ -440,7 +447,14 @@ pub struct HybridSearchStrategyBuilder {
     fusion_config: FusionConfig,
 }
 
+impl Default for HybridSearchStrategyBuilder {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
 impl HybridSearchStrategyBuilder {
+    #[must_use]
     pub fn new() -> Self {
         Self {
             vector_config: VectorSearchConfig::default(),
@@ -449,43 +463,54 @@ impl HybridSearchStrategyBuilder {
         }
     }
 
+    #[must_use]
     pub fn with_vector_config(mut self, config: VectorSearchConfig) -> Self {
         self.vector_config = config;
         self
     }
 
+    #[must_use]
     pub fn with_keyword_config(mut self, config: KeywordSearchConfig) -> Self {
         self.keyword_config = config;
         self
     }
 
+    #[must_use]
     pub fn with_fusion_config(mut self, config: FusionConfig) -> Self {
         self.fusion_config = config;
         self
     }
 
+    #[must_use]
     pub fn with_vector_weight(self, _weight: f32) -> Self {
         // The weight in the fusion config can be adjusted here.
         // This is a placeholder; a real implementation would pass this to the fusion method.
         self
     }
 
+    #[must_use]
     pub fn with_keyword_weight(self, _weight: f32) -> Self {
         // The weight in the fusion config can be adjusted here.
         // This is a placeholder; a real implementation would pass this to the fusion method.
         self
     }
 
+    #[must_use]
     pub fn with_keyword_fields(mut self, fields: Vec<&str>) -> Self {
-        self.keyword_config.search_fields = fields.into_iter().map(|s| s.to_string()).collect();
+        self.keyword_config.search_fields = fields
+            .into_iter()
+            .map(std::string::ToString::to_string)
+            .collect();
         self
     }
 
+    #[must_use]
     pub fn with_fusion_method(mut self, method: FusionMethod) -> Self {
         self.fusion_config.method = method;
         self
     }
 
+    #[must_use]
     pub fn build(self) -> HybridSearchStrategy {
         HybridSearchStrategy::new(self.vector_config, self.keyword_config, self.fusion_config)
     }

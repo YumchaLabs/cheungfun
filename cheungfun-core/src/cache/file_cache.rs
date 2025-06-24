@@ -5,8 +5,8 @@
 //! expensive operations like embeddings.
 
 use async_trait::async_trait;
+use cached::IOCached;
 use cached::stores::DiskCache;
-use cached::{Cached, IOCached};
 use serde::{Deserialize, Serialize};
 use std::path::{Path, PathBuf};
 use std::sync::Arc;
@@ -164,22 +164,20 @@ impl FileCache {
             .set_refresh(true)
             .build()
             .map_err(|e| {
-                CheungfunError::internal(format!("Failed to create embedding cache: {}", e))
+                CheungfunError::internal(format!("Failed to create embedding cache: {e}"))
             })?;
 
         let nodes_cache = DiskCache::new(&nodes_dir.to_string_lossy())
             .set_lifespan(3600)
             .set_refresh(true)
             .build()
-            .map_err(|e| {
-                CheungfunError::internal(format!("Failed to create nodes cache: {}", e))
-            })?;
+            .map_err(|e| CheungfunError::internal(format!("Failed to create nodes cache: {e}")))?;
 
         let data_cache = DiskCache::new(&data_dir.to_string_lossy())
             .set_lifespan(3600)
             .set_refresh(true)
             .build()
-            .map_err(|e| CheungfunError::internal(format!("Failed to create data cache: {}", e)))?;
+            .map_err(|e| CheungfunError::internal(format!("Failed to create data cache: {e}")))?;
 
         info!("Created file cache at: {}", cache_dir.display());
 
@@ -212,6 +210,7 @@ impl FileCache {
     }
 
     /// Get the cache directory path.
+    #[must_use]
     pub fn cache_dir(&self) -> &Path {
         &self.cache_dir
     }
@@ -242,8 +241,8 @@ impl FileCache {
     where
         T: Clone + Serialize + for<'de> Deserialize<'de>,
     {
-        let mut cache_guard = cache.write().await;
-        let mut expired_keys: Vec<String> = Vec::new();
+        let _cache_guard = cache.write().await;
+        let expired_keys: Vec<String> = Vec::new();
 
         // Note: DiskCache doesn't support iteration, so we'll skip cleanup for now
         // This is a limitation of the current cached crate implementation
@@ -351,7 +350,7 @@ impl PipelineCache for FileCache {
         debug!("Storing nodes in file cache: {}", key);
 
         let entry = CacheEntry::new(nodes, ttl);
-        let mut cache = self.nodes_cache.write().await;
+        let cache = self.nodes_cache.write().await;
 
         let _ = cache.cache_set(key.to_string(), entry);
 
@@ -416,9 +415,9 @@ impl PipelineCache for FileCache {
         // Check all cache types
         let embedding_exists = {
             let cache = self.embedding_cache.read().await;
-            cache.cache_get(&key.to_string()).map_or(false, |result| {
-                result.map_or(false, |entry| !entry.is_expired())
-            })
+            cache
+                .cache_get(&key.to_string())
+                .is_ok_and(|result| result.is_some_and(|entry| !entry.is_expired()))
         };
 
         if embedding_exists {
@@ -427,9 +426,9 @@ impl PipelineCache for FileCache {
 
         let nodes_exists = {
             let cache = self.nodes_cache.read().await;
-            cache.cache_get(&key.to_string()).map_or(false, |result| {
-                result.map_or(false, |entry| !entry.is_expired())
-            })
+            cache
+                .cache_get(&key.to_string())
+                .is_ok_and(|result| result.is_some_and(|entry| !entry.is_expired()))
         };
 
         if nodes_exists {
@@ -438,9 +437,9 @@ impl PipelineCache for FileCache {
 
         let data_exists = {
             let cache = self.data_cache.read().await;
-            cache.cache_get(&key.to_string()).map_or(false, |result| {
-                result.map_or(false, |entry| !entry.is_expired())
-            })
+            cache
+                .cache_get(&key.to_string())
+                .is_ok_and(|result| result.is_some_and(|entry| !entry.is_expired()))
         };
 
         Ok(data_exists)
@@ -451,17 +450,17 @@ impl PipelineCache for FileCache {
 
         // Remove from all cache types
         {
-            let mut cache = self.embedding_cache.write().await;
+            let cache = self.embedding_cache.write().await;
             let _ = cache.cache_remove(&key.to_string());
         }
 
         {
-            let mut cache = self.nodes_cache.write().await;
+            let cache = self.nodes_cache.write().await;
             let _ = cache.cache_remove(&key.to_string());
         }
 
         {
-            let mut cache = self.data_cache.write().await;
+            let cache = self.data_cache.write().await;
             let _ = cache.cache_remove(&key.to_string());
         }
 

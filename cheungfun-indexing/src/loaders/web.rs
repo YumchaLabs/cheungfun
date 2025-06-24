@@ -98,10 +98,7 @@ impl WebLoader {
 
         // Validate URL
         if url::Url::parse(&url).is_err() {
-            return Err(IndexingError::configuration(format!(
-                "Invalid URL: {}",
-                url
-            )));
+            return Err(IndexingError::configuration(format!("Invalid URL: {url}")));
         }
 
         let config = WebLoaderConfig::default();
@@ -115,7 +112,7 @@ impl WebLoader {
             })
             .build()
             .map_err(|e| {
-                IndexingError::configuration(format!("Failed to create HTTP client: {}", e))
+                IndexingError::configuration(format!("Failed to create HTTP client: {e}"))
             })?;
 
         Ok(Self {
@@ -131,10 +128,7 @@ impl WebLoader {
 
         // Validate URL
         if url::Url::parse(&url).is_err() {
-            return Err(IndexingError::configuration(format!(
-                "Invalid URL: {}",
-                url
-            )));
+            return Err(IndexingError::configuration(format!("Invalid URL: {url}")));
         }
 
         let client = Client::builder()
@@ -147,7 +141,7 @@ impl WebLoader {
             })
             .build()
             .map_err(|e| {
-                IndexingError::configuration(format!("Failed to create HTTP client: {}", e))
+                IndexingError::configuration(format!("Failed to create HTTP client: {e}"))
             })?;
 
         Ok(Self {
@@ -158,11 +152,13 @@ impl WebLoader {
     }
 
     /// Get the URL.
+    #[must_use]
     pub fn url(&self) -> &str {
         &self.url
     }
 
     /// Get the loader configuration.
+    #[must_use]
     pub fn config(&self) -> &WebLoaderConfig {
         &self.config
     }
@@ -252,7 +248,7 @@ impl WebLoader {
         // Clean up the text
         let cleaned_text = extracted_text
             .lines()
-            .map(|line| line.trim())
+            .map(str::trim)
             .filter(|line| !line.is_empty())
             .collect::<Vec<_>>()
             .join("\n");

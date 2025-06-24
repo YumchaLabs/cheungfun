@@ -7,7 +7,6 @@ use crate::{
 use async_trait::async_trait;
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
-use uuid::Uuid;
 
 pub mod builtin;
 pub mod registry;
@@ -95,7 +94,7 @@ pub trait Tool: Send + Sync + std::fmt::Debug {
         _context: &ToolContext,
     ) -> Result<Box<dyn futures::Stream<Item = Result<String>> + Send + Unpin>> {
         Err(AgentError::tool(
-            &self.name(),
+            self.name(),
             "Streaming execution not supported",
         ))
     }
@@ -152,11 +151,13 @@ impl ToolResult {
     }
 
     /// Check if the result contains an error
+    #[must_use]
     pub fn is_error(&self) -> bool {
         !self.success || self.error.is_some()
     }
 
     /// Get the error message if any
+    #[must_use]
     pub fn error_message(&self) -> Option<&str> {
         self.error.as_deref()
     }
@@ -164,11 +165,13 @@ impl ToolResult {
 
 impl ToolContext {
     /// Create a new tool context
+    #[must_use]
     pub fn new() -> Self {
         Self::default()
     }
 
     /// Create a tool context with a call ID
+    #[must_use]
     pub fn with_call_id(call_id: ToolCallId) -> Self {
         Self {
             call_id: Some(call_id),
@@ -189,11 +192,13 @@ impl ToolContext {
     }
 
     /// Get a variable from the context
+    #[must_use]
     pub fn get_variable(&self, key: &str) -> Option<&serde_json::Value> {
         self.variables.get(key)
     }
 
     /// Get data from the context
+    #[must_use]
     pub fn get_data(&self, key: &str) -> Option<&serde_json::Value> {
         self.data.get(key)
     }
@@ -248,6 +253,7 @@ macro_rules! tool_schema {
 }
 
 /// Helper function to create a simple JSON schema for tool parameters
+#[must_use]
 pub fn create_simple_schema(
     properties: HashMap<String, serde_json::Value>,
     required: Vec<String>,
@@ -260,6 +266,7 @@ pub fn create_simple_schema(
 }
 
 /// Helper function to create a string parameter schema
+#[must_use]
 pub fn string_param(description: &str, required: bool) -> (serde_json::Value, bool) {
     (
         serde_json::json!({
@@ -271,6 +278,7 @@ pub fn string_param(description: &str, required: bool) -> (serde_json::Value, bo
 }
 
 /// Helper function to create a number parameter schema
+#[must_use]
 pub fn number_param(description: &str, required: bool) -> (serde_json::Value, bool) {
     (
         serde_json::json!({
@@ -282,6 +290,7 @@ pub fn number_param(description: &str, required: bool) -> (serde_json::Value, bo
 }
 
 /// Helper function to create a boolean parameter schema
+#[must_use]
 pub fn boolean_param(description: &str, required: bool) -> (serde_json::Value, bool) {
     (
         serde_json::json!({

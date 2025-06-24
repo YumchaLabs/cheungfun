@@ -87,6 +87,7 @@ pub enum VectorStoreConfig {
 
 impl VectorStoreConfig {
     /// Create a new in-memory vector store configuration.
+    #[must_use]
     pub fn memory(dimension: usize) -> Self {
         Self::Memory {
             dimension,
@@ -116,6 +117,7 @@ impl VectorStoreConfig {
     }
 
     /// Set the distance metric.
+    #[must_use]
     pub fn with_distance_metric(mut self, metric: DistanceMetric) -> Self {
         match &mut self {
             Self::Memory {
@@ -135,6 +137,7 @@ impl VectorStoreConfig {
     }
 
     /// Set capacity for memory store.
+    #[must_use]
     pub fn with_capacity(mut self, capacity: usize) -> Self {
         match &mut self {
             Self::Memory { capacity: cap, .. } => *cap = Some(capacity),
@@ -172,18 +175,20 @@ impl VectorStoreConfig {
     }
 
     /// Get the vector dimension.
+    #[must_use]
     pub fn dimension(&self) -> usize {
         match self {
             Self::Memory { dimension, .. } => *dimension,
             Self::Qdrant { dimension, .. } => *dimension,
             Self::Custom { config, .. } => config
                 .get("dimension")
-                .and_then(|v| v.as_u64())
+                .and_then(serde_json::Value::as_u64)
                 .unwrap_or(768) as usize,
         }
     }
 
     /// Get the distance metric.
+    #[must_use]
     pub fn distance_metric(&self) -> &DistanceMetric {
         match self {
             Self::Memory {
@@ -197,6 +202,7 @@ impl VectorStoreConfig {
     }
 
     /// Get the store type name.
+    #[must_use]
     pub fn store_type(&self) -> &str {
         match self {
             Self::Memory { .. } => "memory",
@@ -206,11 +212,13 @@ impl VectorStoreConfig {
     }
 
     /// Check if this is a local store.
+    #[must_use]
     pub fn is_local(&self) -> bool {
         matches!(self, Self::Memory { .. } | Self::Custom { .. })
     }
 
     /// Check if this is a remote store.
+    #[must_use]
     pub fn is_remote(&self) -> bool {
         matches!(self, Self::Qdrant { .. })
     }
@@ -274,6 +282,7 @@ impl VectorStoreConfig {
     }
 
     /// Get connection information for logging (without sensitive data).
+    #[must_use]
     pub fn connection_info(&self) -> HashMap<String, String> {
         let mut info = HashMap::new();
         match self {

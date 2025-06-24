@@ -204,7 +204,7 @@ impl MediaData {
 }
 
 /// Metadata associated with media content.
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, Default)]
 pub struct MediaMetadata {
     /// File size in bytes
     pub size: Option<u64>,
@@ -241,25 +241,6 @@ pub struct MediaMetadata {
 
     /// Additional format-specific metadata
     pub extra: HashMap<String, serde_json::Value>,
-}
-
-impl Default for MediaMetadata {
-    fn default() -> Self {
-        Self {
-            size: None,
-            created_at: None,
-            modified_at: None,
-            mime_type: None,
-            filename: None,
-            title: None,
-            author: None,
-            description: None,
-            tags: Vec::new(),
-            language: None,
-            copyright: None,
-            extra: HashMap::new(),
-        }
-    }
 }
 
 impl MediaMetadata {

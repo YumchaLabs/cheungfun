@@ -38,8 +38,8 @@ fn generate_test_vectors(count: usize, dimension: usize) -> Vec<Vec<f32>> {
                 .map(|j| {
                     let mut h = DefaultHasher::new();
                     (seed + j as u64).hash(&mut h);
-                    let val = (h.finish() % 2000) as f32 / 1000.0 - 1.0;
-                    val
+
+                    (h.finish() % 2000) as f32 / 1000.0 - 1.0
                 })
                 .collect();
 

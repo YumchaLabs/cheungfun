@@ -17,6 +17,7 @@ pub struct EchoTool {
 
 impl EchoTool {
     /// Create a new echo tool
+    #[must_use]
     pub fn new() -> Self {
         Self {
             name: "echo".to_string(),

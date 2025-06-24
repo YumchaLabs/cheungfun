@@ -244,6 +244,7 @@ pub struct IndexingStats {
 
 impl IndexingStats {
     /// Create new indexing statistics.
+    #[must_use]
     pub fn new() -> Self {
         Self {
             documents_processed: 0,
@@ -256,6 +257,7 @@ impl IndexingStats {
     }
 
     /// Calculate the success rate for document processing.
+    #[must_use]
     pub fn document_success_rate(&self) -> f64 {
         if self.documents_processed == 0 {
             0.0
@@ -268,6 +270,7 @@ impl IndexingStats {
     }
 
     /// Calculate the storage success rate for nodes.
+    #[must_use]
     pub fn storage_success_rate(&self) -> f64 {
         if self.nodes_created == 0 {
             0.0
@@ -277,6 +280,7 @@ impl IndexingStats {
     }
 
     /// Calculate average nodes per document.
+    #[must_use]
     pub fn avg_nodes_per_document(&self) -> f64 {
         if self.documents_processed == 0 {
             0.0
@@ -286,6 +290,7 @@ impl IndexingStats {
     }
 
     /// Calculate processing speed (documents per second).
+    #[must_use]
     pub fn documents_per_second(&self) -> f64 {
         if self.processing_time.is_zero() {
             0.0
@@ -337,6 +342,7 @@ impl IndexingProgress {
     }
 
     /// Calculate progress percentage if total is known.
+    #[must_use]
     pub fn percentage(&self) -> Option<f64> {
         self.total.map(|total| {
             if total == 0 {
@@ -348,8 +354,9 @@ impl IndexingProgress {
     }
 
     /// Check if the operation is complete.
+    #[must_use]
     pub fn is_complete(&self) -> bool {
-        self.total.map_or(false, |total| self.processed >= total)
+        self.total.is_some_and(|total| self.processed >= total)
     }
 }
 
@@ -380,11 +387,13 @@ pub struct QueryStats {
 
 impl QueryStats {
     /// Create new query statistics.
+    #[must_use]
     pub fn new() -> Self {
         Self::default()
     }
 
     /// Calculate the success rate as a percentage.
+    #[must_use]
     pub fn success_rate(&self) -> f64 {
         if self.queries_processed == 0 {
             0.0
@@ -395,6 +404,7 @@ impl QueryStats {
     }
 
     /// Calculate queries per second.
+    #[must_use]
     pub fn queries_per_second(&self) -> f64 {
         if self.total_query_time.is_zero() {
             0.0

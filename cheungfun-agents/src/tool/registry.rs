@@ -21,6 +21,7 @@ pub struct ToolRegistry {
 
 impl ToolRegistry {
     /// Create a new empty tool registry
+    #[must_use]
     pub fn new() -> Self {
         Self::default()
     }
@@ -73,15 +74,13 @@ impl ToolRegistry {
 
         if !self.tools.contains_key(&tool_name) {
             return Err(AgentError::configuration(format!(
-                "Cannot create alias '{}' for non-existent tool '{}'",
-                alias, tool_name
+                "Cannot create alias '{alias}' for non-existent tool '{tool_name}'"
             )));
         }
 
         if self.aliases.contains_key(&alias) {
             return Err(AgentError::configuration(format!(
-                "Alias '{}' is already registered",
-                alias
+                "Alias '{alias}' is already registered"
             )));
         }
 
@@ -106,21 +105,25 @@ impl ToolRegistry {
     }
 
     /// Check if a tool exists (by name or alias)
+    #[must_use]
     pub fn contains(&self, name: &str) -> bool {
         self.tools.contains_key(name) || self.aliases.contains_key(name)
     }
 
     /// Get all registered tool names
+    #[must_use]
     pub fn tool_names(&self) -> Vec<String> {
         self.tools.keys().cloned().collect()
     }
 
     /// Get all tool schemas
+    #[must_use]
     pub fn schemas(&self) -> Vec<ToolSchema> {
         self.tools.values().map(|tool| tool.schema()).collect()
     }
 
     /// Get tools by category
+    #[must_use]
     pub fn tools_by_category(&self, category: &str) -> Vec<Arc<dyn Tool>> {
         if let Some(tool_names) = self.categories.get(category) {
             tool_names
@@ -133,6 +136,7 @@ impl ToolRegistry {
     }
 
     /// Get all categories
+    #[must_use]
     pub fn categories(&self) -> Vec<String> {
         self.categories.keys().cloned().collect()
     }
@@ -182,8 +186,7 @@ impl ToolRegistry {
     pub fn unregister(&mut self, tool_name: &str) -> Result<()> {
         if !self.tools.contains_key(tool_name) {
             return Err(AgentError::configuration(format!(
-                "Tool '{}' is not registered",
-                tool_name
+                "Tool '{tool_name}' is not registered"
             )));
         }
 
@@ -211,6 +214,7 @@ impl ToolRegistry {
     }
 
     /// Get registry statistics
+    #[must_use]
     pub fn stats(&self) -> RegistryStats {
         RegistryStats {
             total_tools: self.tools.len(),
@@ -251,14 +255,14 @@ impl ToolRegistry {
             if schema.name.is_empty() {
                 return Err(AgentError::validation(
                     "tool_schema",
-                    format!("Tool '{}' has empty name in schema", name),
+                    format!("Tool '{name}' has empty name in schema"),
                 ));
             }
 
             if schema.description.is_empty() {
                 return Err(AgentError::validation(
                     "tool_schema",
-                    format!("Tool '{}' has empty description in schema", name),
+                    format!("Tool '{name}' has empty description in schema"),
                 ));
             }
 

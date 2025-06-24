@@ -286,11 +286,13 @@ pub struct IndexInfo {
 
 impl StorageStats {
     /// Create new storage statistics.
+    #[must_use]
     pub fn new() -> Self {
         Self::default()
     }
 
     /// Calculate the average operations per second.
+    #[must_use]
     pub fn operations_per_second(&self, duration: std::time::Duration) -> f64 {
         let total_ops = self.search_operations
             + self.insert_operations
@@ -305,6 +307,7 @@ impl StorageStats {
     }
 
     /// Get the storage efficiency (nodes per byte).
+    #[must_use]
     pub fn storage_efficiency(&self) -> Option<f64> {
         self.storage_size_bytes.map(|size| {
             if size == 0 {

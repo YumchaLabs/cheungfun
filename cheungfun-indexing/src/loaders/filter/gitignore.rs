@@ -19,7 +19,7 @@ pub struct GitignoreMatcher {
 }
 
 impl GitignoreMatcher {
-    /// Create a new GitignoreMatcher for the given directory.
+    /// Create a new `GitignoreMatcher` for the given directory.
     ///
     /// This will automatically discover and parse .gitignore files in the directory tree.
     pub fn new<P: AsRef<Path>>(base_dir: P) -> FilterResult<Self> {
@@ -79,7 +79,7 @@ impl GitignoreMatcher {
         })
     }
 
-    /// Create a GitignoreMatcher with custom ignore files.
+    /// Create a `GitignoreMatcher` with custom ignore files.
     pub fn with_ignore_files<P: AsRef<Path>>(
         base_dir: P,
         ignore_files: &[PathBuf],
@@ -125,7 +125,7 @@ impl GitignoreMatcher {
         })
     }
 
-    /// Create a GitignoreMatcher from custom patterns.
+    /// Create a `GitignoreMatcher` from custom patterns.
     pub fn from_patterns<P: AsRef<Path>>(base_dir: P, patterns: &[String]) -> FilterResult<Self> {
         let base_dir = base_dir.as_ref().to_path_buf();
 
@@ -140,8 +140,7 @@ impl GitignoreMatcher {
         for pattern in patterns {
             if let Err(e) = builder.add_line(None, pattern) {
                 return Err(FilterError::GitignoreParse(format!(
-                    "Invalid pattern '{}': {}",
-                    pattern, e
+                    "Invalid pattern '{pattern}': {e}"
                 )));
             }
         }
@@ -150,8 +149,7 @@ impl GitignoreMatcher {
             Ok(gitignore) => Some(gitignore),
             Err(e) => {
                 return Err(FilterError::GitignoreParse(format!(
-                    "Failed to build gitignore matcher: {}",
-                    e
+                    "Failed to build gitignore matcher: {e}"
                 )));
             }
         };
@@ -164,12 +162,14 @@ impl GitignoreMatcher {
     }
 
     /// Set whether to respect global gitignore files.
+    #[must_use]
     pub fn with_respect_global(mut self, respect: bool) -> Self {
         self.respect_global = respect;
         self
     }
 
     /// Check if a path matches any ignore pattern.
+    #[must_use]
     pub fn is_ignored(&self, path: &Path) -> bool {
         let Some(ref matcher) = self.matcher else {
             return false;
@@ -193,6 +193,7 @@ impl GitignoreMatcher {
     }
 
     /// Get the base directory.
+    #[must_use]
     pub fn base_dir(&self) -> &Path {
         &self.base_dir
     }

@@ -19,7 +19,7 @@ use cheungfun_core::{
 
 use crate::engine::{QueryEngine, QueryEngineConfig, QueryEngineOptions};
 
-/// Default implementation of the QueryPipeline trait.
+/// Default implementation of the `QueryPipeline` trait.
 ///
 /// This pipeline provides a complete RAG workflow with support for:
 /// - Context-aware retrieval
@@ -117,6 +117,7 @@ impl DefaultQueryPipeline {
     }
 
     /// Create a builder for constructing query pipelines.
+    #[must_use]
     pub fn builder() -> QueryPipelineBuilder {
         QueryPipelineBuilder::new()
     }
@@ -158,7 +159,7 @@ impl DefaultQueryPipeline {
         if query.len() < 10 || !query.contains('?') {
             let recent_context = self.process_conversation_history(&context.chat_history);
             if !recent_context.is_empty() {
-                return format!("{}\n\nPrevious conversation:\n{}", query, recent_context);
+                return format!("{query}\n\nPrevious conversation:\n{recent_context}");
             }
         }
 
@@ -183,7 +184,7 @@ impl DefaultQueryPipeline {
         let end_start = context.len().saturating_sub(half_length);
         let end = &context[end_start..];
 
-        format!("{}...[content truncated]...{}", start, end)
+        format!("{start}...[content truncated]...{end}")
     }
 }
 
@@ -313,7 +314,7 @@ impl QueryPipeline for DefaultQueryPipeline {
 }
 
 /// Options for query execution in pipelines.
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, Default)]
 pub struct QueryOptions {
     /// Retrieval options.
     pub retrieval_options: RetrievalOptions,
@@ -323,16 +324,6 @@ pub struct QueryOptions {
 
     /// Context for the query.
     pub context: RetrievalContext,
-}
-
-impl Default for QueryOptions {
-    fn default() -> Self {
-        Self {
-            retrieval_options: RetrievalOptions::default(),
-            generation_options: GenerationOptions::default(),
-            context: RetrievalContext::default(),
-        }
-    }
 }
 
 /// Options for retrieval operations.
@@ -373,6 +364,7 @@ pub struct QueryPipelineBuilder {
 
 impl QueryPipelineBuilder {
     /// Create a new builder.
+    #[must_use]
     pub fn new() -> Self {
         Self::default()
     }
@@ -390,12 +382,14 @@ impl QueryPipelineBuilder {
     }
 
     /// Set the engine configuration.
+    #[must_use]
     pub fn engine_config(mut self, config: QueryEngineConfig) -> Self {
         self.engine_config = Some(config);
         self
     }
 
     /// Set the pipeline configuration.
+    #[must_use]
     pub fn pipeline_config(mut self, config: QueryPipelineConfig) -> Self {
         self.pipeline_config = Some(config);
         self

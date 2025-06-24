@@ -2,11 +2,11 @@
 
 use crate::{
     error::{AgentError, Result},
-    task::{Task, TaskContext, TaskResult, TaskStatus},
-    tool::{Tool, ToolContext, ToolRegistry, ToolResult},
+    task::{Task, TaskContext},
+    tool::{Tool, ToolContext, ToolRegistry},
     types::{
         AgentCapabilities, AgentConfig, AgentId, AgentMessage, AgentResponse, ExecutionStats,
-        MessageRole, ToolCall, ToolOutput,
+        ToolCall, ToolOutput,
     },
 };
 use async_trait::async_trait;
@@ -101,8 +101,7 @@ pub trait Agent: Send + Sync + std::fmt::Debug {
             if let Some(task_max_time) = task.max_execution_time_ms {
                 if task_max_time > max_time {
                     return Err(AgentError::execution(format!(
-                        "Task execution time limit ({} ms) exceeds agent limit ({} ms)",
-                        task_max_time, max_time
+                        "Task execution time limit ({task_max_time} ms) exceeds agent limit ({max_time} ms)"
                     )));
                 }
             }
@@ -185,6 +184,7 @@ pub struct AgentStats {
 
 impl BasicAgent {
     /// Create a new basic agent
+    #[must_use]
     pub fn new(config: AgentConfig, tool_registry: Arc<ToolRegistry>) -> Self {
         Self {
             id: Uuid::new_v4(),

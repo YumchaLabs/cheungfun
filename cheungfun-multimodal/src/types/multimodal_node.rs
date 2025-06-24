@@ -177,7 +177,7 @@ impl MultimodalNode {
     pub fn add_cross_modal_relation(mut self, modality: ModalityType, node_id: Uuid) -> Self {
         self.cross_modal_relations
             .entry(modality)
-            .or_insert_with(Vec::new)
+            .or_default()
             .push(node_id);
         self
     }
@@ -317,7 +317,7 @@ impl MultimodalNodeBuilder {
     pub fn cross_modal_relation(mut self, modality: ModalityType, node_id: Uuid) -> Self {
         self.cross_modal_relations
             .entry(modality)
-            .or_insert_with(Vec::new)
+            .or_default()
             .push(node_id);
         self
     }

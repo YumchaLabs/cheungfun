@@ -124,6 +124,7 @@ impl EmbedderConfig {
     }
 
     /// Set batch size for the embedder.
+    #[must_use]
     pub fn with_batch_size(mut self, batch_size: usize) -> Self {
         match &mut self {
             Self::Candle { batch_size: bs, .. } => *bs = batch_size,
@@ -136,6 +137,7 @@ impl EmbedderConfig {
     }
 
     /// Set normalization for Candle embedders.
+    #[must_use]
     pub fn with_normalize(mut self, normalize: bool) -> Self {
         if let Self::Candle {
             normalize: norm, ..
@@ -174,6 +176,7 @@ impl EmbedderConfig {
     }
 
     /// Get the model name.
+    #[must_use]
     pub fn model_name(&self) -> &str {
         match self {
             Self::Candle { model_name, .. } => model_name,
@@ -183,13 +186,14 @@ impl EmbedderConfig {
     }
 
     /// Get the batch size.
+    #[must_use]
     pub fn batch_size(&self) -> usize {
         match self {
             Self::Candle { batch_size, .. } => *batch_size,
             Self::Api { batch_size, .. } => *batch_size,
             Self::Custom { config, .. } => config
                 .get("batch_size")
-                .and_then(|v| v.as_u64())
+                .and_then(serde_json::Value::as_u64)
                 .unwrap_or(32) as usize,
         }
     }
@@ -259,16 +263,19 @@ impl EmbedderConfig {
     }
 
     /// Check if this is a local embedder.
+    #[must_use]
     pub fn is_local(&self) -> bool {
         matches!(self, Self::Candle { .. } | Self::Custom { .. })
     }
 
     /// Check if this is a remote API embedder.
+    #[must_use]
     pub fn is_api(&self) -> bool {
         matches!(self, Self::Api { .. })
     }
 
     /// Get the provider name.
+    #[must_use]
     pub fn provider(&self) -> &str {
         match self {
             Self::Candle { .. } => "candle",

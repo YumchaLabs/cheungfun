@@ -1,4 +1,4 @@
-//! FastEmbed embedder implementation.
+//! `FastEmbed` embedder implementation.
 
 use async_trait::async_trait;
 use cheungfun_core::{
@@ -18,7 +18,7 @@ use super::{
 /// FastEmbed-based embedder with a focus on simplicity and performance.
 ///
 /// This embedder provides a clean, ergonomic interface for generating embeddings
-/// using the FastEmbed library. It handles model initialization, caching, and
+/// using the `FastEmbed` library. It handles model initialization, caching, and
 /// provides convenient preset configurations for common use cases.
 ///
 /// # Examples
@@ -45,7 +45,7 @@ use super::{
 pub struct FastEmbedder {
     /// Configuration
     config: FastEmbedConfig,
-    /// FastEmbed model
+    /// `FastEmbed` model
     model: TextEmbedding,
     /// Statistics tracking
     stats: Arc<Mutex<EmbeddingStats>>,
@@ -186,9 +186,7 @@ impl FastEmbedder {
             reason: format!(
                 "Failed after {} attempts: {}",
                 MAX_RETRIES,
-                last_error
-                    .map(|e| e.to_string())
-                    .unwrap_or_else(|| "Unknown error".to_string())
+                last_error.map_or_else(|| "Unknown error".to_string(), |e| e.to_string())
             ),
         })
     }
@@ -236,7 +234,7 @@ impl Embedder for FastEmbedder {
         }
 
         let start_time = std::time::Instant::now();
-        let texts_owned: Vec<String> = texts.iter().map(|s| s.to_string()).collect();
+        let texts_owned: Vec<String> = texts.iter().map(|s| (*s).to_string()).collect();
         let texts_count = texts_owned.len();
 
         let result = self.generate_embeddings_with_retry(texts_owned).await;
@@ -278,7 +276,7 @@ impl Embedder for FastEmbedder {
 }
 
 impl FastEmbedder {
-    /// Parse model name string to EmbeddingModel enum.
+    /// Parse model name string to `EmbeddingModel` enum.
     fn parse_model_name(model_name: &str) -> Result<EmbeddingModel> {
         match model_name {
             "BAAI/bge-small-en-v1.5" => Ok(EmbeddingModel::BGESmallENV15),
@@ -292,8 +290,7 @@ impl FastEmbedder {
             _ => Err(FastEmbedError::ModelInit {
                 model: model_name.to_string(),
                 reason: format!(
-                    "Unsupported model: {}. Please use a supported model name.",
-                    model_name
+                    "Unsupported model: {model_name}. Please use a supported model name."
                 ),
             }),
         }

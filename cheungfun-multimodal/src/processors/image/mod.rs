@@ -48,7 +48,7 @@ impl ImageProcessor {
         let data = content.data.as_bytes().await?;
 
         let image = image::load_from_memory(&data)
-            .map_err(|e| crate::error::MultimodalError::ImageProcessing(e))?;
+            .map_err(crate::error::MultimodalError::ImageProcessing)?;
 
         // Check dimensions
         if let (Some(max_w), Some(max_h)) = (self.max_width, self.max_height) {
@@ -101,12 +101,12 @@ impl ImageProcessor {
                 );
                 image
                     .write_with_encoder(encoder)
-                    .map_err(|e| crate::error::MultimodalError::ImageProcessing(e))?;
+                    .map_err(crate::error::MultimodalError::ImageProcessing)?;
             }
             _ => {
                 image
                     .write_to(&mut cursor, format)
-                    .map_err(|e| crate::error::MultimodalError::ImageProcessing(e))?;
+                    .map_err(crate::error::MultimodalError::ImageProcessing)?;
             }
         }
 
@@ -236,9 +236,7 @@ impl MediaProcessor for ImageProcessor {
 
             // Update features
             let features = self.extract_image_features(&image);
-            processed_content
-                .features
-                .extend(features.into_iter().map(|(k, v)| (k, v)));
+            processed_content.features.extend(features.into_iter());
 
             Ok(processed_content)
         }

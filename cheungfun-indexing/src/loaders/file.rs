@@ -77,11 +77,13 @@ impl FileLoader {
     }
 
     /// Get the file path.
+    #[must_use]
     pub fn path(&self) -> &Path {
         &self.path
     }
 
     /// Get the loader configuration.
+    #[must_use]
     pub fn config(&self) -> &LoaderConfig {
         &self.config
     }
@@ -118,17 +120,15 @@ impl FileLoader {
         let content_type = utils::detect_content_type(&self.path);
 
         match content_type.as_deref() {
-            Some("text/plain")
-            | Some("text/markdown")
-            | Some("text/html")
-            | Some("text/csv")
-            | Some("application/json")
-            | Some("application/xml") => self.extract_text_file().await,
+            Some(
+                "text/plain" | "text/markdown" | "text/html" | "text/csv" | "application/json"
+                | "application/xml",
+            ) => self.extract_text_file().await,
             Some("application/pdf") => self.extract_pdf_content().await,
-            Some("application/msword")
-            | Some("application/vnd.openxmlformats-officedocument.wordprocessingml.document") => {
-                self.extract_word_content().await
-            }
+            Some(
+                "application/msword"
+                | "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+            ) => self.extract_word_content().await,
             _ => {
                 // Try to read as text file as fallback
                 warn!(
@@ -156,7 +156,7 @@ impl FileLoader {
 
         // Use pdf-extract crate to extract text
         let text = pdf_extract::extract_text_from_mem(&bytes)
-            .map_err(|e| IndexingError::text_extraction(format!("PDF extraction failed: {}", e)))?;
+            .map_err(|e| IndexingError::text_extraction(format!("PDF extraction failed: {e}")))?;
 
         Ok(text)
     }
@@ -174,9 +174,8 @@ impl FileLoader {
 
         // Use docx-rs crate for .docx files
         if self.path.extension().and_then(|e| e.to_str()) == Some("docx") {
-            let docx = docx_rs::read_docx(&bytes).map_err(|e| {
-                IndexingError::text_extraction(format!("DOCX parsing failed: {}", e))
-            })?;
+            let docx = docx_rs::read_docx(&bytes)
+                .map_err(|e| IndexingError::text_extraction(format!("DOCX parsing failed: {e}")))?;
 
             // Extract text from all paragraphs
             let mut text = String::new();
@@ -284,7 +283,7 @@ impl Loader for FileLoader {
         // Try to read file metadata
         tokio::fs::metadata(&self.path)
             .await
-            .map_err(|e| IndexingError::Io(e))?;
+            .map_err(IndexingError::Io)?;
 
         Ok(())
     }

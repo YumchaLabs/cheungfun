@@ -1,11 +1,10 @@
 // Response Transformers Implementation
 
-use super::*;
+use super::{ExternalCache, RerankModel, ResponseTransformer, RetrievalResponse, VectorStore};
 use anyhow::{Context, Result};
 use async_trait::async_trait;
 use cheungfun_core::{ResponseGenerator, ScoredNode};
-use serde::{Deserialize, Serialize};
-use std::collections::{HashMap, HashSet};
+use std::collections::HashSet;
 use std::sync::Arc;
 use std::time::Duration;
 use tracing::{debug, info, warn};
@@ -40,18 +39,21 @@ impl SummaryTransformer {
     }
 
     /// Sets the prompt template.
+    #[must_use]
     pub fn with_prompt_template(mut self, template: String) -> Self {
         self.prompt_template = template;
         self
     }
 
     /// Sets the maximum summary length.
+    #[must_use]
     pub fn with_max_length(mut self, max_length: usize) -> Self {
         self.max_summary_length = max_length;
         self
     }
 
     /// Sets whether to preserve the original content.
+    #[must_use]
     pub fn with_preserve_original(mut self, preserve: bool) -> Self {
         self.preserve_original = preserve;
         self
@@ -143,7 +145,7 @@ impl ResponseTransformer for SummaryTransformer {
     }
 
     fn estimated_transform_time(&self, nodes_count: usize) -> Option<Duration> {
-        let batches = (nodes_count + self.batch_size - 1) / self.batch_size;
+        let batches = nodes_count.div_ceil(self.batch_size);
         Some(Duration::from_secs(batches as u64 * 3)) // Estimate 3 seconds per batch.
     }
 }
@@ -175,6 +177,7 @@ pub enum DeduplicationMethod {
 
 impl DeduplicationTransformer {
     /// Creates a new deduplication transformer.
+    #[must_use]
     pub fn new(similarity_threshold: f32) -> Self {
         Self {
             similarity_threshold,
@@ -184,12 +187,14 @@ impl DeduplicationTransformer {
     }
 
     /// Sets the deduplication method.
+    #[must_use]
     pub fn with_method(mut self, method: DeduplicationMethod) -> Self {
         self.method = method;
         self
     }
 
     /// Sets whether to keep the highest score.
+    #[must_use]
     pub fn with_keep_highest_score(mut self, keep_highest: bool) -> Self {
         self.keep_highest_score = keep_highest;
         self
@@ -373,8 +378,15 @@ pub enum FilterCondition {
     Custom(String), // Function name; actual implementation requires a registration mechanism.
 }
 
+impl Default for FilterTransformer {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
 impl FilterTransformer {
     /// Creates a new filter transformer.
+    #[must_use]
     pub fn new() -> Self {
         Self {
             filters: Vec::new(),
@@ -382,18 +394,21 @@ impl FilterTransformer {
     }
 
     /// Adds a filter condition.
+    #[must_use]
     pub fn add_filter(mut self, condition: FilterCondition) -> Self {
         self.filters.push(condition);
         self
     }
 
     /// Adds a minimum score filter.
+    #[must_use]
     pub fn with_min_score(mut self, min_score: f32) -> Self {
         self.filters.push(FilterCondition::MinScore(min_score));
         self
     }
 
     /// Adds a content length filter.
+    #[must_use]
     pub fn with_content_length(mut self, min: Option<usize>, max: Option<usize>) -> Self {
         self.filters
             .push(FilterCondition::ContentLength { min, max });
@@ -407,8 +422,8 @@ impl FilterTransformer {
             FilterCondition::MaxScore(max_score) => node.score <= *max_score,
             FilterCondition::ContentLength { min, max } => {
                 let content_len = node.node.content.len();
-                let min_ok = min.map_or(true, |m| content_len >= m);
-                let max_ok = max.map_or(true, |m| content_len <= m);
+                let min_ok = min.is_none_or(|m| content_len >= m);
+                let max_ok = max.is_none_or(|m| content_len <= m);
                 min_ok && max_ok
             }
             FilterCondition::Metadata { key, value } => node.node.metadata.get(key) == Some(value),
@@ -477,7 +492,7 @@ impl ResponseTransformer for FilterTransformer {
 }
 
 // Default summary prompt template
-const DEFAULT_SUMMARY_PROMPT: &str = r#"
+const DEFAULT_SUMMARY_PROMPT: &str = r"
 Please provide a concise summary of the following content that is relevant to the query.
 The summary should be no more than {max_length} characters and should capture the key information that answers or relates to the query.
 
@@ -486,4 +501,4 @@ Query: {query}
 Content: {content}
 
 Summary:
-"#;
+";

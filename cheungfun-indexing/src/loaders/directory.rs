@@ -102,11 +102,13 @@ impl DirectoryLoader {
     }
 
     /// Get the directory path.
+    #[must_use]
     pub fn path(&self) -> &Path {
         &self.path
     }
 
     /// Get the loader configuration.
+    #[must_use]
     pub fn config(&self) -> &LoaderConfig {
         &self.config
     }
@@ -140,13 +142,9 @@ impl DirectoryLoader {
                 current_depth
             );
 
-            let mut entries = fs::read_dir(dir).await.map_err(|e| IndexingError::Io(e))?;
+            let mut entries = fs::read_dir(dir).await.map_err(IndexingError::Io)?;
 
-            while let Some(entry) = entries
-                .next_entry()
-                .await
-                .map_err(|e| IndexingError::Io(e))?
-            {
+            while let Some(entry) = entries.next_entry().await.map_err(IndexingError::Io)? {
                 let path = entry.path();
 
                 // Handle symbolic links
@@ -338,9 +336,7 @@ impl Loader for DirectoryLoader {
         }
 
         // Try to read directory
-        let _ = fs::read_dir(&self.path)
-            .await
-            .map_err(|e| IndexingError::Io(e))?;
+        let _ = fs::read_dir(&self.path).await.map_err(IndexingError::Io)?;
 
         Ok(())
     }

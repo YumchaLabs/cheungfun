@@ -1,6 +1,6 @@
 // Query Cache Implementation
 
-use super::*;
+use super::{Result, RetrievalResponse};
 use std::collections::HashMap;
 use std::sync::Arc;
 use std::time::{Duration, Instant};
@@ -50,6 +50,7 @@ pub struct CacheStats {
 
 impl CacheStats {
     /// Calculates the hit rate.
+    #[must_use]
     pub fn hit_rate(&self) -> f64 {
         let total = self.hits + self.misses;
         if total == 0 {
@@ -62,6 +63,7 @@ impl CacheStats {
 
 impl QueryCache {
     /// Creates a new query cache.
+    #[must_use]
     pub fn new(ttl: Duration, max_size: usize) -> Self {
         Self {
             cache: Arc::new(RwLock::new(HashMap::new())),
@@ -88,12 +90,11 @@ impl QueryCache {
                 stats.hits += 1;
                 info!("Cache hit for query hash: {}", query_hash);
                 return Some(cached.response.clone());
-            } else {
-                // Expired, remove it
-                cache.remove(query_hash);
-                stats.evictions += 1;
-                debug!("Cache entry expired for query hash: {}", query_hash);
             }
+            // Expired, remove it
+            cache.remove(query_hash);
+            stats.evictions += 1;
+            debug!("Cache entry expired for query hash: {}", query_hash);
         }
 
         stats.misses += 1;
@@ -175,7 +176,7 @@ impl QueryCache {
             .map(|(key, cached)| {
                 key.len() + cached.response.nodes.len() * 1000 + // Estimate 1KB per node
             cached.response.query.original_text.len() +
-            cached.response.query.transformed_queries.iter().map(|q| q.len()).sum::<usize>()
+            cached.response.query.transformed_queries.iter().map(std::string::String::len).sum::<usize>()
             })
             .sum()
     }
@@ -286,6 +287,7 @@ impl Default for TieredCacheConfig {
 
 impl TieredQueryCache {
     /// Creates a new tiered cache.
+    #[must_use]
     pub fn new(config: TieredCacheConfig) -> Self {
         Self {
             l1_cache: QueryCache::new(config.l1_ttl, config.l1_max_size),
@@ -412,9 +414,9 @@ mod tests {
         // Create a test response
         let response = RetrievalResponse {
             nodes: vec![],
-            query: AdvancedQuery::from_text("test query"),
+            query: crate::advanced::AdvancedQuery::from_text("test query"),
             metadata: std::collections::HashMap::new(),
-            stats: RetrievalStats::default(),
+            stats: crate::advanced::RetrievalStats::default(),
         };
 
         // Test storing and getting
@@ -436,9 +438,9 @@ mod tests {
 
         let response = RetrievalResponse {
             nodes: vec![],
-            query: AdvancedQuery::from_text("test query"),
+            query: crate::advanced::AdvancedQuery::from_text("test query"),
             metadata: std::collections::HashMap::new(),
-            stats: RetrievalStats::default(),
+            stats: crate::advanced::RetrievalStats::default(),
         };
 
         cache.put("test_key".to_string(), response).await;

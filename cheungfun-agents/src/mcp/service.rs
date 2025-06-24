@@ -3,7 +3,7 @@
 use crate::{
     error::{AgentError, Result},
     mcp::{McpClient, McpServer, McpToolRegistry},
-    tool::{Tool, ToolRegistry},
+    tool::Tool,
 };
 use std::{collections::HashMap, sync::Arc};
 use tracing::{debug, error, info, warn};
@@ -53,6 +53,7 @@ impl Default for McpServiceConfig {
 
 impl McpService {
     /// Create a new MCP service
+    #[must_use]
     pub fn new() -> Self {
         Self {
             clients: HashMap::new(),
@@ -63,6 +64,7 @@ impl McpService {
     }
 
     /// Create MCP service with custom configuration
+    #[must_use]
     pub fn with_config(config: McpServiceConfig) -> Self {
         Self {
             clients: HashMap::new(),
@@ -99,7 +101,7 @@ impl McpService {
         info!("Adding MCP server: {}", name);
 
         if self.servers.contains_key(&name) {
-            return Err(AgentError::mcp(format!("Server '{}' already exists", name)));
+            return Err(AgentError::mcp(format!("Server '{name}' already exists")));
         }
 
         self.servers.insert(name.clone(), server);
@@ -118,7 +120,7 @@ impl McpService {
             info!("Removed MCP client: {}", name);
             Ok(())
         } else {
-            Err(AgentError::mcp(format!("Client '{}' not found", name)))
+            Err(AgentError::mcp(format!("Client '{name}' not found")))
         }
     }
 
@@ -128,16 +130,18 @@ impl McpService {
             info!("Removed MCP server: {}", name);
             Ok(())
         } else {
-            Err(AgentError::mcp(format!("Server '{}' not found", name)))
+            Err(AgentError::mcp(format!("Server '{name}' not found")))
         }
     }
 
     /// Get an MCP client by name
+    #[must_use]
     pub fn get_client(&self, name: &str) -> Option<&Arc<McpClient>> {
         self.clients.get(name)
     }
 
     /// Get an MCP server by name
+    #[must_use]
     pub fn get_server(&self, name: &str) -> Option<&McpServer> {
         self.servers.get(name)
     }
@@ -148,16 +152,19 @@ impl McpService {
     }
 
     /// List all client names
+    #[must_use]
     pub fn client_names(&self) -> Vec<String> {
         self.clients.keys().cloned().collect()
     }
 
     /// List all server names
+    #[must_use]
     pub fn server_names(&self) -> Vec<String> {
         self.servers.keys().cloned().collect()
     }
 
     /// Get the MCP tool registry
+    #[must_use]
     pub fn tool_registry(&self) -> &McpToolRegistry {
         &self.tool_registry
     }
@@ -218,7 +225,7 @@ impl McpService {
 
         for (name, client) in &self.clients {
             // In a real implementation, you'd have connection URLs stored
-            let url = format!("ws://localhost:8080/{}", name);
+            let url = format!("ws://localhost:8080/{name}");
 
             // Note: We can't call mutable methods on Arc<McpClient>
             // In a real implementation, you'd need to handle this differently
@@ -235,7 +242,7 @@ impl McpService {
     pub async fn disconnect_all_clients(&mut self) -> Result<()> {
         info!("Disconnecting all MCP clients");
 
-        for (name, _client) in &self.clients {
+        for name in self.clients.keys() {
             // Note: We can't call mutable methods on Arc<McpClient>
             // In a real implementation, you'd need to handle this differently
             if self.config.verbose_logging {
@@ -248,6 +255,7 @@ impl McpService {
     }
 
     /// Get service status
+    #[must_use]
     pub fn status(&self) -> McpServiceStatus {
         let client_statuses: HashMap<String, bool> = self
             .clients
@@ -305,6 +313,7 @@ impl McpService {
     }
 
     /// Get service configuration
+    #[must_use]
     pub fn config(&self) -> &McpServiceConfig {
         &self.config
     }
@@ -343,7 +352,6 @@ pub struct McpServiceStatus {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::tool::builtin::EchoTool;
 
     #[tokio::test]
     async fn test_mcp_service_creation() {
@@ -368,7 +376,7 @@ mod tests {
     #[test]
     fn test_mcp_service_server_management() {
         let mut service = McpService::new();
-        let registry = Arc::new(ToolRegistry::new());
+        let registry = Arc::new(crate::ToolRegistry::new());
         let server = McpServer::new("test_server", "1.0.0", registry);
 
         // Add server

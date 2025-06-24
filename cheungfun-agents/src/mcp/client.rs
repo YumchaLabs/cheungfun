@@ -113,12 +113,12 @@ impl McpClient {
             .json(&request)
             .send()
             .await
-            .map_err(|e| AgentError::mcp(format!("HTTP request failed: {}", e)))?;
+            .map_err(|e| AgentError::mcp(format!("HTTP request failed: {e}")))?;
 
         let json_response: JsonRpcResponse = response
             .json()
             .await
-            .map_err(|e| AgentError::mcp(format!("Failed to parse JSON response: {}", e)))?;
+            .map_err(|e| AgentError::mcp(format!("Failed to parse JSON response: {e}")))?;
 
         if let Some(error) = json_response.error {
             return Err(AgentError::mcp(format!(
@@ -167,6 +167,7 @@ impl McpClient {
     }
 
     /// Check if client is connected
+    #[must_use]
     pub fn is_connected(&self) -> bool {
         self.connected
     }
@@ -260,7 +261,7 @@ impl McpClient {
 
         let is_error = result
             .get("isError")
-            .and_then(|e| e.as_bool())
+            .and_then(serde_json::Value::as_bool)
             .unwrap_or(false);
 
         let execution_result = if is_error {
@@ -297,6 +298,7 @@ impl McpClient {
     }
 
     /// Get client information
+    #[must_use]
     pub fn client_info(&self) -> &Implementation {
         &self.client_info
     }
@@ -308,12 +310,9 @@ impl McpClient {
     }
 
     /// Get connection status and statistics
+    #[must_use]
     pub fn status(&self) -> McpClientStatus {
-        let tools_count = self
-            .tools_cache
-            .as_ref()
-            .map(|tools| tools.len())
-            .unwrap_or(0);
+        let tools_count = self.tools_cache.as_ref().map_or(0, std::vec::Vec::len);
 
         McpClientStatus {
             connected: self.connected,

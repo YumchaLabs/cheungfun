@@ -1,4 +1,4 @@
-//! Configuration for FastEmbed embedder.
+//! Configuration for `FastEmbed` embedder.
 
 use serde::{Deserialize, Serialize};
 use std::path::PathBuf;
@@ -29,6 +29,7 @@ pub enum ModelPreset {
 
 impl ModelPreset {
     /// Get the model name for this preset.
+    #[must_use]
     pub fn model_name(&self) -> &'static str {
         match self {
             ModelPreset::Default => "BAAI/bge-small-en-v1.5",
@@ -40,6 +41,7 @@ impl ModelPreset {
     }
 
     /// Get the expected embedding dimension for this preset.
+    #[must_use]
     pub fn dimension(&self) -> usize {
         match self {
             ModelPreset::Default | ModelPreset::Fast => 384,
@@ -50,6 +52,7 @@ impl ModelPreset {
     }
 
     /// Get a description of this preset.
+    #[must_use]
     pub fn description(&self) -> &'static str {
         match self {
             ModelPreset::Default => "Balanced performance and quality for English text",
@@ -61,7 +64,7 @@ impl ModelPreset {
     }
 }
 
-/// Configuration for FastEmbed embedder.
+/// Configuration for `FastEmbed` embedder.
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct FastEmbedConfig {
     /// Model name or preset
@@ -106,6 +109,7 @@ impl FastEmbedConfig {
     }
 
     /// Create configuration from a preset.
+    #[must_use]
     pub fn from_preset(preset: ModelPreset) -> Self {
         Self {
             model_name: preset.model_name().to_string(),
@@ -114,12 +118,14 @@ impl FastEmbedConfig {
     }
 
     /// Set the maximum sequence length.
+    #[must_use]
     pub fn with_max_length(mut self, max_length: usize) -> Self {
         self.max_length = max_length;
         self
     }
 
     /// Set the batch size.
+    #[must_use]
     pub fn with_batch_size(mut self, batch_size: usize) -> Self {
         self.batch_size = batch_size;
         self
@@ -132,12 +138,14 @@ impl FastEmbedConfig {
     }
 
     /// Set the number of threads.
+    #[must_use]
     pub fn with_threads(mut self, threads: usize) -> Self {
         self.threads = Some(threads);
         self
     }
 
     /// Disable progress bar.
+    #[must_use]
     pub fn without_progress(mut self) -> Self {
         self.show_progress = false;
         self
@@ -197,7 +205,7 @@ mod tests {
         assert!(valid_config.validate().is_ok());
 
         let invalid_config = FastEmbedConfig {
-            model_name: "".to_string(),
+            model_name: String::new(),
             ..Default::default()
         };
         assert!(invalid_config.validate().is_err());

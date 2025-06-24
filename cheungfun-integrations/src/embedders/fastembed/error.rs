@@ -1,8 +1,8 @@
-//! Error types for FastEmbed embedder.
+//! Error types for `FastEmbed` embedder.
 
 use thiserror::Error;
 
-/// Simplified error types for FastEmbed operations.
+/// Simplified error types for `FastEmbed` operations.
 #[derive(Error, Debug)]
 pub enum FastEmbedError {
     /// Model initialization failed
@@ -32,7 +32,7 @@ pub enum FastEmbedError {
     #[error("I/O error: {0}")]
     Io(#[from] std::io::Error),
 
-    /// FastEmbed library error
+    /// `FastEmbed` library error
     #[error("FastEmbed error: {0}")]
     FastEmbed(#[from] fastembed::Error),
 }
@@ -45,5 +45,5 @@ impl From<FastEmbedError> for cheungfun_core::CheungfunError {
     }
 }
 
-/// Result type for FastEmbed operations.
+/// Result type for `FastEmbed` operations.
 pub type Result<T> = std::result::Result<T, FastEmbedError>;

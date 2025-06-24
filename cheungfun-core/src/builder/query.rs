@@ -79,7 +79,7 @@ enum VectorStoreComponent {
 #[derive(Debug)]
 enum ResponseGeneratorComponent {
     Instance(Arc<dyn ResponseGenerator>),
-    Config(LlmConfig),
+    Config(Box<LlmConfig>),
 }
 
 impl QueryPipelineBuilder {
@@ -100,7 +100,7 @@ impl QueryPipelineBuilder {
             embedder: Some(EmbedderComponent::Config(default_embedder)),
             vector_store: Some(VectorStoreComponent::Config(default_vector_store)),
             retriever: None,
-            response_generator: Some(ResponseGeneratorComponent::Config(default_llm)),
+            response_generator: Some(ResponseGeneratorComponent::Config(Box::new(default_llm))),
             embedder_factory: None,
             vector_store_factory: None,
             llm_factory: None,
@@ -109,12 +109,14 @@ impl QueryPipelineBuilder {
     }
 
     /// Set the embedder instance directly.
+    #[must_use]
     pub fn with_embedder(mut self, embedder: Arc<dyn Embedder>) -> Self {
         self.embedder = Some(EmbedderComponent::Instance(embedder));
         self
     }
 
     /// Set the embedder configuration.
+    #[must_use]
     pub fn with_embedder_config(mut self, config: EmbedderConfig) -> Self {
         self.config.embedder = config.clone();
         self.embedder = Some(EmbedderComponent::Config(config));
@@ -122,12 +124,14 @@ impl QueryPipelineBuilder {
     }
 
     /// Set the vector store instance directly.
+    #[must_use]
     pub fn with_vector_store(mut self, vector_store: Arc<dyn VectorStore>) -> Self {
         self.vector_store = Some(VectorStoreComponent::Instance(vector_store));
         self
     }
 
     /// Set the vector store configuration.
+    #[must_use]
     pub fn with_vector_store_config(mut self, config: VectorStoreConfig) -> Self {
         self.config.vector_store = config.clone();
         self.vector_store = Some(VectorStoreComponent::Config(config));
@@ -135,6 +139,7 @@ impl QueryPipelineBuilder {
     }
 
     /// Set the retriever component.
+    #[must_use]
     pub fn with_retriever(mut self, retriever: Arc<dyn Retriever>) -> Self {
         self.retriever = Some(retriever);
         self
@@ -147,49 +152,57 @@ impl QueryPipelineBuilder {
     }
 
     /// Set the LLM configuration.
+    #[must_use]
     pub fn with_llm_config(mut self, config: LlmConfig) -> Self {
         self.config.llm = config.clone();
-        self.response_generator = Some(ResponseGeneratorComponent::Config(config));
+        self.response_generator = Some(ResponseGeneratorComponent::Config(Box::new(config)));
         self
     }
 
     /// Set the embedder factory registry.
+    #[must_use]
     pub fn with_embedder_factory(mut self, factory: Arc<EmbedderFactoryRegistry>) -> Self {
         self.embedder_factory = Some(factory);
         self
     }
 
     /// Set the vector store factory registry.
+    #[must_use]
     pub fn with_vector_store_factory(mut self, factory: Arc<VectorStoreFactoryRegistry>) -> Self {
         self.vector_store_factory = Some(factory);
         self
     }
 
     /// Set the LLM factory registry.
+    #[must_use]
     pub fn with_llm_factory(mut self, factory: Arc<LlmFactoryRegistry>) -> Self {
         self.llm_factory = Some(factory);
         self
     }
 
     /// Set the default top-k value.
+    #[must_use]
     pub fn with_top_k(mut self, top_k: usize) -> Self {
         self.config = self.config.with_top_k(top_k);
         self
     }
 
     /// Set the similarity threshold.
+    #[must_use]
     pub fn with_similarity_threshold(mut self, threshold: f32) -> Self {
         self.config = self.config.with_similarity_threshold(threshold);
         self
     }
 
     /// Set the maximum tokens for generation.
+    #[must_use]
     pub fn with_max_tokens(mut self, max_tokens: usize) -> Self {
         self.config = self.config.with_max_tokens(max_tokens);
         self
     }
 
     /// Set the temperature for generation.
+    #[must_use]
     pub fn with_temperature(mut self, temperature: f32) -> Self {
         self.config = self.config.with_temperature(temperature);
         self
@@ -202,6 +215,7 @@ impl QueryPipelineBuilder {
     }
 
     /// Set whether to include citations.
+    #[must_use]
     pub fn with_citations(mut self, include_citations: bool) -> Self {
         self.config = self.config.with_citations(include_citations);
         self

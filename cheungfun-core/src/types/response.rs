@@ -182,6 +182,7 @@ pub enum MessageRole {
 
 impl QueryResponse {
     /// Create a new query response.
+    #[must_use]
     pub fn new(response: GeneratedResponse, retrieved_nodes: Vec<ScoredNode>) -> Self {
         Self {
             response,
@@ -201,11 +202,13 @@ impl QueryResponse {
     }
 
     /// Get the response content.
+    #[must_use]
     pub fn content(&self) -> &str {
         &self.response.content
     }
 
     /// Get the number of retrieved nodes.
+    #[must_use]
     pub fn num_retrieved(&self) -> usize {
         self.retrieved_nodes.len()
     }
@@ -223,12 +226,14 @@ impl GeneratedResponse {
     }
 
     /// Add a source node ID.
+    #[must_use]
     pub fn with_source_node(mut self, node_id: Uuid) -> Self {
         self.source_nodes.push(node_id);
         self
     }
 
     /// Set token usage information.
+    #[must_use]
     pub fn with_usage(mut self, usage: TokenUsage) -> Self {
         self.usage = Some(usage);
         self
@@ -245,11 +250,13 @@ impl GeneratedResponse {
     }
 
     /// Check if the response has usage information.
+    #[must_use]
     pub fn has_usage(&self) -> bool {
         self.usage.is_some()
     }
 
     /// Get the total tokens used, if available.
+    #[must_use]
     pub fn total_tokens(&self) -> Option<usize> {
         self.usage.as_ref().map(|u| u.total_tokens)
     }
@@ -257,6 +264,7 @@ impl GeneratedResponse {
 
 impl TokenUsage {
     /// Create new token usage information.
+    #[must_use]
     pub fn new(prompt_tokens: usize, completion_tokens: usize) -> Self {
         Self {
             prompt_tokens,
@@ -271,6 +279,7 @@ impl TokenUsage {
     ///
     /// * `prompt_price_per_1k` - Price per 1000 prompt tokens
     /// * `completion_price_per_1k` - Price per 1000 completion tokens
+    #[must_use]
     pub fn calculate_cost(&self, prompt_price_per_1k: f64, completion_price_per_1k: f64) -> f64 {
         let prompt_cost = (self.prompt_tokens as f64 / 1000.0) * prompt_price_per_1k;
         let completion_cost = (self.completion_tokens as f64 / 1000.0) * completion_price_per_1k;
@@ -318,6 +327,7 @@ impl ChatMessage {
     }
 
     /// Add metadata to the message.
+    #[must_use]
     pub fn with_metadata(mut self, metadata: HashMap<String, serde_json::Value>) -> Self {
         self.metadata = Some(metadata);
         self

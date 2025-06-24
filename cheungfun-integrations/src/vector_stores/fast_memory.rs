@@ -34,6 +34,7 @@ pub struct FastInMemoryVectorStore {
 
 impl FastInMemoryVectorStore {
     /// Create a new fast in-memory vector store
+    #[must_use]
     pub fn new(dimension: usize, distance_metric: DistanceMetric) -> Self {
         Self {
             dimension,
@@ -45,6 +46,7 @@ impl FastInMemoryVectorStore {
     }
 
     /// Get search statistics
+    #[must_use]
     pub fn get_search_count(&self) -> u64 {
         *self.search_count.read().unwrap()
     }
@@ -368,10 +370,7 @@ impl VectorStore for FastInMemoryVectorStore {
 
         if node_count != vector_count {
             return Err(CheungfunError::Internal {
-                message: format!(
-                    "Data inconsistency: nodes={}, vectors={}",
-                    node_count, vector_count
-                ),
+                message: format!("Data inconsistency: nodes={node_count}, vectors={vector_count}"),
             });
         }
 

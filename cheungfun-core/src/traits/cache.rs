@@ -191,7 +191,7 @@ pub trait PipelineCacheExt: PipelineCache {
     }
 }
 
-/// Blanket implementation of PipelineCacheExt for all PipelineCache implementors.
+/// Blanket implementation of `PipelineCacheExt` for all `PipelineCache` implementors.
 impl<T: PipelineCache> PipelineCacheExt for T {}
 
 /// Cache statistics for monitoring and debugging.
@@ -213,6 +213,7 @@ pub struct CacheStats {
 
 impl CacheStats {
     /// Calculate the cache hit rate as a percentage.
+    #[must_use]
     pub fn hit_rate(&self) -> f64 {
         if self.hits + self.misses == 0 {
             0.0
@@ -222,11 +223,13 @@ impl CacheStats {
     }
 
     /// Calculate the cache miss rate as a percentage.
+    #[must_use]
     pub fn miss_rate(&self) -> f64 {
         100.0 - self.hit_rate()
     }
 
     /// Get the total number of cache operations.
+    #[must_use]
     pub fn total_operations(&self) -> u64 {
         self.hits + self.misses
     }
@@ -273,6 +276,7 @@ impl CacheKeyGenerator {
     ///
     /// # Returns
     /// A deterministic cache key based on the input parameters
+    #[must_use]
     pub fn embedding_key(text: &str, model_name: &str, model_version: Option<&str>) -> String {
         use std::collections::hash_map::DefaultHasher;
         use std::hash::{Hash, Hasher};
@@ -296,6 +300,7 @@ impl CacheKeyGenerator {
     ///
     /// # Returns
     /// A deterministic cache key based on the input parameters
+    #[must_use]
     pub fn nodes_key(document_id: &str, chunk_size: usize, overlap: usize) -> String {
         use std::collections::hash_map::DefaultHasher;
         use std::hash::{Hash, Hasher};
@@ -316,6 +321,7 @@ impl CacheKeyGenerator {
     ///
     /// # Returns
     /// A deterministic cache key based on the input parameters
+    #[must_use]
     pub fn query_key(query: &str, parameters: &HashMap<String, String>) -> String {
         use std::collections::hash_map::DefaultHasher;
         use std::hash::{Hash, Hasher};

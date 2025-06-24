@@ -17,7 +17,7 @@ use uuid::Uuid;
 
 /// In-memory vector store implementation.
 ///
-/// This store keeps all vectors and nodes in memory using HashMap for storage.
+/// This store keeps all vectors and nodes in memory using `HashMap` for storage.
 /// It supports basic CRUD operations and similarity search with different
 /// distance metrics.
 ///
@@ -66,11 +66,13 @@ impl InMemoryVectorStore {
     }
 
     /// Get the vector dimension.
+    #[must_use]
     pub fn dimension(&self) -> usize {
         self.dimension
     }
 
     /// Get the distance metric.
+    #[must_use]
     pub fn distance_metric(&self) -> &DistanceMetric {
         &self.distance_metric
     }
@@ -177,7 +179,7 @@ impl VectorStore for InMemoryVectorStore {
             // Check if node exists
             if !node_storage.contains_key(&node_id) {
                 return Err(cheungfun_core::CheungfunError::NotFound {
-                    resource: format!("Node with ID {}", node_id),
+                    resource: format!("Node with ID {node_id}"),
                 });
             }
 

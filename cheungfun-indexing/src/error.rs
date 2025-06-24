@@ -175,7 +175,7 @@ impl From<IndexingError> for cheungfun_core::error::CheungfunError {
             IndexingError::Io(e) => Self::Io(e),
             IndexingError::Core(e) => e,
             IndexingError::Network(e) => Self::Internal {
-                message: format!("Network error: {}", e),
+                message: format!("Network error: {e}"),
             },
             IndexingError::Configuration { message } => Self::Configuration { message },
             IndexingError::Pipeline { message } => Self::Pipeline { message },

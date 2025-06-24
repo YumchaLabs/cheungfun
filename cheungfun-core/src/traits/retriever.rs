@@ -144,11 +144,13 @@ pub struct RetrievalStats {
 
 impl RetrievalStats {
     /// Create new retrieval statistics.
+    #[must_use]
     pub fn new() -> Self {
         Self::default()
     }
 
     /// Calculate the success rate as a percentage.
+    #[must_use]
     pub fn success_rate(&self) -> f64 {
         if self.queries_processed == 0 {
             0.0
@@ -159,6 +161,7 @@ impl RetrievalStats {
     }
 
     /// Calculate queries per second.
+    #[must_use]
     pub fn queries_per_second(&self) -> f64 {
         if self.total_retrieval_time.is_zero() {
             0.0
@@ -229,6 +232,7 @@ impl RetrievalStep {
     }
 
     /// Set the estimated time for this step.
+    #[must_use]
     pub fn with_estimated_time(mut self, time: std::time::Duration) -> Self {
         self.estimated_time = Some(time);
         self

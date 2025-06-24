@@ -184,8 +184,7 @@ impl VectorStoreFactoryRegistry {
 
         let factory = self.factories.get(store_type).ok_or_else(|| {
             crate::CheungfunError::configuration(format!(
-                "No factory registered for vector store type: {}",
-                store_type
+                "No factory registered for vector store type: {store_type}"
             ))
         })?;
 
@@ -214,7 +213,7 @@ impl VectorStoreFactoryRegistry {
 
         self.factories
             .get(store_type)
-            .map_or(false, |factory| factory.can_create(config))
+            .is_some_and(|factory| factory.can_create(config))
     }
 
     /// Get all registered vector store types.
@@ -252,8 +251,7 @@ impl VectorStoreFactoryRegistry {
 
         let factory = self.factories.get(store_type).ok_or_else(|| {
             crate::CheungfunError::configuration(format!(
-                "No factory registered for vector store type: {}",
-                store_type
+                "No factory registered for vector store type: {store_type}"
             ))
         })?;
 

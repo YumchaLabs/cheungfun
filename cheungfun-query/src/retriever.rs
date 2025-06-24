@@ -109,6 +109,7 @@ impl VectorRetriever {
     }
 
     /// Create a builder for constructing vector retrievers.
+    #[must_use]
     pub fn builder() -> VectorRetrieverBuilder {
         VectorRetrieverBuilder::new()
     }
@@ -283,6 +284,7 @@ pub struct VectorRetrieverBuilder {
 
 impl VectorRetrieverBuilder {
     /// Create a new builder.
+    #[must_use]
     pub fn new() -> Self {
         Self::default()
     }
@@ -300,6 +302,7 @@ impl VectorRetrieverBuilder {
     }
 
     /// Set the configuration.
+    #[must_use]
     pub fn config(mut self, config: VectorRetrieverConfig) -> Self {
         self.config = Some(config);
         self

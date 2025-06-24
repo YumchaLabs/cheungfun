@@ -1,6 +1,6 @@
 // Fusion Algorithms Implementation
 
-use super::*;
+use super::{ExternalCache, FusionMethod, RerankModel, VectorStore};
 use cheungfun_core::ScoredNode;
 use std::collections::HashMap;
 use tracing::{debug, info};
@@ -9,7 +9,7 @@ use tracing::{debug, info};
 ///
 /// RRF is an effective result fusion algorithm, especially suitable for hybrid search scenarios.
 /// Paper: "Reciprocal rank fusion outperforms Condorcet and individual rank learning methods"
-/// Formula: RRF_score(d) = Σ (1 / (k + rank(d))), where k is a smoothing parameter, typically set to 60.
+/// Formula: `RRF_score(d)` = Σ (1 / (k + rank(d))), where k is a smoothing parameter, typically set to 60.
 #[derive(Debug, Clone)]
 pub struct ReciprocalRankFusion {
     /// RRF parameter k, used to control the influence of outlier rankings.
@@ -19,11 +19,13 @@ pub struct ReciprocalRankFusion {
 
 impl ReciprocalRankFusion {
     /// Creates a new RRF fuser.
+    #[must_use]
     pub fn new(k: f32) -> Self {
         Self { k }
     }
 
     /// Creates an RRF fuser with default parameters.
+    #[must_use]
     pub fn default() -> Self {
         Self::new(60.0)
     }
@@ -47,7 +49,7 @@ impl ReciprocalRankFusion {
         let mut result_list_sizes = Vec::new();
 
         // Calculate RRF scores for each result list
-        for (_list_idx, result_list) in results.into_iter().enumerate() {
+        for result_list in results.into_iter() {
             result_list_sizes.push(result_list.len());
 
             for (rank, node) in result_list.into_iter().enumerate() {
@@ -98,6 +100,7 @@ impl ReciprocalRankFusion {
     }
 
     /// Calculates the RRF score for a single document at a specific rank.
+    #[must_use]
     pub fn calculate_rrf_score(&self, rank: usize) -> f32 {
         1.0 / (rank as f32 + self.k)
     }
@@ -114,6 +117,7 @@ pub struct WeightedAverageFusion {
 
 impl WeightedAverageFusion {
     /// Creates a new Weighted Average fuser.
+    #[must_use]
     pub fn new(weights: Vec<f32>) -> Self {
         Self {
             weights,
@@ -122,6 +126,7 @@ impl WeightedAverageFusion {
     }
 
     /// Sets whether to normalize scores.
+    #[must_use]
     pub fn with_normalize_scores(mut self, normalize: bool) -> Self {
         self.normalize_scores = normalize;
         self
@@ -134,13 +139,12 @@ impl WeightedAverageFusion {
             results.len()
         );
 
-        if results.len() != self.weights.len() {
-            panic!(
-                "Number of result lists ({}) must match number of weights ({})",
-                results.len(),
-                self.weights.len()
-            );
-        }
+        assert!(
+            !(results.len() != self.weights.len()),
+            "Number of result lists ({}) must match number of weights ({})",
+            results.len(),
+            self.weights.len()
+        );
 
         let mut fused_scores: HashMap<String, f32> = HashMap::new();
         let mut node_map: HashMap<String, ScoredNode> = HashMap::new();
@@ -239,6 +243,7 @@ pub struct LinearCombinationFusion {
 
 impl LinearCombinationFusion {
     /// Creates a new Linear Combination fuser.
+    #[must_use]
     pub fn new(coefficients: Vec<f32>) -> Self {
         Self {
             coefficients,
@@ -253,13 +258,12 @@ impl LinearCombinationFusion {
             results.len()
         );
 
-        if results.len() != self.coefficients.len() {
-            panic!(
-                "Number of result lists ({}) must match number of coefficients ({})",
-                results.len(),
-                self.coefficients.len()
-            );
-        }
+        assert!(
+            !(results.len() != self.coefficients.len()),
+            "Number of result lists ({}) must match number of coefficients ({})",
+            results.len(),
+            self.coefficients.len()
+        );
 
         let mut fused_scores: HashMap<String, f32> = HashMap::new();
         let mut node_map: HashMap<String, ScoredNode> = HashMap::new();
@@ -308,7 +312,7 @@ impl LinearCombinationFusion {
         final_results
     }
 
-    /// Normalizes the result scores (same implementation as WeightedAverageFusion).
+    /// Normalizes the result scores (same implementation as `WeightedAverageFusion`).
     fn normalize_result_scores(&self, results: Vec<Vec<ScoredNode>>) -> Vec<Vec<ScoredNode>> {
         results
             .into_iter()
@@ -344,6 +348,7 @@ pub struct FusionAlgorithmFactory;
 
 impl FusionAlgorithmFactory {
     /// Creates a corresponding fusion algorithm based on the fusion method.
+    #[must_use]
     pub fn create_fusion_algorithm(method: &FusionMethod) -> Box<dyn FusionAlgorithm> {
         match method {
             FusionMethod::ReciprocalRankFusion { k } => Box::new(ReciprocalRankFusion::new(*k)),
@@ -357,7 +362,7 @@ impl FusionAlgorithmFactory {
             }
             FusionMethod::Custom(name) => {
                 // TODO: Implement registration and creation mechanism for custom fusion algorithms
-                panic!("Custom fusion algorithm '{}' not implemented", name);
+                panic!("Custom fusion algorithm '{name}' not implemented");
             }
         }
     }

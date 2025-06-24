@@ -145,13 +145,9 @@ pub mod utils {
     pub fn detect_modality_from_extension(extension: &str) -> Option<ModalityType> {
         let ext = extension.to_lowercase();
 
-        for modality in ModalityType::all() {
-            if modality.typical_extensions().contains(&ext.as_str()) {
-                return Some(modality);
-            }
-        }
-
-        None
+        ModalityType::all()
+            .into_iter()
+            .find(|&modality| modality.typical_extensions().contains(&ext.as_str()))
     }
 
     /// Detect the media format from a file extension.

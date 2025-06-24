@@ -11,9 +11,9 @@ use siumai::prelude::*;
 
 use crate::generator::{SiumaiGenerator, SiumaiGeneratorConfig};
 
-/// Concrete implementation of LlmFactory using siumai.
+/// Concrete implementation of `LlmFactory` using siumai.
 ///
-/// This factory creates SiumaiGenerator instances from LlmConfig,
+/// This factory creates `SiumaiGenerator` instances from `LlmConfig`,
 /// providing a bridge between the core configuration system and
 /// the siumai-based response generation.
 ///

@@ -54,31 +54,37 @@ impl Workflow {
     }
 
     /// Create a workflow builder
+    #[must_use]
     pub fn builder() -> WorkflowBuilder {
         WorkflowBuilder::new()
     }
 
     /// Get workflow ID
+    #[must_use]
     pub fn id(&self) -> WorkflowId {
         self.id
     }
 
     /// Get workflow name
+    #[must_use]
     pub fn name(&self) -> &str {
         &self.name
     }
 
     /// Get workflow description
+    #[must_use]
     pub fn description(&self) -> Option<&str> {
         self.description.as_deref()
     }
 
     /// Get workflow steps
+    #[must_use]
     pub fn steps(&self) -> &[WorkflowStep] {
         &self.steps
     }
 
     /// Get workflow context
+    #[must_use]
     pub fn context(&self) -> &WorkflowContext {
         &self.context
     }
@@ -89,6 +95,7 @@ impl Workflow {
     }
 
     /// Get workflow status
+    #[must_use]
     pub fn status(&self) -> &WorkflowStatus {
         &self.status
     }
@@ -106,6 +113,7 @@ impl Workflow {
     }
 
     /// Get a step by ID
+    #[must_use]
     pub fn get_step(&self, step_id: &str) -> Option<&WorkflowStep> {
         self.steps.iter().find(|step| step.id == step_id)
     }
@@ -126,12 +134,13 @@ impl Workflow {
         } else {
             Err(AgentError::workflow(
                 self.id.to_string(),
-                format!("Step '{}' not found", step_id),
+                format!("Step '{step_id}' not found"),
             ))
         }
     }
 
     /// Get steps that are ready to execute (all dependencies completed)
+    #[must_use]
     pub fn get_ready_steps(&self, completed_steps: &[String]) -> Option<Vec<&WorkflowStep>> {
         let ready_steps: Vec<_> = self
             .steps
@@ -154,16 +163,17 @@ impl Workflow {
     }
 
     /// Check if workflow has circular dependencies
+    #[must_use]
     pub fn has_circular_dependencies(&self) -> bool {
         // Simple cycle detection using DFS
         let mut visited = HashMap::new();
         let mut rec_stack = HashMap::new();
 
         for step in &self.steps {
-            if !visited.get(&step.id).unwrap_or(&false) {
-                if self.has_cycle_util(&step.id, &mut visited, &mut rec_stack) {
-                    return true;
-                }
+            if !visited.get(&step.id).unwrap_or(&false)
+                && self.has_cycle_util(&step.id, &mut visited, &mut rec_stack)
+            {
+                return true;
             }
         }
 
@@ -287,13 +297,13 @@ impl Workflow {
             }
         }
 
-        if result.len() != self.steps.len() {
+        if result.len() == self.steps.len() {
+            Ok(result)
+        } else {
             Err(AgentError::workflow(
                 self.id.to_string(),
                 "Failed to determine execution order (circular dependency detected)",
             ))
-        } else {
-            Ok(result)
         }
     }
 
@@ -304,6 +314,7 @@ impl Workflow {
     }
 
     /// Get context variable
+    #[must_use]
     pub fn get_variable(&self, key: &str) -> Option<&serde_json::Value> {
         self.context.variables.get(key)
     }
@@ -315,6 +326,7 @@ impl Workflow {
     }
 
     /// Get metadata
+    #[must_use]
     pub fn get_metadata(&self, key: &str) -> Option<&serde_json::Value> {
         self.metadata.get(key)
     }
@@ -333,6 +345,7 @@ pub struct WorkflowBuilder {
 
 impl WorkflowBuilder {
     /// Create a new workflow builder
+    #[must_use]
     pub fn new() -> Self {
         Self::default()
     }
@@ -350,12 +363,14 @@ impl WorkflowBuilder {
     }
 
     /// Add a step to the workflow
+    #[must_use]
     pub fn step(mut self, step: WorkflowStep) -> Self {
         self.steps.push(step);
         self
     }
 
     /// Add multiple steps
+    #[must_use]
     pub fn steps(mut self, steps: Vec<WorkflowStep>) -> Self {
         self.steps.extend(steps);
         self
@@ -374,6 +389,7 @@ impl WorkflowBuilder {
     }
 
     /// Set workflow timeout
+    #[must_use]
     pub fn timeout_ms(mut self, timeout_ms: u64) -> Self {
         self.timeout_ms = Some(timeout_ms);
         self

@@ -120,83 +120,97 @@ impl Default for FilterConfig {
 
 impl FilterConfig {
     /// Create a new filter configuration with defaults.
+    #[must_use]
     pub fn new() -> Self {
         Self::default()
     }
 
     /// Enable or disable gitignore respect.
+    #[must_use]
     pub fn with_respect_gitignore(mut self, respect: bool) -> Self {
         self.respect_gitignore = respect;
         self
     }
 
     /// Add additional ignore files.
+    #[must_use]
     pub fn with_ignore_files(mut self, files: Vec<PathBuf>) -> Self {
         self.ignore_files = files;
         self
     }
 
     /// Add exclude patterns.
+    #[must_use]
     pub fn with_exclude_patterns(mut self, patterns: Vec<String>) -> Self {
         self.exclude_patterns.extend(patterns);
         self
     }
 
     /// Add include patterns.
+    #[must_use]
     pub fn with_include_patterns(mut self, patterns: Vec<String>) -> Self {
         self.include_patterns.extend(patterns);
         self
     }
 
     /// Set file extensions to include.
+    #[must_use]
     pub fn with_include_extensions(mut self, extensions: Vec<String>) -> Self {
         self.include_extensions = Some(extensions);
         self
     }
 
     /// Set file extensions to exclude.
+    #[must_use]
     pub fn with_exclude_extensions(mut self, extensions: Vec<String>) -> Self {
         self.exclude_extensions = extensions;
         self
     }
 
     /// Enable or disable hidden file exclusion.
+    #[must_use]
     pub fn with_exclude_hidden(mut self, exclude: bool) -> Self {
         self.exclude_hidden = exclude;
         self
     }
 
     /// Enable or disable empty file exclusion.
+    #[must_use]
     pub fn with_exclude_empty(mut self, exclude: bool) -> Self {
         self.exclude_empty = exclude;
         self
     }
 
     /// Set maximum file size.
+    #[must_use]
     pub fn with_max_file_size(mut self, size: u64) -> Self {
         self.max_file_size = Some(size);
         self
     }
 
     /// Set minimum file size.
+    #[must_use]
     pub fn with_min_file_size(mut self, size: u64) -> Self {
         self.min_file_size = Some(size);
         self
     }
 
     /// Enable or disable symlink following.
+    #[must_use]
     pub fn with_follow_symlinks(mut self, follow: bool) -> Self {
         self.follow_symlinks = follow;
         self
     }
 
     /// Set case sensitivity for pattern matching.
+    #[must_use]
     pub fn with_case_sensitive(mut self, sensitive: bool) -> Self {
         self.case_sensitive = sensitive;
         self
     }
 
     /// Create a minimal configuration for text files only.
+    #[must_use]
     pub fn text_files_only() -> Self {
         Self {
             include_extensions: Some(vec![
@@ -211,6 +225,7 @@ impl FilterConfig {
     }
 
     /// Create a configuration for source code files.
+    #[must_use]
     pub fn source_code_only() -> Self {
         Self {
             include_extensions: Some(vec![

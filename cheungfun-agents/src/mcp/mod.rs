@@ -6,12 +6,9 @@ use crate::{
     types::ToolSchema,
 };
 use async_trait::async_trait;
-use rmcp::{
-    ClientHandler, ServerHandler, Service, ServiceExt,
-    model::{ClientInfo, Implementation, ServerInfo},
-};
+use rmcp::ServerHandler;
 use std::{collections::HashMap, sync::Arc};
-use tracing::{debug, error, info, warn};
+use tracing::{debug, error, info};
 
 pub mod client;
 pub mod server;
@@ -65,6 +62,7 @@ impl McpTool {
     }
 
     /// Get the MCP client
+    #[must_use]
     pub fn client(&self) -> &Arc<McpClient> {
         &self.client
     }
@@ -150,6 +148,7 @@ pub struct McpToolInfo {
 
 impl McpToolRegistry {
     /// Create a new MCP tool registry
+    #[must_use]
     pub fn new() -> Self {
         Self {
             clients: HashMap::new(),
@@ -168,7 +167,7 @@ impl McpToolRegistry {
 
         // Get available tools from the client
         let tools = client.list_tools().await.map_err(|e| {
-            AgentError::mcp(format!("Failed to list tools from client '{}': {e}", name))
+            AgentError::mcp(format!("Failed to list tools from client '{name}': {e}"))
         })?;
 
         let mut tool_infos = Vec::new();
@@ -201,6 +200,7 @@ impl McpToolRegistry {
     }
 
     /// Get all available tools
+    #[must_use]
     pub fn list_tools(&self) -> Vec<McpToolInfo> {
         self.tools_by_client
             .values()
@@ -209,10 +209,11 @@ impl McpToolRegistry {
     }
 
     /// Get tools from a specific client
+    #[must_use]
     pub fn list_tools_by_client(&self, client_name: &str) -> Vec<McpToolInfo> {
         self.tools_by_client
             .get(client_name)
-            .map(|tools| tools.clone())
+            .cloned()
             .unwrap_or_default()
     }
 
@@ -221,9 +222,10 @@ impl McpToolRegistry {
         // Find the tool and its client
         for (client_name, tools) in &self.tools_by_client {
             if let Some(tool_info) = tools.iter().find(|t| t.name == tool_name) {
-                let client = self.clients.get(client_name).ok_or_else(|| {
-                    AgentError::mcp(format!("Client '{}' not found", client_name))
-                })?;
+                let client = self
+                    .clients
+                    .get(client_name)
+                    .ok_or_else(|| AgentError::mcp(format!("Client '{client_name}' not found")))?;
 
                 let mcp_tool = McpTool::with_schema(
                     tool_info.name.clone(),
@@ -236,15 +238,17 @@ impl McpToolRegistry {
             }
         }
 
-        Err(AgentError::mcp(format!("Tool '{}' not found", tool_name)))
+        Err(AgentError::mcp(format!("Tool '{tool_name}' not found")))
     }
 
     /// Get all registered client names
+    #[must_use]
     pub fn client_names(&self) -> Vec<String> {
         self.clients.keys().cloned().collect()
     }
 
     /// Get a client by name
+    #[must_use]
     pub fn get_client(&self, name: &str) -> Option<&Arc<McpClient>> {
         self.clients.get(name)
     }
@@ -256,7 +260,7 @@ impl McpToolRegistry {
             info!("Removed MCP client: {}", name);
             Ok(())
         } else {
-            Err(AgentError::mcp(format!("Client '{}' not found", name)))
+            Err(AgentError::mcp(format!("Client '{name}' not found")))
         }
     }
 
@@ -265,7 +269,7 @@ impl McpToolRegistry {
         let client = self
             .clients
             .get_mut(client_name)
-            .ok_or_else(|| AgentError::mcp(format!("Client '{}' not found", client_name)))?;
+            .ok_or_else(|| AgentError::mcp(format!("Client '{client_name}' not found")))?;
 
         let tools = Arc::get_mut(client)
             .ok_or_else(|| AgentError::mcp("Cannot get mutable reference to client".to_string()))?
@@ -273,8 +277,7 @@ impl McpToolRegistry {
             .await
             .map_err(|e| {
                 AgentError::mcp(format!(
-                    "Failed to refresh tools for client '{}': {e}",
-                    client_name
+                    "Failed to refresh tools for client '{client_name}': {e}"
                 ))
             })?;
 
@@ -303,8 +306,9 @@ impl McpToolRegistry {
     }
 
     /// Get registry statistics
+    #[must_use]
     pub fn stats(&self) -> McpRegistryStats {
-        let total_tools = self.tools_by_client.values().map(|tools| tools.len()).sum();
+        let total_tools = self.tools_by_client.values().map(std::vec::Vec::len).sum();
         let tools_by_client = self
             .tools_by_client
             .iter()

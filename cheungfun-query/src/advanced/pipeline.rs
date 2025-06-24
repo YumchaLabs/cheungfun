@@ -1,12 +1,16 @@
 // Advanced Retrieval Pipeline Implementation
 
-use super::*;
+use super::{
+    AdvancedQuery, ExternalCache, FusionAlgorithm, QueryCache, QueryTransformer, Reranker,
+    ResponseGenerator, ResponseTransformer, RetrievalResponse, RetrievalStats, RetryConfig,
+    ScoredNode, SearchStrategy,
+};
 use anyhow::{Context, Result};
 use cheungfun_core::VectorStore;
 use std::sync::Arc;
 use std::time::{Duration, Instant};
 use tokio::time::timeout;
-use tracing::{debug, error, info, warn};
+use tracing::{debug, info, warn};
 
 /// The Advanced Retrieval Pipeline.
 #[derive(Debug)]
@@ -62,6 +66,7 @@ impl Default for PipelineConfig {
 
 impl AdvancedRetrievalPipeline {
     /// Creates a pipeline using the builder pattern.
+    #[must_use]
     pub fn builder() -> AdvancedRetrievalPipelineBuilder {
         AdvancedRetrievalPipelineBuilder::new()
     }
@@ -289,6 +294,7 @@ impl AdvancedRetrievalPipeline {
     }
 
     /// Gets pipeline statistics.
+    #[must_use]
     pub fn get_stats(&self) -> PipelineStats {
         PipelineStats {
             query_transformers_count: self.query_transformers.len(),
@@ -323,7 +329,14 @@ pub struct AdvancedRetrievalPipelineBuilder {
     cache: Option<Arc<QueryCache>>,
 }
 
+impl Default for AdvancedRetrievalPipelineBuilder {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
 impl AdvancedRetrievalPipelineBuilder {
+    #[must_use]
     pub fn new() -> Self {
         Self {
             query_transformers: Vec::new(),
@@ -397,12 +410,14 @@ impl AdvancedRetrievalPipelineBuilder {
     }
 
     /// Sets the configuration.
+    #[must_use]
     pub fn with_config(mut self, config: PipelineConfig) -> Self {
         self.config = config;
         self
     }
 
     /// Sets the cache.
+    #[must_use]
     pub fn with_cache(mut self, cache: Arc<QueryCache>) -> Self {
         self.cache = Some(cache);
         self

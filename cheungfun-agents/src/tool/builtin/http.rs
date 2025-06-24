@@ -25,6 +25,7 @@ pub struct HttpTool {
 
 impl HttpTool {
     /// Create a new HTTP tool with default settings
+    #[must_use]
     pub fn new() -> Self {
         let client = reqwest::Client::builder()
             .timeout(Duration::from_secs(30))
@@ -41,6 +42,7 @@ impl HttpTool {
     }
 
     /// Create an HTTP tool that allows requests to localhost
+    #[must_use]
     pub fn with_local_access() -> Self {
         let mut tool = Self::new();
         tool.allow_local = true;
@@ -48,6 +50,7 @@ impl HttpTool {
     }
 
     /// Create an HTTP tool with custom timeout
+    #[must_use]
     pub fn with_timeout(timeout_secs: u64) -> Self {
         let client = reqwest::Client::builder()
             .timeout(Duration::from_secs(timeout_secs))
@@ -64,6 +67,7 @@ impl HttpTool {
     }
 
     /// Set maximum response size
+    #[must_use]
     pub fn with_max_response_size(mut self, size: usize) -> Self {
         self.max_response_size = size;
         self
@@ -252,8 +256,7 @@ impl Tool for HttpTool {
             "HEAD" => self.client.head(url.clone()),
             _ => {
                 return Ok(ToolResult::error(format!(
-                    "Unsupported HTTP method: {}",
-                    method
+                    "Unsupported HTTP method: {method}"
                 )));
             }
         };

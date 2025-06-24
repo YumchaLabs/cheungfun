@@ -93,24 +93,28 @@ impl IndexingPipelineBuilder {
     }
 
     /// Set the loader component.
+    #[must_use]
     pub fn with_loader(mut self, loader: Arc<dyn Loader>) -> Self {
         self.loader = Some(loader);
         self
     }
 
     /// Set the transformer component.
+    #[must_use]
     pub fn with_transformer(mut self, transformer: Arc<dyn Transformer>) -> Self {
         self.transformer = Some(transformer);
         self
     }
 
     /// Set the embedder instance directly.
+    #[must_use]
     pub fn with_embedder(mut self, embedder: Arc<dyn Embedder>) -> Self {
         self.embedder = Some(EmbedderComponent::Instance(embedder));
         self
     }
 
     /// Set the embedder configuration.
+    #[must_use]
     pub fn with_embedder_config(mut self, config: EmbedderConfig) -> Self {
         self.config.embedder = config.clone();
         self.embedder = Some(EmbedderComponent::Config(config));
@@ -118,12 +122,14 @@ impl IndexingPipelineBuilder {
     }
 
     /// Set the vector store instance directly.
+    #[must_use]
     pub fn with_vector_store(mut self, vector_store: Arc<dyn VectorStore>) -> Self {
         self.vector_store = Some(VectorStoreComponent::Instance(vector_store));
         self
     }
 
     /// Set the vector store configuration.
+    #[must_use]
     pub fn with_vector_store_config(mut self, config: VectorStoreConfig) -> Self {
         self.config.vector_store = config.clone();
         self.vector_store = Some(VectorStoreComponent::Config(config));
@@ -131,48 +137,56 @@ impl IndexingPipelineBuilder {
     }
 
     /// Set the embedder factory registry.
+    #[must_use]
     pub fn with_embedder_factory(mut self, factory: Arc<EmbedderFactoryRegistry>) -> Self {
         self.embedder_factory = Some(factory);
         self
     }
 
     /// Set the vector store factory registry.
+    #[must_use]
     pub fn with_vector_store_factory(mut self, factory: Arc<VectorStoreFactoryRegistry>) -> Self {
         self.vector_store_factory = Some(factory);
         self
     }
 
     /// Set the batch size for processing.
+    #[must_use]
     pub fn with_batch_size(mut self, batch_size: usize) -> Self {
         self.config = self.config.with_batch_size(batch_size);
         self
     }
 
     /// Set the chunk size for text splitting.
+    #[must_use]
     pub fn with_chunk_size(mut self, chunk_size: usize) -> Self {
         self.config = self.config.with_chunk_size(chunk_size);
         self
     }
 
     /// Set the chunk overlap.
+    #[must_use]
     pub fn with_chunk_overlap(mut self, chunk_overlap: usize) -> Self {
         self.config = self.config.with_chunk_overlap(chunk_overlap);
         self
     }
 
     /// Set the concurrency level.
+    #[must_use]
     pub fn with_concurrency(mut self, concurrency: usize) -> Self {
         self.config = self.config.with_concurrency(concurrency);
         self
     }
 
     /// Set whether to continue on error.
+    #[must_use]
     pub fn with_continue_on_error(mut self, continue_on_error: bool) -> Self {
         self.config = self.config.with_continue_on_error(continue_on_error);
         self
     }
 
     /// Add additional configuration parameter.
+    #[must_use]
     pub fn with_config<K, V>(mut self, key: K, value: V) -> Self
     where
         K: Into<String>,
@@ -240,6 +254,10 @@ impl IndexingPipelineBuilder {
     ///
     /// Returns an error if the pipeline cannot be built due to
     /// invalid configuration or component creation failures.
+    ///
+    /// # Panics
+    ///
+    /// Panics if required components (embedder, vector store) are not set.
     pub async fn build(self) -> Result<Arc<dyn IndexingPipeline>> {
         // Validate the configuration first
         self.validate()?;

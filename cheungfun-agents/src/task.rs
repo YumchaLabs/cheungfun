@@ -150,6 +150,7 @@ impl Task {
     }
 
     /// Create a task builder
+    #[must_use]
     pub fn builder() -> TaskBuilder {
         TaskBuilder::default()
     }
@@ -179,6 +180,7 @@ impl Task {
     }
 
     /// Check if task is ready to execute (all dependencies completed)
+    #[must_use]
     pub fn is_ready(&self, completed_tasks: &[TaskId]) -> bool {
         self.dependencies
             .iter()
@@ -186,6 +188,7 @@ impl Task {
     }
 
     /// Check if task has expired (past deadline)
+    #[must_use]
     pub fn is_expired(&self) -> bool {
         if let Some(deadline) = self.deadline {
             Utc::now() > deadline
@@ -195,6 +198,7 @@ impl Task {
     }
 
     /// Get task age in milliseconds
+    #[must_use]
     pub fn age_ms(&self) -> u64 {
         (Utc::now() - self.created_at).num_milliseconds() as u64
     }
@@ -220,12 +224,14 @@ impl TaskBuilder {
     }
 
     /// Set task priority
+    #[must_use]
     pub fn priority(mut self, priority: TaskPriority) -> Self {
         self.priority = priority;
         self
     }
 
     /// Assign agent to task
+    #[must_use]
     pub fn agent_id(mut self, agent_id: AgentId) -> Self {
         self.agent_id = Some(agent_id);
         self
@@ -244,24 +250,28 @@ impl TaskBuilder {
     }
 
     /// Set deadline
+    #[must_use]
     pub fn deadline(mut self, deadline: DateTime<Utc>) -> Self {
         self.deadline = Some(deadline);
         self
     }
 
     /// Set maximum execution time
+    #[must_use]
     pub fn max_execution_time_ms(mut self, ms: u64) -> Self {
         self.max_execution_time_ms = Some(ms);
         self
     }
 
     /// Add dependency
+    #[must_use]
     pub fn dependency(mut self, task_id: TaskId) -> Self {
         self.dependencies.push(task_id);
         self
     }
 
     /// Set parent task
+    #[must_use]
     pub fn parent_task(mut self, parent_id: TaskId) -> Self {
         self.parent_task_id = Some(parent_id);
         self

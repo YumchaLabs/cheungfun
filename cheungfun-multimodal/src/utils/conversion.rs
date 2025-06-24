@@ -17,7 +17,7 @@ pub fn convert_from_base64(base64_str: &str) -> Result<Vec<u8>> {
     use base64::Engine;
     base64::engine::general_purpose::STANDARD
         .decode(base64_str)
-        .map_err(|e| crate::error::MultimodalError::Base64Decode(e))
+        .map_err(crate::error::MultimodalError::Base64Decode)
 }
 
 /// Normalize file path for cross-platform compatibility.

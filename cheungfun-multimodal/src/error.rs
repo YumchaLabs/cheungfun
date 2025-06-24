@@ -387,7 +387,7 @@ mod tests {
 
     #[test]
     fn test_error_categories() {
-        let errors = vec![
+        let errors = [
             MultimodalError::media_processing("test"),
             MultimodalError::format_detection("test"),
             MultimodalError::configuration("test"),

@@ -2,11 +2,11 @@
 
 use crate::{
     error::{AgentError, Result},
-    tool::{Tool, ToolContext, ToolResult, create_simple_schema, string_param},
+    tool::{Tool, ToolContext, ToolResult, create_simple_schema},
     types::ToolSchema,
 };
 use async_trait::async_trait;
-use serde::{Deserialize, Serialize};
+use serde::Deserialize;
 use std::collections::HashMap;
 
 pub mod echo;
@@ -27,6 +27,7 @@ pub struct MathTool {
 
 impl MathTool {
     /// Create a new math tool
+    #[must_use]
     pub fn new() -> Self {
         Self {
             name: "math".to_string(),
@@ -181,6 +182,7 @@ pub struct TimeTool {
 
 impl TimeTool {
     /// Create a new time tool
+    #[must_use]
     pub fn new() -> Self {
         Self {
             name: "time".to_string(),

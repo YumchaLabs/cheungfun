@@ -56,6 +56,7 @@ pub struct IndexingPipelineConfig {
 
 impl IndexingPipelineConfig {
     /// Create a new indexing pipeline configuration.
+    #[must_use]
     pub fn new(embedder: EmbedderConfig, vector_store: VectorStoreConfig) -> Self {
         Self {
             embedder,
@@ -70,30 +71,35 @@ impl IndexingPipelineConfig {
     }
 
     /// Set the batch size.
+    #[must_use]
     pub fn with_batch_size(mut self, batch_size: usize) -> Self {
         self.batch_size = batch_size;
         self
     }
 
     /// Set the chunk size.
+    #[must_use]
     pub fn with_chunk_size(mut self, chunk_size: usize) -> Self {
         self.chunk_size = chunk_size;
         self
     }
 
     /// Set the chunk overlap.
+    #[must_use]
     pub fn with_chunk_overlap(mut self, chunk_overlap: usize) -> Self {
         self.chunk_overlap = chunk_overlap;
         self
     }
 
     /// Set the concurrency level.
+    #[must_use]
     pub fn with_concurrency(mut self, concurrency: usize) -> Self {
         self.concurrency = concurrency;
         self
     }
 
     /// Set whether to continue on error.
+    #[must_use]
     pub fn with_continue_on_error(mut self, continue_on_error: bool) -> Self {
         self.continue_on_error = continue_on_error;
         self
@@ -146,7 +152,7 @@ impl IndexingPipelineConfig {
                 additional_config, ..
             } => additional_config
                 .get("dimension")
-                .and_then(|v| v.as_u64())
+                .and_then(serde_json::Value::as_u64)
                 .map(|d| d as usize),
             _ => None,
         };
@@ -219,6 +225,7 @@ pub struct QueryPipelineConfig {
 
 impl QueryPipelineConfig {
     /// Create a new query pipeline configuration.
+    #[must_use]
     pub fn new(embedder: EmbedderConfig, vector_store: VectorStoreConfig, llm: LlmConfig) -> Self {
         Self {
             embedder,
@@ -235,24 +242,28 @@ impl QueryPipelineConfig {
     }
 
     /// Set the default top-k value.
+    #[must_use]
     pub fn with_top_k(mut self, top_k: usize) -> Self {
         self.top_k = top_k;
         self
     }
 
     /// Set the similarity threshold.
+    #[must_use]
     pub fn with_similarity_threshold(mut self, threshold: f32) -> Self {
         self.similarity_threshold = Some(threshold);
         self
     }
 
     /// Set the maximum tokens for generation.
+    #[must_use]
     pub fn with_max_tokens(mut self, max_tokens: usize) -> Self {
         self.max_tokens = Some(max_tokens);
         self
     }
 
     /// Set the temperature for generation.
+    #[must_use]
     pub fn with_temperature(mut self, temperature: f32) -> Self {
         self.temperature = Some(temperature);
         self
@@ -265,6 +276,7 @@ impl QueryPipelineConfig {
     }
 
     /// Set whether to include citations.
+    #[must_use]
     pub fn with_citations(mut self, include_citations: bool) -> Self {
         self.include_citations = include_citations;
         self
@@ -281,11 +293,13 @@ impl QueryPipelineConfig {
     }
 
     /// Get the effective max tokens (from pipeline or LLM config).
+    #[must_use]
     pub fn effective_max_tokens(&self) -> usize {
         self.max_tokens.or(self.llm.max_tokens).unwrap_or(1000)
     }
 
     /// Get the effective temperature (from pipeline or LLM config).
+    #[must_use]
     pub fn effective_temperature(&self) -> f32 {
         self.temperature.or(self.llm.temperature).unwrap_or(0.7)
     }

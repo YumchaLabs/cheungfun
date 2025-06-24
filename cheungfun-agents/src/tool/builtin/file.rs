@@ -22,6 +22,7 @@ pub struct FileTool {
 
 impl FileTool {
     /// Create a new file tool with default settings (read-only)
+    #[must_use]
     pub fn new() -> Self {
         Self {
             name: "file".to_string(),
@@ -31,6 +32,7 @@ impl FileTool {
     }
 
     /// Create a file tool that allows write operations
+    #[must_use]
     pub fn with_write_access() -> Self {
         Self {
             name: "file".to_string(),
@@ -426,7 +428,7 @@ impl FileTool {
             "none"
         };
 
-        let content = format!("Path exists: {}, type: {}", exists, file_type);
+        let content = format!("Path exists: {exists}, type: {file_type}");
 
         Ok(ToolResult::success(content)
             .with_metadata("operation".to_string(), serde_json::json!("exists"))

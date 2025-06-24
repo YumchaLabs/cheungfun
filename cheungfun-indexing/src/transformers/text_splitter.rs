@@ -43,6 +43,7 @@ pub struct TextSplitter {
 
 impl TextSplitter {
     /// Create a new text splitter with default configuration.
+    #[must_use]
     pub fn new(chunk_size: usize, chunk_overlap: usize) -> Self {
         Self {
             config: SplitterConfig::new(chunk_size, chunk_overlap),
@@ -50,11 +51,13 @@ impl TextSplitter {
     }
 
     /// Create a new text splitter with custom configuration.
+    #[must_use]
     pub fn with_config(config: SplitterConfig) -> Self {
         Self { config }
     }
 
     /// Get the splitter configuration.
+    #[must_use]
     pub fn config(&self) -> &SplitterConfig {
         &self.config
     }
@@ -190,7 +193,7 @@ impl TextSplitter {
         // Add text statistics
         let stats = utils::calculate_statistics(&chunk);
         for (key, value) in stats {
-            metadata.insert(format!("chunk_{}", key), value);
+            metadata.insert(format!("chunk_{key}"), value);
         }
 
         Node {
@@ -262,7 +265,7 @@ impl Transformer for TextSplitter {
             Ok(chunks) => chunks,
             Err(e) => {
                 return Err(cheungfun_core::error::CheungfunError::Pipeline {
-                    message: format!("Text splitting failed: {}", e),
+                    message: format!("Text splitting failed: {e}"),
                 });
             }
         };

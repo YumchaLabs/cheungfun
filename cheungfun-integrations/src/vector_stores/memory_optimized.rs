@@ -78,6 +78,7 @@ pub struct OptimizedInMemoryVectorStore {
 
 impl OptimizedInMemoryVectorStore {
     /// Create a new optimized in-memory vector store
+    #[must_use]
     pub fn new(dimension: usize, distance_metric: DistanceMetric) -> Self {
         Self {
             dimension,
@@ -94,6 +95,7 @@ impl OptimizedInMemoryVectorStore {
     }
 
     /// Create with custom parallel processing settings
+    #[must_use]
     pub fn with_parallel_config(
         dimension: usize,
         distance_metric: DistanceMetric,
@@ -107,6 +109,7 @@ impl OptimizedInMemoryVectorStore {
     }
 
     /// Get performance statistics
+    #[must_use]
     pub fn get_stats(&self) -> OptimizedVectorStoreStats {
         self.stats.read().unwrap().clone()
     }
@@ -119,6 +122,7 @@ impl OptimizedInMemoryVectorStore {
 
     #[cfg(not(feature = "simd"))]
     /// Check if SIMD operations are available
+    #[must_use]
     pub fn is_simd_available(&self) -> bool {
         false
     }
@@ -131,6 +135,7 @@ impl OptimizedInMemoryVectorStore {
 
     #[cfg(not(feature = "simd"))]
     /// Get SIMD capabilities information
+    #[must_use]
     pub fn get_simd_capabilities(&self) -> String {
         "SIMD not available".to_string()
     }
@@ -220,6 +225,7 @@ impl OptimizedInMemoryVectorStore {
     }
 
     // Scalar fallback implementations
+    #[allow(dead_code)]
     fn cosine_similarity_scalar(&self, a: &[f32], b: &[f32]) -> f32 {
         let dot_product = self.dot_product_scalar(a, b);
         let norm_a = self.calculate_norm(a);
@@ -232,10 +238,12 @@ impl OptimizedInMemoryVectorStore {
         }
     }
 
+    #[allow(dead_code)]
     fn dot_product_scalar(&self, a: &[f32], b: &[f32]) -> f32 {
         a.iter().zip(b.iter()).map(|(x, y)| x * y).sum()
     }
 
+    #[allow(dead_code)]
     fn euclidean_distance_scalar(&self, a: &[f32], b: &[f32]) -> f32 {
         a.iter()
             .zip(b.iter())
@@ -487,8 +495,7 @@ impl VectorStore for OptimizedInMemoryVectorStore {
         if node_count != vector_count || node_count != norm_count {
             return Err(CheungfunError::Internal {
                 message: format!(
-                    "Data inconsistency: nodes={}, vectors={}, norms={}",
-                    node_count, vector_count, norm_count
+                    "Data inconsistency: nodes={node_count}, vectors={vector_count}, norms={norm_count}"
                 ),
             });
         }

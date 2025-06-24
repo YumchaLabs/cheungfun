@@ -7,7 +7,7 @@ pub mod cache;
 pub mod fusion;
 /// Advanced retrieval pipeline orchestrating all components.
 pub mod pipeline;
-/// Query transformation algorithms including HyDE and sub-question generation.
+/// Query transformation algorithms including `HyDE` and sub-question generation.
 pub mod query_transformers;
 /// Result reranking algorithms for improving search relevance.
 pub mod rerankers;
@@ -30,11 +30,10 @@ use async_trait::async_trait;
 use chrono::{DateTime, Utc};
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
-use std::sync::Arc;
 use std::time::Duration;
 use uuid::Uuid;
 
-use cheungfun_core::{Node, ResponseGenerator, ScoredNode, VectorStore};
+use cheungfun_core::{ResponseGenerator, ScoredNode, VectorStore};
 
 /// An extended query structure that supports various query forms.
 #[derive(Debug, Clone)]
@@ -78,21 +77,28 @@ impl AdvancedQuery {
     }
 
     /// Sets the embedding vector.
+    #[must_use]
     pub fn with_embedding(mut self, embedding: Vec<f32>) -> Self {
         self.embedding = Some(embedding);
         self
     }
 
     /// Sets the search parameters.
+    #[must_use]
     pub fn with_search_params(mut self, params: SearchParams) -> Self {
         self.search_params = params;
         self
     }
 
     /// Gets all query texts (original + transformed).
+    #[must_use]
     pub fn all_queries(&self) -> Vec<&str> {
         let mut queries = vec![self.original_text.as_str()];
-        queries.extend(self.transformed_queries.iter().map(|s| s.as_str()));
+        queries.extend(
+            self.transformed_queries
+                .iter()
+                .map(std::string::String::as_str),
+        );
         queries
     }
 }
@@ -197,6 +203,7 @@ impl RetrievalStats {
     }
 
     /// Gets the total duration.
+    #[must_use]
     pub fn total_time(&self) -> Duration {
         self.stage_times.values().sum()
     }

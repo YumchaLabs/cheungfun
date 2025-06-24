@@ -84,6 +84,7 @@ impl Default for MetadataPatterns {
 
 impl MetadataExtractor {
     /// Create a new metadata extractor with default configuration.
+    #[must_use]
     pub fn new() -> Self {
         Self {
             config: MetadataConfig::default(),
@@ -92,6 +93,7 @@ impl MetadataExtractor {
     }
 
     /// Create a new metadata extractor with custom configuration.
+    #[must_use]
     pub fn with_config(config: MetadataConfig) -> Self {
         Self {
             config,
@@ -100,6 +102,7 @@ impl MetadataExtractor {
     }
 
     /// Get the extractor configuration.
+    #[must_use]
     pub fn config(&self) -> &MetadataConfig {
         &self.config
     }
@@ -244,17 +247,17 @@ impl MetadataExtractor {
         if content.contains("# ")
             || content.contains("## ")
             || content.contains("**")
-            || content.contains("*")
+            || content.contains('*')
         {
             return "markdown".to_string();
         }
 
         // Check for structured data
-        if content_lower.contains("json") && (content.contains("{") || content.contains("[")) {
+        if content_lower.contains("json") && (content.contains('{') || content.contains('[')) {
             return "json".to_string();
         }
 
-        if content.contains("<") && content.contains(">") {
+        if content.contains('<') && content.contains('>') {
             return "html".to_string();
         }
 
@@ -289,7 +292,7 @@ impl MetadataExtractor {
         // Simple keyword extraction based on word frequency
         let words: Vec<&str> = content
             .split_whitespace()
-            .filter(|word| word.len() > 3 && word.chars().all(|c| c.is_alphabetic()))
+            .filter(|word| word.len() > 3 && word.chars().all(char::is_alphabetic))
             .collect();
 
         let mut word_counts: HashMap<String, usize> = HashMap::new();

@@ -1,12 +1,9 @@
 //! High-performance SIMD vector operations for Cheungfun
 //!
 //! This module provides optimized vector similarity calculations using SIMD instructions
-//! through the SimSIMD library, offering 10-200x performance improvements over naive implementations.
+//! through the `SimSIMD` library, offering 10-200x performance improvements over naive implementations.
 
 use cheungfun_core::{CheungfunError, Result};
-
-#[cfg(feature = "simd")]
-use simsimd::SpatialSimilarity;
 
 /// High-performance vector similarity calculator using SIMD instructions
 #[derive(Debug, Clone)]
@@ -17,6 +14,7 @@ pub struct SimdVectorOps {
 
 impl SimdVectorOps {
     /// Create a new SIMD vector operations instance
+    #[must_use]
     pub fn new() -> Self {
         Self {
             #[cfg(feature = "simd")]

@@ -3,8 +3,7 @@
 use crate::{
     agent::Agent,
     error::{AgentError, Result},
-    task::{Task, TaskResult, TaskStatus},
-    types::{AgentId, AgentResponse},
+    task::{Task, TaskResult},
 };
 use std::{sync::Arc, time::Duration};
 use tokio::time::timeout;
@@ -137,13 +136,12 @@ impl AgentExecutor {
             // Execute with timeout
             let execution_result = if let Some(timeout_ms) = self.config.execution_timeout_ms {
                 let timeout_duration = Duration::from_millis(timeout_ms);
-                match timeout(timeout_duration, self.agent.execute(task)).await {
-                    Ok(result) => result,
-                    Err(_) => {
-                        let error_msg = format!("Task execution timed out after {}ms", timeout_ms);
-                        warn!("{}", error_msg);
-                        Err(AgentError::timeout("task_execution", timeout_ms))
-                    }
+                if let Ok(result) = timeout(timeout_duration, self.agent.execute(task)).await {
+                    result
+                } else {
+                    let error_msg = format!("Task execution timed out after {timeout_ms}ms");
+                    warn!("{}", error_msg);
+                    Err(AgentError::timeout("task_execution", timeout_ms))
                 }
             } else {
                 self.agent.execute(task).await
@@ -206,9 +204,7 @@ impl AgentExecutor {
         context.metrics.success = false;
         context.metrics.error_message = context.last_error.clone();
 
-        let error_msg = last_error
-            .map(|e| e.to_string())
-            .unwrap_or_else(|| "Unknown error".to_string());
+        let error_msg = last_error.map_or_else(|| "Unknown error".to_string(), |e| e.to_string());
 
         if self.config.verbose_logging {
             error!(
@@ -262,11 +258,13 @@ impl AgentExecutor {
     }
 
     /// Get the agent being executed
+    #[must_use]
     pub fn agent(&self) -> &Arc<dyn Agent> {
         &self.agent
     }
 
     /// Get the executor configuration
+    #[must_use]
     pub fn config(&self) -> &ExecutorConfig {
         &self.config
     }
@@ -305,59 +303,69 @@ pub struct ExecutorConfigBuilder {
 
 impl ExecutorConfigBuilder {
     /// Create a new executor config builder
+    #[must_use]
     pub fn new() -> Self {
         Self::default()
     }
 
     /// Set maximum retries
+    #[must_use]
     pub fn max_retries(mut self, retries: usize) -> Self {
         self.config.max_retries = retries;
         self
     }
 
     /// Set initial retry delay
+    #[must_use]
     pub fn initial_retry_delay_ms(mut self, delay_ms: u64) -> Self {
         self.config.initial_retry_delay_ms = delay_ms;
         self
     }
 
     /// Set retry delay multiplier
+    #[must_use]
     pub fn retry_delay_multiplier(mut self, multiplier: f64) -> Self {
         self.config.retry_delay_multiplier = multiplier;
         self
     }
 
     /// Set maximum retry delay
+    #[must_use]
     pub fn max_retry_delay_ms(mut self, delay_ms: u64) -> Self {
         self.config.max_retry_delay_ms = delay_ms;
         self
     }
 
     /// Set execution timeout
+    #[must_use]
     pub fn execution_timeout_ms(mut self, timeout_ms: u64) -> Self {
         self.config.execution_timeout_ms = Some(timeout_ms);
         self
     }
 
     /// Disable execution timeout
+    #[must_use]
     pub fn no_timeout(mut self) -> Self {
         self.config.execution_timeout_ms = None;
         self
     }
 
     /// Enable verbose logging
+    #[must_use]
     pub fn verbose_logging(mut self) -> Self {
         self.config.verbose_logging = true;
         self
     }
 
     /// Enable metrics collection
+    #[must_use]
     pub fn collect_metrics(mut self) -> Self {
         self.config.collect_metrics = true;
         self
     }
 
     /// Build the configuration
+    #[must_use]
     pub fn build(self) -> ExecutorConfig {
         self.config
     }
@@ -381,7 +389,7 @@ mod tests {
         let task = Task::new("Test task");
 
         let result = executor.execute_task(&task).await.unwrap();
-        assert_eq!(result.status, TaskStatus::Completed);
+        assert_eq!(result.status, crate::TaskStatus::Completed);
     }
 
     #[test]

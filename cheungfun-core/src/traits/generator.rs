@@ -237,11 +237,13 @@ pub struct GenerationStats {
 
 impl GenerationStats {
     /// Create new generation statistics.
+    #[must_use]
     pub fn new() -> Self {
         Self::default()
     }
 
     /// Calculate the success rate as a percentage.
+    #[must_use]
     pub fn success_rate(&self) -> f64 {
         let total = self.responses_generated + self.generations_failed;
         if total == 0 {
@@ -252,11 +254,13 @@ impl GenerationStats {
     }
 
     /// Calculate total tokens used.
+    #[must_use]
     pub fn total_tokens(&self) -> usize {
         self.total_prompt_tokens + self.total_completion_tokens
     }
 
     /// Calculate tokens per second.
+    #[must_use]
     pub fn tokens_per_second(&self) -> f64 {
         if self.total_generation_time.is_zero() {
             0.0
@@ -266,6 +270,7 @@ impl GenerationStats {
     }
 
     /// Calculate average tokens per response.
+    #[must_use]
     pub fn avg_tokens_per_response(&self) -> f64 {
         if self.responses_generated == 0 {
             0.0
@@ -301,6 +306,7 @@ pub struct GenerationCost {
 
 impl GenerationCost {
     /// Create a new generation cost.
+    #[must_use]
     pub fn new(amount: f64, currency: &str) -> Self {
         Self {
             amount,

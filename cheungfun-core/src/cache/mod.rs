@@ -134,11 +134,13 @@ impl PipelineCache for UnifiedCache {
 
 impl UnifiedCache {
     /// Create a new memory cache.
+    #[must_use]
     pub fn memory() -> Self {
         UnifiedCache::Memory(MemoryCache::new())
     }
 
     /// Create a new memory cache with custom configuration.
+    #[must_use]
     pub fn memory_with_config(default_ttl: Duration, max_size: usize) -> Self {
         UnifiedCache::Memory(MemoryCache::with_config(default_ttl, max_size))
     }

@@ -111,6 +111,7 @@ impl Document {
     ///     .metadata("author", "John Doe")
     ///     .build();
     /// ```
+    #[must_use]
     pub fn builder() -> DocumentBuilder {
         DocumentBuilder::new()
     }
@@ -131,12 +132,14 @@ impl Document {
     }
 
     /// Set the embedding for this document.
+    #[must_use]
     pub fn with_embedding(mut self, embedding: Vec<f32>) -> Self {
         self.embedding = Some(embedding);
         self
     }
 
     /// Get metadata value by key.
+    #[must_use]
     pub fn get_metadata(&self, key: &str) -> Option<&serde_json::Value> {
         self.metadata.get(key)
     }
@@ -147,16 +150,19 @@ impl Document {
     }
 
     /// Check if the document has an embedding.
+    #[must_use]
     pub fn has_embedding(&self) -> bool {
         self.embedding.is_some()
     }
 
     /// Get the document size in characters.
+    #[must_use]
     pub fn size(&self) -> usize {
         self.content.len()
     }
 
     /// Check if the document is empty.
+    #[must_use]
     pub fn is_empty(&self) -> bool {
         self.content.is_empty()
     }
@@ -173,11 +179,13 @@ pub struct DocumentBuilder {
 
 impl DocumentBuilder {
     /// Create a new document builder.
+    #[must_use]
     pub fn new() -> Self {
         Self::default()
     }
 
     /// Set the document ID.
+    #[must_use]
     pub fn id(mut self, id: Uuid) -> Self {
         self.id = Some(id);
         self
@@ -200,6 +208,7 @@ impl DocumentBuilder {
     }
 
     /// Set the document embedding.
+    #[must_use]
     pub fn embedding(mut self, embedding: Vec<f32>) -> Self {
         self.embedding = Some(embedding);
         self
