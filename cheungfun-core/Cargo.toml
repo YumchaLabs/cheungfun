@@ -22,6 +22,7 @@ thiserror = { workspace = true }
 serde = { workspace = true }
 serde_json = { workspace = true }
 uuid = { workspace = true }
+bincode = { workspace = true }
 
 # Streaming and futures
 futures = { workspace = true }
@@ -40,6 +41,9 @@ siumai = { workspace = true }
 
 # Logging
 tracing = { workspace = true }
+
+# Caching
+cached = { workspace = true }
 
 [dev-dependencies]
 # Testing utilities

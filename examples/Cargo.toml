@@ -33,6 +33,7 @@ uuid = { workspace = true }
 siumai = { workspace = true }
 serde = { workspace = true }
 serde_json = { workspace = true }
+bincode = { workspace = true }
 tempfile = "3.20"
 
 # Performance testing dependencies
@@ -222,6 +223,19 @@ required-features = ["candle-cuda"]
 name = "metal_embedder_demo"
 path = "07_gpu_acceleration/metal_embedder_demo.rs"
 required-features = ["candle-metal"]
+
+# === Caching Examples ===
+# Caching functionality demonstration
+[[bin]]
+name = "caching_demo"
+path = "caching_demo.rs"
+required-features = ["basic-examples"]
+
+# Pipeline-level caching demonstration
+[[bin]]
+name = "pipeline_caching_demo"
+path = "pipeline_caching_demo.rs"
+required-features = ["basic-examples"]
 
 # === Utility Examples ===
 # List all available examples and their features

@@ -5,6 +5,7 @@
 //! interface for different implementations while maintaining type safety
 //! and async support.
 
+pub mod cache;
 pub mod embedder;
 pub mod generator;
 pub mod loader;
@@ -14,6 +15,7 @@ pub mod storage;
 pub mod transformer;
 
 // Re-export all traits for convenience
+pub use cache::*;
 pub use embedder::*;
 pub use generator::*;
 pub use loader::*;

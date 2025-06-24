@@ -3,7 +3,8 @@
 use async_trait::async_trait;
 use cheungfun_core::{
     Document, IndexingProgress, IndexingStats, Node, Result as CoreResult,
-    traits::{Embedder, IndexingPipeline, Loader, NodeTransformer, Transformer, VectorStore},
+    cache::UnifiedCache,
+    traits::{Embedder, IndexingPipeline, Loader, NodeTransformer, PipelineCache, Transformer, VectorStore},
 };
 use futures::future::join_all;
 use std::sync::Arc;
@@ -26,6 +27,10 @@ pub struct PipelineConfig {
     pub operation_timeout_seconds: Option<u64>,
     /// Whether to enable progress reporting.
     pub enable_progress_reporting: bool,
+    /// Whether to enable caching for embeddings and nodes.
+    pub enable_caching: bool,
+    /// Default TTL for cache entries (in seconds).
+    pub cache_ttl_seconds: u64,
 }
 
 impl Default for PipelineConfig {
@@ -36,6 +41,8 @@ impl Default for PipelineConfig {
             continue_on_error: true,
             operation_timeout_seconds: Some(300), // 5 minutes
             enable_progress_reporting: true,
+            enable_caching: true,
+            cache_ttl_seconds: 3600, // 1 hour
         }
     }
 }
@@ -85,6 +92,8 @@ pub struct DefaultIndexingPipeline {
     embedder: Option<Arc<dyn Embedder>>,
     /// Vector store for persisting nodes.
     vector_store: Option<Arc<dyn VectorStore>>,
+    /// Cache for embeddings and processed nodes.
+    cache: Option<UnifiedCache>,
     /// Pipeline configuration.
     config: PipelineConfig,
 }
@@ -155,22 +164,17 @@ impl DefaultIndexingPipeline {
         Ok(all_nodes)
     }
 
-    /// Generate embeddings for nodes.
+    /// Generate embeddings for nodes with caching support.
     async fn generate_embeddings(&self, mut nodes: Vec<Node>) -> Result<Vec<Node>> {
         if let Some(embedder) = &self.embedder {
             info!("Generating embeddings for {} nodes", nodes.len());
 
-            // Extract text content for embedding
-            let texts: Vec<&str> = nodes.iter().map(|node| node.content.as_str()).collect();
-
-            // Generate embeddings in batches
-            let embeddings = embedder.embed_batch(texts).await.map_err(|e| {
-                IndexingError::pipeline(format!("Embedding generation failed: {}", e))
-            })?;
-
-            // Assign embeddings to nodes
-            for (node, embedding) in nodes.iter_mut().zip(embeddings.into_iter()) {
-                node.embedding = Some(embedding);
+            if self.config.enable_caching && self.cache.is_some() {
+                // Use cache-aware embedding generation
+                self.generate_embeddings_with_cache(&mut nodes, embedder).await?;
+            } else {
+                // Direct embedding generation without cache
+                self.generate_embeddings_direct(&mut nodes, embedder).await?;
             }
 
             info!("Generated embeddings for {} nodes", nodes.len());
@@ -179,6 +183,120 @@ impl DefaultIndexingPipeline {
         }
 
         Ok(nodes)
+    }
+
+    /// Generate embeddings with cache support.
+    async fn generate_embeddings_with_cache(
+        &self,
+        nodes: &mut [Node],
+        embedder: &Arc<dyn Embedder>,
+    ) -> Result<()> {
+        let cache = self.cache.as_ref().unwrap();
+        let ttl = Duration::from_secs(self.config.cache_ttl_seconds);
+
+        let mut cache_hits = 0;
+        let mut cache_misses = 0;
+        let mut texts_to_embed = Vec::new();
+        let mut indices_to_embed = Vec::new();
+        let mut cached_embeddings = Vec::new();
+
+        // First pass: check cache and collect data
+        for (index, node) in nodes.iter().enumerate() {
+            let cache_key = cheungfun_core::traits::CacheKeyGenerator::embedding_key(
+                &node.content,
+                "default", // TODO: Use actual model name
+                None,
+            );
+
+            match cache.get_embedding(&cache_key).await {
+                Ok(Some(cached_embedding)) => {
+                    cached_embeddings.push((index, cached_embedding));
+                    cache_hits += 1;
+                    debug!("Cache hit for node {}: {}", index, &cache_key[..16]);
+                }
+                Ok(None) => {
+                    texts_to_embed.push(node.content.clone());
+                    indices_to_embed.push(index);
+                    cache_misses += 1;
+                    debug!("Cache miss for node {}: {}", index, &cache_key[..16]);
+                }
+                Err(e) => {
+                    warn!("Cache error for node {}: {}", index, e);
+                    texts_to_embed.push(node.content.clone());
+                    indices_to_embed.push(index);
+                    cache_misses += 1;
+                }
+            }
+        }
+
+        // Second pass: set cached embeddings
+        for (index, embedding) in cached_embeddings {
+            nodes[index].embedding = Some(embedding);
+        }
+
+        info!(
+            "Cache statistics: {} hits, {} misses ({:.1}% hit rate)",
+            cache_hits,
+            cache_misses,
+            if cache_hits + cache_misses > 0 {
+                (cache_hits as f64 / (cache_hits + cache_misses) as f64) * 100.0
+            } else {
+                0.0
+            }
+        );
+
+        // Generate embeddings for cache misses
+        if !texts_to_embed.is_empty() {
+            debug!("Generating {} new embeddings", texts_to_embed.len());
+
+            let text_refs: Vec<&str> = texts_to_embed.iter().map(|s| s.as_str()).collect();
+            let new_embeddings = embedder.embed_batch(text_refs).await.map_err(|e| {
+                IndexingError::pipeline(format!("Embedding generation failed: {}", e))
+            })?;
+
+            // Store new embeddings in cache and assign to nodes
+            for (node_index, embedding) in indices_to_embed.iter().zip(new_embeddings.iter()) {
+                // Assign to node
+                nodes[*node_index].embedding = Some(embedding.clone());
+
+                // Cache the embedding
+                let cache_key = cheungfun_core::traits::CacheKeyGenerator::embedding_key(
+                    &nodes[*node_index].content,
+                    "default", // TODO: Use actual model name
+                    None,
+                );
+
+                if let Err(e) = cache.put_embedding(&cache_key, embedding.clone(), ttl).await {
+                    warn!("Failed to cache embedding for node {}: {}", node_index, e);
+                }
+            }
+
+            debug!("Cached {} new embeddings", new_embeddings.len());
+        }
+
+        Ok(())
+    }
+
+    /// Generate embeddings directly without cache.
+    async fn generate_embeddings_direct(
+        &self,
+        nodes: &mut [Node],
+        embedder: &Arc<dyn Embedder>,
+    ) -> Result<()> {
+        // Extract text content for embedding
+        let texts: Vec<&str> = nodes.iter().map(|node| node.content.as_str()).collect();
+
+        // Generate embeddings in batches
+        let embeddings = embedder.embed_batch(texts).await.map_err(|e| {
+            IndexingError::pipeline(format!("Embedding generation failed: {}", e))
+        })?;
+
+        // Assign embeddings to nodes
+        for (node, embedding) in nodes.iter_mut().zip(embeddings.into_iter()) {
+            node.embedding = Some(embedding);
+        }
+
+        Ok(())
     }
 
     /// Store nodes in vector database.
@@ -430,6 +548,7 @@ pub struct PipelineBuilder {
     node_transformers: Vec<Arc<dyn NodeTransformer>>,
     embedder: Option<Arc<dyn Embedder>>,
     vector_store: Option<Arc<dyn VectorStore>>,
+    cache: Option<UnifiedCache>,
     config: Option<PipelineConfig>,
 }
 
@@ -469,6 +588,12 @@ impl PipelineBuilder {
         self
     }
 
+    /// Set the cache for embeddings and processed nodes.
+    pub fn with_cache(mut self, cache: UnifiedCache) -> Self {
+        self.cache = Some(cache);
+        self
+    }
+
     /// Set the pipeline configuration.
     pub fn with_config(mut self, config: PipelineConfig) -> Self {
         self.config = Some(config);
@@ -495,6 +620,7 @@ impl PipelineBuilder {
             node_transformers: self.node_transformers,
             embedder: self.embedder,
             vector_store: self.vector_store,
+            cache: self.cache,
             config,
         })
     }

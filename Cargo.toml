@@ -61,6 +61,10 @@ rand = "0.8"
 # Serialization and config
 toml = "0.8"
 config = "0.15"
+bincode = "1.3"
+
+# Caching
+cached = { version = "0.54", features = ["disk_store", "async"] }
 
 # Document processing
 pdf-extract = "0.9"

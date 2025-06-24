@@ -45,6 +45,7 @@ pub mod prelude;
 
 // Core modules
 pub mod builder;
+pub mod cache;
 pub mod config;
 pub mod error;
 pub mod factory;
