@@ -34,14 +34,14 @@ keywords = ["ai", "llm", "rag"]
 
 [workspace.dependencies]
 # Core dependencies
-siumai = "0.4.0"
-tokio = { version = "1.45", features = ["rt-multi-thread", "time", "macros"] }
+siumai = "0.8.0"
+tokio = { version = "1.47", features = ["rt-multi-thread", "time", "macros"] }
 serde = { version = "1.0", features = ["derive"] }
 serde_json = "1.0"
 anyhow = "1.0"
 thiserror = "2.0"
 async-trait = "0.1"
-uuid = { version = "1.17", features = ["v4", "serde"] }
+uuid = { version = "1.18", features = ["v4", "serde"] }
 tracing = "0.1"
 tracing-subscriber = { version = "0.3", features = ["env-filter"] }
 
@@ -59,22 +59,22 @@ itertools = "0.14"
 rand = "0.8"
 
 # Serialization and config
-toml = "0.8"
+toml = "0.9"
 config = "0.15"
-bincode = "1.3"
+bincode = { version = "2", features = ["serde"] }
 
 # Caching
-cached = { version = "0.54", features = ["disk_store", "async"] }
+cached = { version = "0.56", features = ["disk_store", "async"] }
 
 # Performance optimization
-rayon = "1.8"
+rayon = "1.11"
 num_cpus = "1.16"
 
 # Document processing
 pdf-extract = "0.9"
 docx-rs = "0.4"
 csv = "1.3"
-scraper = "0.23"
+scraper = "0.24"
 
 # HTTP and networking
 reqwest = { version = "0.12", features = ["json", "stream"] }
@@ -94,43 +94,43 @@ candle-nn = "0.9"
 candle-transformers = "0.9"
 
 # HuggingFace Integration
-hf-hub = { version = "0.3", features = ["tokio"] }
-tokenizers = "0.20"
+hf-hub = { version = "0.4", features = ["tokio"] }
+tokenizers = "0.21"
 
 # Alternative ML (optional) - disabled for now due to compatibility issues
 # ort = "2.0"
 # faiss = "0.12"
 
 # Search and indexing
-tantivy = "0.24"
+tantivy = "0.25"
 
 # Vector stores
-qdrant-client = { version = "1.14", features = ["serde"] }
+qdrant-client = { version = "1.15", features = ["serde"] }
 
 # MCP (Model Context Protocol)
-rmcp = "0.1"
-schemars = "0.8"
+rmcp = "0.6"
+schemars = "1"
 
 # Multimodal processing
 image = "0.25"
 imageproc = "0.25"
-rodio = "0.19"
+rodio = "0.21"
 hound = "3.5"
 symphonia = "0.5"
 ffmpeg-next = "7.0"
-infer = "0.16"
+infer = "0.19"
 base64 = "0.22"
 sha2 = "0.10"
 path-absolutize = "3.1"
 
 # Workflow and training
-petgraph = "0.6"
+petgraph = "0.8"
 
 # Cloud storage
 aws-sdk-s3 = "1.0"
-google-cloud-storage = "0.20"
-azure_storage = "0.20"
-azure_storage_blobs = "0.20"
+google-cloud-storage = "0.24"
+azure_storage = "0.21"
+azure_storage_blobs = "0.21"
 
 # Streaming and messaging
 rdkafka = "0.37"
@@ -148,8 +148,8 @@ mockall = "0.13"
 test-case = "3.3"
 pretty_assertions = "1.4"
 temp-dir = "0.1"
-tempfile = "3.8"
-criterion = "0.6"
+tempfile = "3.21"
+criterion = "0.7"
 
 [workspace.lints.rust]
 unsafe_code = "forbid"

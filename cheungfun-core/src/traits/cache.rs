@@ -247,11 +247,11 @@ pub trait PipelineCacheExt: PipelineCache {
     async fn get_data<T>(&self, key: &str) -> std::result::Result<Option<T>, Self::Error>
     where
         T: for<'de> Deserialize<'de> + Send,
-        Self::Error: From<bincode::Error>,
+        Self::Error: From<bincode::error::DecodeError>,
     {
         match self.get_data_bytes(key).await? {
-            Some(bytes) => match bincode::deserialize(&bytes) {
-                Ok(data) => Ok(Some(data)),
+            Some(bytes) => match bincode::serde::decode_from_slice(&bytes, bincode::config::standard()) {
+                Ok((data, _)) => Ok(Some(data)),
                 Err(e) => Err(Self::Error::from(e)),
             },
             None => Ok(None),
@@ -274,9 +274,9 @@ pub trait PipelineCacheExt: PipelineCache {
     ) -> std::result::Result<(), Self::Error>
     where
         T: Serialize + Send + Sync,
-        Self::Error: From<bincode::Error>,
+        Self::Error: From<bincode::error::EncodeError>,
     {
-        let bytes = bincode::serialize(data).map_err(Self::Error::from)?;
+        let bytes = bincode::serde::encode_to_vec(data, bincode::config::standard()).map_err(Self::Error::from)?;
         self.put_data_bytes(key, bytes, ttl).await
     }
 }
@@ -445,7 +445,7 @@ impl CacheKeyGenerator {
         use std::collections::hash_map::DefaultHasher;
         use std::hash::{Hash, Hasher};
 
-        let serialized = bincode::serialize(data)
+        let serialized = bincode::serde::encode_to_vec(data, bincode::config::standard())
             .map_err(|e| Box::new(e) as Box<dyn std::error::Error + Send + Sync>)?;
         let mut hasher = DefaultHasher::new();
         serialized.hash(&mut hasher);

@@ -700,7 +700,7 @@ where
                     item.update_access();
 
                     // Deserialize from prefetch cache
-                    if let Ok(embedding) = bincode::deserialize::<Vec<f32>>(&item.data) {
+                    if let Ok((embedding, _)) = bincode::serde::decode_from_slice::<Vec<f32>, _>(&item.data, bincode::config::standard()) {
                         let mut metrics = self.metrics.write().await;
                         metrics.prefetch_hits += 1;
                         metrics.total_operations += 1;
@@ -735,7 +735,7 @@ where
 
         // Update prefetch cache if enabled
         if self.config.enable_prefetching && result.is_ok() {
-            if let Ok(serialized) = bincode::serialize(&embedding) {
+            if let Ok(serialized) = bincode::serde::encode_to_vec(&embedding, bincode::config::standard()) {
                 let mut prefetch_cache = self.prefetch_cache.write().await;
                 let item = CachedItem {
                     data: serialized,

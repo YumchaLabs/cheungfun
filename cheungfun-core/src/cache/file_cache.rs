@@ -445,8 +445,8 @@ impl PipelineCache for FileCache {
             let file_path = self.cache_dir.join(&metadata.file_path);
             match fs::read(&file_path).await {
                 Ok(content) => {
-                    match bincode::deserialize::<CacheEntryData<Vec<f32>>>(&content) {
-                        Ok(entry_data) => {
+                    match bincode::serde::decode_from_slice::<CacheEntryData<Vec<f32>>, _>(&content, bincode::config::standard()) {
+                        Ok((entry_data, _)) => {
                             if entry_data.is_expired() {
                                 // Double-check expiration
                                 let mut index = self.index.write().await;
@@ -523,7 +523,7 @@ impl PipelineCache for FileCache {
 
         // Create entry data
         let entry_data = CacheEntryData::new(embedding, ttl);
-        let serialized = bincode::serialize(&entry_data)
+        let serialized = bincode::serde::encode_to_vec(&entry_data, bincode::config::standard())
             .map_err(|e| CheungfunError::internal(format!("Failed to serialize embedding: {e}")))?;
 
         // Check entry size
@@ -604,8 +604,8 @@ impl PipelineCache for FileCache {
             let file_path = self.cache_dir.join(&metadata.file_path);
             match fs::read(&file_path).await {
                 Ok(content) => {
-                    match bincode::deserialize::<CacheEntryData<Vec<Node>>>(&content) {
-                        Ok(entry_data) => {
+                    match bincode::serde::decode_from_slice::<CacheEntryData<Vec<Node>>, _>(&content, bincode::config::standard()) {
+                        Ok((entry_data, _)) => {
                             if entry_data.is_expired() {
                                 // Double-check expiration
                                 let mut index = self.index.write().await;
@@ -678,7 +678,7 @@ impl PipelineCache for FileCache {
 
         // Create entry data
         let entry_data = CacheEntryData::new(nodes, ttl);
-        let serialized = bincode::serialize(&entry_data)
+        let serialized = bincode::serde::encode_to_vec(&entry_data, bincode::config::standard())
             .map_err(|e| CheungfunError::internal(format!("Failed to serialize nodes: {e}")))?;
 
         // Check entry size
@@ -759,8 +759,8 @@ impl PipelineCache for FileCache {
             let file_path = self.cache_dir.join(&metadata.file_path);
             match fs::read(&file_path).await {
                 Ok(content) => {
-                    match bincode::deserialize::<CacheEntryData<Vec<u8>>>(&content) {
-                        Ok(entry_data) => {
+                    match bincode::serde::decode_from_slice::<CacheEntryData<Vec<u8>>, _>(&content, bincode::config::standard()) {
+                        Ok((entry_data, _)) => {
                             if entry_data.is_expired() {
                                 // Double-check expiration
                                 let mut index = self.index.write().await;
@@ -833,7 +833,7 @@ impl PipelineCache for FileCache {
 
         // Create entry data
         let entry_data = CacheEntryData::new(data_bytes, ttl);
-        let serialized = bincode::serialize(&entry_data)
+        let serialized = bincode::serde::encode_to_vec(&entry_data, bincode::config::standard())
             .map_err(|e| CheungfunError::internal(format!("Failed to serialize data: {e}")))?;
 
         // Check entry size
