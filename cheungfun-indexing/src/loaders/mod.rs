@@ -3,11 +3,13 @@
 //! This module provides implementations of the `Loader` trait for different
 //! data sources including files, directories, web content, and more.
 
+pub mod code;
 pub mod directory;
 pub mod file;
 pub mod filter;
 pub mod web;
 
+pub use code::{CodeLoader, CodeLoaderConfig, CodeMetadata, ProgrammingLanguage};
 pub use directory::DirectoryLoader;
 pub use file::FileLoader;
 pub use filter::{FileFilter, Filter, FilterConfig};
@@ -40,6 +42,31 @@ pub mod utils {
             "json" => Some("application/json".to_string()),
             "xml" => Some("application/xml".to_string()),
             "rtf" => Some("application/rtf".to_string()),
+            // Programming languages
+            "rs" => Some("text/x-rust".to_string()),
+            "py" | "pyw" => Some("text/x-python".to_string()),
+            "js" | "mjs" => Some("text/javascript".to_string()),
+            "ts" | "tsx" => Some("text/typescript".to_string()),
+            "java" => Some("text/x-java".to_string()),
+            "cs" => Some("text/x-csharp".to_string()),
+            "cpp" | "cxx" | "cc" => Some("text/x-c++".to_string()),
+            "c" | "h" => Some("text/x-c".to_string()),
+            "go" => Some("text/x-go".to_string()),
+            "rb" => Some("text/x-ruby".to_string()),
+            "php" => Some("text/x-php".to_string()),
+            "swift" => Some("text/x-swift".to_string()),
+            "kt" | "kts" => Some("text/x-kotlin".to_string()),
+            "scala" | "sc" => Some("text/x-scala".to_string()),
+            "hs" => Some("text/x-haskell".to_string()),
+            "clj" | "cljs" => Some("text/x-clojure".to_string()),
+            "erl" => Some("text/x-erlang".to_string()),
+            "ex" | "exs" => Some("text/x-elixir".to_string()),
+            "lua" => Some("text/x-lua".to_string()),
+            "sh" | "bash" | "zsh" | "fish" => Some("text/x-shellscript".to_string()),
+            "sql" => Some("text/x-sql".to_string()),
+            "css" => Some("text/css".to_string()),
+            "yaml" | "yml" => Some("text/x-yaml".to_string()),
+            "toml" => Some("text/x-toml".to_string()),
             _ => None,
         }
     }

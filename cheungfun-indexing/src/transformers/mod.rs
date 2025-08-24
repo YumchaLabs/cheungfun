@@ -3,9 +3,11 @@
 //! This module provides implementations of the `Transformer` and `NodeTransformer`
 //! traits for various document processing tasks.
 
+pub mod code_splitter;
 pub mod metadata_extractor;
 pub mod text_splitter;
 
+pub use code_splitter::{CodeSplitter, CodeSplitterConfig};
 pub use metadata_extractor::MetadataExtractor;
 pub use text_splitter::TextSplitter;
 

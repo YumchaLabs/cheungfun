@@ -35,6 +35,18 @@ text-splitter = { workspace = true }
 tiktoken-rs = { workspace = true }
 regex = { workspace = true }
 
+# Tree-sitter for AST parsing
+tree-sitter = "0.25"
+tree-sitter-rust = "0.24"
+tree-sitter-python = "0.23"
+tree-sitter-javascript = "0.23"
+tree-sitter-typescript = "0.23"
+tree-sitter-java = "0.23"
+tree-sitter-c = "0.24"
+tree-sitter-cpp = "0.23"
+tree-sitter-go = "0.23"
+tree-sitter-c-sharp = "0.23"
+
 # Document processing
 pdf-extract = { workspace = true }
 docx-rs = { workspace = true }
@@ -51,6 +63,7 @@ globset = "0.4"
 
 # Logging
 tracing = { workspace = true }
+tracing-subscriber = "0.3"
 
 [dev-dependencies]
 tokio-test = "0.4"

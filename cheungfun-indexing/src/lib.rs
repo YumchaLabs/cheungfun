@@ -38,6 +38,7 @@
 
 pub mod error;
 pub mod loaders;
+pub mod parsers;
 pub mod pipeline;
 pub mod transformers;
 
@@ -45,6 +46,7 @@ pub mod transformers;
 pub mod prelude {
     pub use crate::error::*;
     pub use crate::loaders::*;
+    pub use crate::parsers::*;
     pub use crate::pipeline::*;
     pub use crate::transformers::*;
 
