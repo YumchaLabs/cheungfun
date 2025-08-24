@@ -31,8 +31,6 @@ pub struct PerformanceCache<T> {
     metrics: Arc<RwLock<PerformanceMetrics>>,
     /// Prefetch cache for frequently accessed items
     prefetch_cache: Arc<RwLock<HashMap<String, CachedItem>>>,
-    /// Rayon thread pool for CPU-intensive operations
-    rayon_pool: Option<rayon::ThreadPool>,
 }
 
 /// Configuration for performance optimizations.
@@ -219,35 +217,13 @@ where
             config.cpu_intensive_threshold
         );
 
-        // Initialize Rayon thread pool if enabled
-        let rayon_pool = if config.enable_rayon {
-            let pool_size = config.rayon_thread_pool_size.unwrap_or_else(num_cpus::get);
-            match rayon::ThreadPoolBuilder::new()
-                .num_threads(pool_size)
-                .build()
-            {
-                Ok(pool) => {
-                    info!("Created Rayon thread pool with {} threads", pool_size);
-                    Some(pool)
-                }
-                Err(e) => {
-                    info!(
-                        "Failed to create Rayon thread pool: {}, falling back to global pool",
-                        e
-                    );
-                    None
-                }
-            }
-        } else {
-            None
-        };
+        // Note: Rayon thread pool initialization removed as it was unused
 
         Self {
             inner,
             config,
             metrics: Arc::new(RwLock::new(PerformanceMetrics::default())),
             prefetch_cache: Arc::new(RwLock::new(HashMap::new())),
-            rayon_pool,
         }
     }
 
@@ -340,67 +316,7 @@ where
         }
     }
 
-    /// Choose the optimal parallel processing strategy based on operation characteristics.
-    fn choose_parallel_strategy(
-        &self,
-        item_count: usize,
-        is_cpu_intensive: bool,
-    ) -> ParallelStrategy {
-        match self.config.parallel_strategy {
-            ParallelStrategy::TokioOnly => ParallelStrategy::TokioOnly,
-            ParallelStrategy::RayonOnly => ParallelStrategy::RayonOnly,
-            ParallelStrategy::Adaptive => {
-                if is_cpu_intensive && item_count >= self.config.cpu_intensive_threshold {
-                    ParallelStrategy::RayonOnly
-                } else if !is_cpu_intensive && item_count >= self.config.io_intensive_threshold {
-                    ParallelStrategy::TokioOnly
-                } else {
-                    ParallelStrategy::TokioOnly // Default for small batches
-                }
-            }
-            ParallelStrategy::Hybrid => {
-                if is_cpu_intensive {
-                    ParallelStrategy::RayonOnly
-                } else {
-                    ParallelStrategy::TokioOnly
-                }
-            }
-        }
-    }
-
-    /// Process embeddings using CPU-intensive parallel processing (Rayon).
-    /// This is a simplified version that avoids lifetime issues.
-    async fn process_embeddings_cpu_parallel_simple(
-        &self,
-        embeddings: Vec<Vec<f32>>,
-    ) -> Vec<Vec<f32>> {
-        let start_time = Instant::now();
-
-        // Simple parallel processing without custom operations
-        let results = tokio::task::spawn_blocking(move || {
-            embeddings
-                .into_par_iter()
-                .map(|embedding| {
-                    // Simple processing: normalize the embedding
-                    let sum: f32 = embedding.iter().sum();
-                    if sum != 0.0 {
-                        embedding.iter().map(|&x| x / sum).collect()
-                    } else {
-                        embedding
-                    }
-                })
-                .collect()
-        })
-        .await
-        .unwrap_or_else(|_| Vec::new());
-
-        // Update metrics
-        let mut metrics = self.metrics.write().await;
-        metrics.parallel_operations += 1;
-        metrics.total_time += start_time.elapsed();
-
-        results
-    }
+    // Note: Unused parallel processing methods removed
 
     /// Execute CPU-intensive batch operations using Rayon.
     async fn execute_cpu_batch<I, F, R>(&self, items: Vec<I>, operation: F) -> Vec<R>
@@ -700,7 +616,10 @@ where
                     item.update_access();
 
                     // Deserialize from prefetch cache
-                    if let Ok((embedding, _)) = bincode::serde::decode_from_slice::<Vec<f32>, _>(&item.data, bincode::config::standard()) {
+                    if let Ok((embedding, _)) = bincode::serde::decode_from_slice::<Vec<f32>, _>(
+                        &item.data,
+                        bincode::config::standard(),
+                    ) {
                         let mut metrics = self.metrics.write().await;
                         metrics.prefetch_hits += 1;
                         metrics.total_operations += 1;
@@ -735,7 +654,9 @@ where
 
         // Update prefetch cache if enabled
         if self.config.enable_prefetching && result.is_ok() {
-            if let Ok(serialized) = bincode::serde::encode_to_vec(&embedding, bincode::config::standard()) {
+            if let Ok(serialized) =
+                bincode::serde::encode_to_vec(&embedding, bincode::config::standard())
+            {
                 let mut prefetch_cache = self.prefetch_cache.write().await;
                 let item = CachedItem {
                     data: serialized,

@@ -250,10 +250,12 @@ pub trait PipelineCacheExt: PipelineCache {
         Self::Error: From<bincode::error::DecodeError>,
     {
         match self.get_data_bytes(key).await? {
-            Some(bytes) => match bincode::serde::decode_from_slice(&bytes, bincode::config::standard()) {
-                Ok((data, _)) => Ok(Some(data)),
-                Err(e) => Err(Self::Error::from(e)),
-            },
+            Some(bytes) => {
+                match bincode::serde::decode_from_slice(&bytes, bincode::config::standard()) {
+                    Ok((data, _)) => Ok(Some(data)),
+                    Err(e) => Err(Self::Error::from(e)),
+                }
+            }
             None => Ok(None),
         }
     }
@@ -276,7 +278,8 @@ pub trait PipelineCacheExt: PipelineCache {
         T: Serialize + Send + Sync,
         Self::Error: From<bincode::error::EncodeError>,
     {
-        let bytes = bincode::serde::encode_to_vec(data, bincode::config::standard()).map_err(Self::Error::from)?;
+        let bytes = bincode::serde::encode_to_vec(data, bincode::config::standard())
+            .map_err(Self::Error::from)?;
         self.put_data_bytes(key, bytes, ttl).await
     }
 }

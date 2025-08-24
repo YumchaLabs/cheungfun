@@ -4,7 +4,6 @@
 //! including intelligent cache key generation, batch operations, and cache warming.
 
 use async_trait::async_trait;
-use std::collections::HashMap;
 use std::sync::Arc;
 use std::time::Duration;
 use tracing::{debug, info};
@@ -181,10 +180,7 @@ impl PipelineCacheManager {
         CacheKeyGenerator::nodes_key(document_id, chunk_size, overlap)
     }
 
-    /// Generate cache key for query.
-    fn query_cache_key(&self, query: &str, params: &HashMap<String, String>) -> String {
-        CacheKeyGenerator::query_key(query, params)
-    }
+    // Note: Unused query cache key method removed
 }
 
 /// Trait for embedding cache operations with pipeline integration.

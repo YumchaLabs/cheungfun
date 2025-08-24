@@ -158,20 +158,6 @@ impl CacheEntryMetadata {
 
         now > self.created_at + self.ttl_seconds
     }
-
-    /// Get the remaining TTL for this entry.
-    fn remaining_ttl(&self) -> Duration {
-        let now = SystemTime::now()
-            .duration_since(UNIX_EPOCH)
-            .unwrap_or_default()
-            .as_secs();
-
-        if self.is_expired() {
-            Duration::ZERO
-        } else {
-            Duration::from_secs(self.created_at + self.ttl_seconds - now)
-        }
-    }
 }
 
 impl FileCache {
@@ -445,7 +431,10 @@ impl PipelineCache for FileCache {
             let file_path = self.cache_dir.join(&metadata.file_path);
             match fs::read(&file_path).await {
                 Ok(content) => {
-                    match bincode::serde::decode_from_slice::<CacheEntryData<Vec<f32>>, _>(&content, bincode::config::standard()) {
+                    match bincode::serde::decode_from_slice::<CacheEntryData<Vec<f32>>, _>(
+                        &content,
+                        bincode::config::standard(),
+                    ) {
                         Ok((entry_data, _)) => {
                             if entry_data.is_expired() {
                                 // Double-check expiration
@@ -604,7 +593,10 @@ impl PipelineCache for FileCache {
             let file_path = self.cache_dir.join(&metadata.file_path);
             match fs::read(&file_path).await {
                 Ok(content) => {
-                    match bincode::serde::decode_from_slice::<CacheEntryData<Vec<Node>>, _>(&content, bincode::config::standard()) {
+                    match bincode::serde::decode_from_slice::<CacheEntryData<Vec<Node>>, _>(
+                        &content,
+                        bincode::config::standard(),
+                    ) {
                         Ok((entry_data, _)) => {
                             if entry_data.is_expired() {
                                 // Double-check expiration
@@ -759,7 +751,10 @@ impl PipelineCache for FileCache {
             let file_path = self.cache_dir.join(&metadata.file_path);
             match fs::read(&file_path).await {
                 Ok(content) => {
-                    match bincode::serde::decode_from_slice::<CacheEntryData<Vec<u8>>, _>(&content, bincode::config::standard()) {
+                    match bincode::serde::decode_from_slice::<CacheEntryData<Vec<u8>>, _>(
+                        &content,
+                        bincode::config::standard(),
+                    ) {
                         Ok((entry_data, _)) => {
                             if entry_data.is_expired() {
                                 // Double-check expiration

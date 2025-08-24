@@ -62,8 +62,7 @@ pub struct MemoryCache {
     data_cache: Arc<RwLock<HashMap<String, CacheEntry<Vec<u8>>>>>,
     /// Cache statistics
     stats: Arc<RwLock<CacheStats>>,
-    /// Default TTL for cache entries
-    default_ttl: Duration,
+
     /// Maximum cache size (number of entries)
     max_size: usize,
 }
@@ -93,15 +92,6 @@ impl<T> CacheEntry<T> {
     fn is_expired(&self) -> bool {
         self.created_at.elapsed() > self.ttl
     }
-
-    /// Get the remaining TTL for this entry.
-    fn remaining_ttl(&self) -> Duration {
-        if self.is_expired() {
-            Duration::ZERO
-        } else {
-            self.ttl - self.created_at.elapsed()
-        }
-    }
 }
 
 impl MemoryCache {
@@ -113,24 +103,22 @@ impl MemoryCache {
             nodes_cache: Arc::new(RwLock::new(HashMap::new())),
             data_cache: Arc::new(RwLock::new(HashMap::new())),
             stats: Arc::new(RwLock::new(CacheStats::default())),
-            default_ttl: Duration::from_secs(3600), // 1 hour default
-            max_size: 10000,                        // Default max 10k entries
+            max_size: 10000, // Default max 10k entries
         }
     }
 
     /// Create a new memory cache with custom configuration.
     ///
     /// # Arguments
-    /// * `default_ttl` - Default TTL for cache entries
+    /// * `_default_ttl` - Default TTL for cache entries (currently unused)
     /// * `max_size` - Maximum number of entries per cache type
     #[must_use]
-    pub fn with_config(default_ttl: Duration, max_size: usize) -> Self {
+    pub fn with_config(_default_ttl: Duration, max_size: usize) -> Self {
         Self {
             embedding_cache: Arc::new(RwLock::new(HashMap::new())),
             nodes_cache: Arc::new(RwLock::new(HashMap::new())),
             data_cache: Arc::new(RwLock::new(HashMap::new())),
             stats: Arc::new(RwLock::new(CacheStats::default())),
-            default_ttl,
             max_size,
         }
     }
