@@ -214,8 +214,10 @@ impl McpClient {
 
             let tool = RmcpTool {
                 name: name.into(),
-                description: description.into(),
+                description: Some(description.into()),
                 input_schema: Arc::new(input_schema.as_object().unwrap().clone()),
+                output_schema: None,
+                annotations: None,
             };
 
             tools.push(tool);

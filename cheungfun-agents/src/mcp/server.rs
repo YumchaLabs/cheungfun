@@ -188,7 +188,7 @@ pub struct McpServerStatus {
 impl ServerHandler for McpServerHandler {
     async fn list_tools(
         &self,
-        _request: Option<rmcp::model::PaginatedRequestParamInner>,
+        _request: Option<rmcp::model::PaginatedRequestParam>,
         _context: RequestContext<RoleServer>,
     ) -> std::result::Result<ListToolsResult, rmcp::model::ErrorData> {
         debug!("Handling list_tools request");
@@ -198,8 +198,10 @@ impl ServerHandler for McpServerHandler {
             .into_iter()
             .map(|schema| RmcpTool {
                 name: schema.name.into(),
-                description: schema.description.into(),
+                description: Some(schema.description.into()),
                 input_schema: Arc::new(schema.input_schema.as_object().unwrap().clone()),
+                output_schema: None,
+                annotations: None,
             })
             .collect();
 
@@ -238,6 +240,7 @@ impl ServerHandler for McpServerHandler {
 
                     Ok(CallToolResult {
                         content: vec![Content::text(result.content)],
+                        structured_content: None,
                         is_error: Some(false),
                     })
                 } else {
@@ -250,6 +253,7 @@ impl ServerHandler for McpServerHandler {
                         content: vec![Content::text(
                             result.error.unwrap_or_else(|| "Unknown error".to_string()),
                         )],
+                        structured_content: None,
                         is_error: Some(true),
                     })
                 }

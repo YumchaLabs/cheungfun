@@ -261,8 +261,8 @@ impl AgentError {
 }
 
 // Convert from rmcp errors
-impl From<rmcp::Error> for AgentError {
-    fn from(err: rmcp::Error) -> Self {
+impl From<rmcp::ErrorData> for AgentError {
+    fn from(err: rmcp::ErrorData) -> Self {
         Self::mcp(format!("RMCP error: {err}"))
     }
 }
