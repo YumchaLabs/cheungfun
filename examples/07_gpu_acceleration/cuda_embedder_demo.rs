@@ -30,10 +30,10 @@
 //! nvidia-smi
 //! ```
 
-use cheungfun_core::{Result, traits::Embedder};
+use cheungfun_core::{traits::Embedder, Result};
 use cheungfun_integrations::CandleEmbedder;
 use std::time::Instant;
-use tracing::{Level, info, warn};
+use tracing::{info, warn, Level};
 
 #[tokio::main]
 async fn main() -> Result<()> {

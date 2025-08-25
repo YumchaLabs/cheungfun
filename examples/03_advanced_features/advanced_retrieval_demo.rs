@@ -6,7 +6,7 @@ use cheungfun::prelude::*;
 use cheungfun_query::advanced::*;
 use std::sync::Arc;
 use std::time::Duration;
-use tracing::{Level, info};
+use tracing::{info, Level};
 
 #[tokio::main]
 async fn main() -> Result<()> {

@@ -17,6 +17,10 @@ Cheungfun is a high-performance RAG (Retrieval-Augmented Generation) and AI appl
   - Optimized memory management
 - **🔧 Modular Architecture**: Clean separation of concerns with extensible design
 - **🌊 Streaming Processing**: Handle large-scale data with streaming indexing and querying
+- **💻 Advanced Code Indexing**: Tree-sitter AST parsing for 9+ programming languages
+  - Extract functions, classes, imports, comments, and complexity metrics
+  - Code-aware splitting that preserves syntactic boundaries
+  - Support for Rust, Python, JavaScript, TypeScript, Java, C#, C/C++, Go
 - **🛡️ Type Safety**: Leverage Rust's type system for runtime safety guarantees
 - **🔌 Unified LLM Interface**: Seamless integration with multiple LLM providers via [siumai](https://crates.io/crates/siumai)
 - **⚡ Async-First**: Built on tokio for high-performance async operations

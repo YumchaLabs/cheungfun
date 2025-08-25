@@ -6,9 +6,9 @@
 
 use async_trait::async_trait;
 use cheungfun_core::{
-    Result,
     traits::{DistanceMetric, StorageStats, VectorStore},
     types::{Node, Query, ScoredNode},
+    Result,
 };
 use std::collections::HashMap;
 use std::sync::{Arc, RwLock};

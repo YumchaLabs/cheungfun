@@ -21,7 +21,7 @@ use cheungfun_integrations::InMemoryVectorStore;
 use std::collections::HashMap;
 use std::sync::Arc;
 use tempfile::TempDir;
-use tracing::{Level, info};
+use tracing::{info, Level};
 use uuid::Uuid;
 
 #[tokio::main]
@@ -329,6 +329,7 @@ async fn demonstrate_advanced_features() -> Result<()> {
 }
 
 /// Mock embedder for demonstration
+#[derive(Debug)]
 struct MockEmbedder {
     dimension: usize,
 }

@@ -216,7 +216,7 @@ impl EmbeddingCache for InMemoryCache {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use tokio::time::{Duration, sleep};
+    use tokio::time::{sleep, Duration};
 
     #[tokio::test]
     async fn test_cache_key_creation() {

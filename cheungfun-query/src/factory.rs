@@ -6,7 +6,7 @@
 use async_trait::async_trait;
 use std::sync::Arc;
 
-use cheungfun_core::{Result, config::LlmConfig, factory::LlmFactory, traits::ResponseGenerator};
+use cheungfun_core::{config::LlmConfig, factory::LlmFactory, traits::ResponseGenerator, Result};
 use siumai::prelude::*;
 
 use crate::generator::{SiumaiGenerator, SiumaiGeneratorConfig};

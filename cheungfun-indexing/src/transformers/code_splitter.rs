@@ -5,7 +5,7 @@
 
 use crate::error::Result;
 use crate::loaders::ProgrammingLanguage;
-use cheungfun_core::{ChunkInfo, Document, Node, Result as CoreResult, traits::NodeTransformer};
+use cheungfun_core::{traits::NodeTransformer, ChunkInfo, Document, Node, Result as CoreResult};
 use tracing::debug;
 
 /// Configuration for code-aware splitting.

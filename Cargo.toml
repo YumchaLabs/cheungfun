@@ -9,6 +9,7 @@ members = [
     "cheungfun-integrations",
     "cheungfun-multimodal",
     "examples",
+    "tools",
 ]
 # "cheungfun-evaluation",
 # "cheungfun-workflow",
@@ -18,7 +19,7 @@ default-members = ["cheungfun", "cheungfun-*"]
 [workspace.package]
 version = "0.1.0"
 authors = ["Mingzhen Zhuang"]
-edition = "2024"
+edition = "2021"
 license = "MIT OR Apache-2.0"
 repository = "https://github.com/YumchaLabs/cheungfun"
 homepage = "https://github.com/YumchaLabs/cheungfun"

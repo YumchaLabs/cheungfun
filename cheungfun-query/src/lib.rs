@@ -55,6 +55,7 @@ pub mod advanced;
 pub mod engine;
 pub mod factory;
 pub mod generator;
+pub mod memory;
 pub mod pipeline;
 pub mod retriever;
 pub mod utils;
@@ -63,9 +64,14 @@ pub mod utils;
 pub mod prelude {
     pub use crate::engine::{
         QueryEngine, QueryEngineBuilder, QueryEngineConfig, QueryEngineOptions,
+        QueryRewriteStrategy,
     };
     pub use crate::factory::SiumaiLlmFactory;
     pub use crate::generator::{SiumaiGenerator, SiumaiGeneratorBuilder, SiumaiGeneratorConfig};
+    pub use crate::memory::{
+        ApproximateTokenCounter, BaseMemory, ChatMemoryBuffer, ChatMemoryConfig, MemoryStats,
+        TokenCounter,
+    };
     pub use crate::pipeline::{
         DefaultQueryPipeline, QueryOptions, QueryPipelineBuilder, QueryPipelineConfig,
         RetrievalOptions,

@@ -3,7 +3,7 @@
 //! This module provides specialized loading for source code files with enhanced
 //! metadata extraction using tree-sitter AST parsing.
 
-use crate::loaders::{LoaderConfig, utils};
+use crate::loaders::{utils, LoaderConfig};
 use crate::parsers::AstParser;
 use async_trait::async_trait;
 use cheungfun_core::Loader;

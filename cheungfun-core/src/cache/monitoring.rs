@@ -12,8 +12,8 @@ use std::time::{Duration, Instant, SystemTime, UNIX_EPOCH};
 use tokio::sync::RwLock;
 use tracing::{debug, error, info, warn};
 
-use crate::CheungfunError;
 use crate::traits::{CacheHealth, CacheStats, HealthStatus, PipelineCache};
+use crate::CheungfunError;
 
 /// Comprehensive cache monitoring system.
 ///

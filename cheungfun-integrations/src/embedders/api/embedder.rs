@@ -2,8 +2,8 @@
 
 use async_trait::async_trait;
 use cheungfun_core::{
-    Result as CoreResult,
     traits::{Embedder, EmbeddingStats},
+    Result as CoreResult,
 };
 use siumai::{
     providers::openai::{OpenAiConfig, OpenAiEmbeddings},

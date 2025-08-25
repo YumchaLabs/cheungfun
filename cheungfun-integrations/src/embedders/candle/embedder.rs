@@ -34,8 +34,8 @@
 
 use async_trait::async_trait;
 use cheungfun_core::{
-    Result,
     traits::{Embedder, EmbeddingStats},
+    Result,
 };
 
 use std::sync::Arc;

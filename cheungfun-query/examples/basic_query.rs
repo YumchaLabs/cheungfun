@@ -31,9 +31,9 @@ use std::collections::HashMap;
 use std::sync::Arc;
 
 use cheungfun_core::{
-    Result,
     traits::{Embedder, VectorStore},
     types::{Node, Query, ScoredNode},
+    Result,
 };
 use cheungfun_query::prelude::*;
 use siumai::prelude::*;

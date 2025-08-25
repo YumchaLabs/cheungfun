@@ -8,15 +8,15 @@
 //! 4. Display retrieved results
 
 use cheungfun_core::{
-    Result,
     traits::{Embedder, Retriever, Transformer, VectorStore},
     types::{Document, Query, SearchMode},
+    Result,
 };
 use cheungfun_indexing::prelude::{SplitterConfig, TextSplitter};
 use cheungfun_integrations::{CandleEmbedder, InMemoryVectorStore};
 use cheungfun_query::retriever::{VectorRetriever, VectorRetrieverConfig};
 use std::sync::Arc;
-use tracing::{Level, info};
+use tracing::{info, Level};
 
 #[tokio::main]
 async fn main() -> Result<()> {

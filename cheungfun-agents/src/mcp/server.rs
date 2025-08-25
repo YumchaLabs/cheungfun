@@ -5,12 +5,12 @@ use crate::{
     tool::{Tool, ToolContext, ToolRegistry},
 };
 use rmcp::{
-    ServerHandler,
     model::{
         CallToolRequestParam, CallToolResult, Content, Implementation, ListToolsResult, ServerInfo,
         Tool as RmcpTool,
     },
     service::{RequestContext, RoleServer},
+    ServerHandler,
 };
 use std::sync::Arc;
 use tracing::{debug, error, info, warn};

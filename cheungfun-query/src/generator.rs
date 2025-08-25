@@ -10,9 +10,9 @@ use std::pin::Pin;
 use tracing::{debug, info, instrument};
 
 use cheungfun_core::{
-    Result,
     traits::ResponseGenerator,
     types::{GeneratedResponse, GenerationOptions, ScoredNode, TokenUsage},
+    Result,
 };
 
 use siumai::prelude::*;

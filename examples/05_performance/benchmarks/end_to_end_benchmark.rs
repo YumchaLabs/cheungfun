@@ -30,7 +30,7 @@ use tracing::{info, warn};
 use uuid::Uuid;
 
 use cheungfun_examples::benchmark_framework::{
-    BenchmarkConfig, PerformanceMetrics, format_metrics, run_benchmark,
+    format_metrics, run_benchmark, BenchmarkConfig, PerformanceMetrics,
 };
 
 #[cfg(feature = "fastembed")]

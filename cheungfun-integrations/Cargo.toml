@@ -57,6 +57,13 @@ hnsw_rs = { version = "0.3", optional = true }
 # Qdrant vector database client
 qdrant-client = { workspace = true, optional = true }
 
+# Database storage (optional)
+sqlx = { version = "0.8", features = ["postgres", "sqlite", "runtime-tokio-rustls", "migrate", "uuid", "chrono", "json"], optional = true }
+redis = { version = "0.32", features = ["tokio-comp", "connection-manager"], optional = true }
+
+# Time handling
+chrono = { workspace = true }
+
 # Logging
 tracing = { workspace = true }
 
@@ -102,11 +109,17 @@ hnsw = ["dep:hnsw_rs"]
 # Qdrant vector database integration
 qdrant = ["dep:qdrant-client"]
 
+# Database storage integration
+storage = ["dep:sqlx", "dep:redis"]
+
 # Enable all embedding backends
 all-embedders = ["fastembed", "candle", "api"]
 
 # Enable all vector stores
 all-stores = ["qdrant", "hnsw"]
+
+# Enable all storage backends
+all-storage = ["storage", "qdrant"]
 
 # Memory-optimized vector store (always recommended)
 optimized-memory = []

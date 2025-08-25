@@ -29,9 +29,9 @@
 //! - `performance`: Enable all performance optimizations (simd + optimized-memory + hnsw)
 
 use cheungfun_core::{
-    DistanceMetric, Result,
     traits::VectorStore,
     types::{ChunkInfo, Node, Query},
+    DistanceMetric, Result,
 };
 use cheungfun_integrations::vector_stores::{
     memory::InMemoryVectorStore, memory_optimized::OptimizedInMemoryVectorStore,

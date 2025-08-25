@@ -5,13 +5,13 @@
 
 use async_trait::async_trait;
 use cheungfun_core::{
-    Result,
     traits::{StorageStats, VectorStore},
     types::{Node, Query, ScoredNode},
+    Result,
 };
 use qdrant_client::qdrant::{
-    DeletePointsBuilder, GetPointsBuilder, PointId, SearchPointsBuilder, UpsertPointsBuilder,
-    point_id::PointIdOptions,
+    point_id::PointIdOptions, DeletePointsBuilder, GetPointsBuilder, PointId, SearchPointsBuilder,
+    UpsertPointsBuilder,
 };
 use serde_json::Value;
 use std::collections::HashMap;

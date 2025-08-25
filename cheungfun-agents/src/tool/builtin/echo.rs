@@ -2,7 +2,7 @@
 
 use crate::{
     error::{AgentError, Result},
-    tool::{Tool, ToolContext, ToolResult, create_simple_schema, string_param},
+    tool::{create_simple_schema, string_param, Tool, ToolContext, ToolResult},
     types::ToolSchema,
 };
 use async_trait::async_trait;
@@ -110,12 +110,10 @@ mod tests {
         assert_eq!(schema.name, "echo");
         assert!(!schema.description.is_empty());
         assert!(!schema.dangerous);
-        assert!(
-            schema.input_schema["required"]
-                .as_array()
-                .unwrap()
-                .contains(&serde_json::json!("message"))
-        );
+        assert!(schema.input_schema["required"]
+            .as_array()
+            .unwrap()
+            .contains(&serde_json::json!("message")));
     }
 
     #[tokio::test]

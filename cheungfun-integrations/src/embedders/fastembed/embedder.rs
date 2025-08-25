@@ -2,8 +2,8 @@
 
 use async_trait::async_trait;
 use cheungfun_core::{
-    Result as CoreResult,
     traits::{Embedder, EmbeddingStats},
+    Result as CoreResult,
 };
 use fastembed::{EmbeddingModel, InitOptions, TextEmbedding};
 use std::sync::Arc;
@@ -325,7 +325,7 @@ mod tests {
     async fn test_preset_dimensions() {
         assert_eq!(ModelPreset::Default.dimension(), 384);
         assert_eq!(ModelPreset::HighQuality.dimension(), 1024);
-        assert_eq!(ModelPreset::Multilingual.dimension(), 1024);
+        assert_eq!(ModelPreset::Multilingual.dimension(), 768); // Fixed: should be 768, not 1024
         assert_eq!(ModelPreset::Fast.dimension(), 384);
         assert_eq!(ModelPreset::Code.dimension(), 768);
     }

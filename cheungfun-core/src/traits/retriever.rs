@@ -91,6 +91,93 @@ pub trait Retriever: Send + Sync + std::fmt::Debug {
         std::any::type_name::<Self>()
     }
 
+    /// Retrieve nodes with metadata filtering.
+    ///
+    /// This method allows filtering results based on node metadata,
+    /// enabling more precise retrieval for specific use cases.
+    ///
+    /// # Arguments
+    ///
+    /// * `query` - The search query
+    /// * `metadata_filters` - Key-value pairs for filtering nodes by metadata
+    ///
+    /// # Returns
+    ///
+    /// A vector of scored nodes that match both the query and metadata filters.
+    async fn retrieve_with_filters(
+        &self,
+        query: &Query,
+        metadata_filters: &HashMap<String, serde_json::Value>,
+    ) -> Result<Vec<ScoredNode>> {
+        // Default implementation: retrieve all and filter in memory
+        let all_nodes = self.retrieve(query).await?;
+
+        if metadata_filters.is_empty() {
+            return Ok(all_nodes);
+        }
+
+        let filtered_nodes: Vec<ScoredNode> = all_nodes
+            .into_iter()
+            .filter(|scored_node| {
+                // Check if node metadata matches all filters
+                metadata_filters.iter().all(|(key, expected_value)| {
+                    scored_node
+                        .node
+                        .metadata
+                        .get(key)
+                        .map(|actual_value| actual_value == expected_value)
+                        .unwrap_or(false)
+                })
+            })
+            .collect();
+
+        Ok(filtered_nodes)
+    }
+
+    /// Retrieve nodes with advanced filtering and context.
+    ///
+    /// This method combines context-aware retrieval with metadata filtering
+    /// for maximum flexibility and precision.
+    ///
+    /// # Arguments
+    ///
+    /// * `query` - The search query
+    /// * `context` - Additional context for retrieval
+    /// * `metadata_filters` - Key-value pairs for filtering nodes by metadata
+    ///
+    /// # Returns
+    ///
+    /// A vector of scored nodes that match the query, context, and filters.
+    async fn retrieve_with_context_and_filters(
+        &self,
+        query: &Query,
+        context: &RetrievalContext,
+        metadata_filters: &HashMap<String, serde_json::Value>,
+    ) -> Result<Vec<ScoredNode>> {
+        // Default implementation: use context retrieval then filter
+        let context_nodes = self.retrieve_with_context(query, context).await?;
+
+        if metadata_filters.is_empty() {
+            return Ok(context_nodes);
+        }
+
+        let filtered_nodes: Vec<ScoredNode> = context_nodes
+            .into_iter()
+            .filter(|scored_node| {
+                metadata_filters.iter().all(|(key, expected_value)| {
+                    scored_node
+                        .node
+                        .metadata
+                        .get(key)
+                        .map(|actual_value| actual_value == expected_value)
+                        .unwrap_or(false)
+                })
+            })
+            .collect();
+
+        Ok(filtered_nodes)
+    }
+
     /// Check if the retriever is healthy and ready to process queries.
     async fn health_check(&self) -> Result<()> {
         // Default implementation does nothing

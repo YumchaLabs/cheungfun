@@ -21,7 +21,7 @@ use cheungfun_integrations::InMemoryVectorStore;
 use std::collections::HashMap;
 use std::sync::Arc;
 use tempfile::TempDir;
-use tracing::{Level, info};
+use tracing::{info, Level};
 use uuid::Uuid;
 
 #[tokio::main]
@@ -53,7 +53,7 @@ async fn main() -> Result<()> {
 
         // Create query and search
         let query_embedding = embedder.embed(question).await?;
-        let query = Query::new(question)
+        let query = Query::new(*question)
             .with_embedding(query_embedding)
             .with_top_k(3);
 
@@ -230,7 +230,7 @@ async fn analyze_query_performance(
 
         // Embed query and search
         let query_embedding = embedder.embed(query_text).await?;
-        let query = Query::new(query_text)
+        let query = Query::new(*query_text)
             .with_embedding(query_embedding)
             .with_top_k(3);
         let _results = vector_store.search(&query).await?;
@@ -251,6 +251,7 @@ async fn analyze_query_performance(
 }
 
 /// Mock embedder for demonstration
+#[derive(Debug)]
 struct MockEmbedder {
     dimension: usize,
 }

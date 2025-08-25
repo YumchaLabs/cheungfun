@@ -4,8 +4,8 @@
 //! and Qdrant types (PointStruct, ScoredPoint, etc.).
 
 use cheungfun_core::{
-    Result,
     types::{ChunkInfo, Node},
+    Result,
 };
 use qdrant_client::qdrant::{PointId, PointStruct, RetrievedPoint, ScoredPoint};
 use serde_json::Value;

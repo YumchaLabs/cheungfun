@@ -6,10 +6,10 @@
 use std::sync::Arc;
 
 use crate::{
-    Result,
     config::{EmbedderConfig, LlmConfig, QueryPipelineConfig, VectorStoreConfig},
     factory::{EmbedderFactoryRegistry, LlmFactoryRegistry, VectorStoreFactoryRegistry},
     traits::{Embedder, QueryPipeline, ResponseGenerator, Retriever, VectorStore},
+    Result,
 };
 
 /// Builder for creating query pipelines.

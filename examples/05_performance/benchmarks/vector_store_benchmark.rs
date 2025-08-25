@@ -6,9 +6,9 @@
 
 use anyhow::Result;
 use cheungfun_core::{
-    DistanceMetric,
     traits::VectorStore,
     types::{ChunkInfo, Node, Query, SearchMode},
+    DistanceMetric,
 };
 use cheungfun_integrations::vector_stores::{
     memory::InMemoryVectorStore,
@@ -22,7 +22,7 @@ use tracing::{info, warn};
 use uuid::Uuid;
 
 use cheungfun_examples::benchmark_framework::{
-    BenchmarkConfig, PerformanceMetrics, format_metrics, run_benchmark,
+    format_metrics, run_benchmark, BenchmarkConfig, PerformanceMetrics,
 };
 
 /// Test data generator for vector store benchmarks

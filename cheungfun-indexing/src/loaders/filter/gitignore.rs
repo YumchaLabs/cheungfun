@@ -1,7 +1,7 @@
 //! Gitignore pattern matching implementation.
 
 use super::{Filter, FilterError, FilterResult};
-use ignore::{Match, gitignore::GitignoreBuilder};
+use ignore::{gitignore::GitignoreBuilder, Match};
 use std::path::{Path, PathBuf};
 use tracing::{debug, warn};
 

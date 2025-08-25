@@ -13,9 +13,9 @@ use tracing::{debug, info};
 use uuid::Uuid;
 
 use cheungfun_core::{
-    CheungfunError, Result,
     traits::{DistanceMetric, VectorStore},
     types::{Node, Query, ScoredNode},
+    CheungfunError, Result,
 };
 
 /// Fast in-memory vector store with real optimizations

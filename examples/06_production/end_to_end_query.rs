@@ -4,9 +4,9 @@
 //! from user questions to generated responses using Cheungfun components.
 
 use cheungfun_core::{
-    GenerationOptions, Result,
     traits::{Embedder, ResponseGenerator, Retriever, Transformer, VectorStore},
     types::{Document, Query, SearchMode},
+    GenerationOptions, Result,
 };
 use cheungfun_indexing::prelude::{SplitterConfig, TextSplitter};
 use cheungfun_integrations::{CandleEmbedder, InMemoryVectorStore};
@@ -16,7 +16,7 @@ use cheungfun_query::{
 };
 use siumai::prelude::*;
 use std::sync::Arc;
-use tracing::{Level, info};
+use tracing::{info, Level};
 
 #[tokio::main]
 async fn main() -> Result<()> {

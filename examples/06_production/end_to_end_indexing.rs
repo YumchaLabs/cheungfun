@@ -4,14 +4,14 @@
 //! from documents to vector storage using Cheungfun components.
 
 use cheungfun_core::{
-    Result,
     traits::{Embedder, Transformer, VectorStore},
     types::Document,
+    Result,
 };
 use cheungfun_indexing::prelude::{SplitterConfig, TextSplitter};
 use cheungfun_integrations::{CandleEmbedder, InMemoryVectorStore};
 use std::sync::Arc;
-use tracing::{Level, info};
+use tracing::{info, Level};
 
 #[tokio::main]
 async fn main() -> Result<()> {

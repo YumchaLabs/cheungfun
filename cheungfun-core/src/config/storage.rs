@@ -7,7 +7,7 @@
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 
-use crate::{Result, traits::DistanceMetric};
+use crate::{traits::DistanceMetric, Result};
 
 /// Configuration for vector storage backends.
 ///

@@ -44,6 +44,13 @@ Cheungfun 是一个基于 Rust 的高性能 RAG (Retrieval-Augmented Generation)
 - ✅ **视频处理架构** - 基础框架就绪
 - 🔄 **跨模态检索** - 进行中
 
+**💻 代码索引系统 (100% 完成)**
+- ✅ **Tree-sitter AST解析** - 支持9+种编程语言的语法树解析
+- ✅ **智能元数据提取** - 函数、类、导入、注释、复杂度指标
+- ✅ **代码感知分割** - 保持语法边界的智能文本分割
+- ✅ **多语言支持** - Rust, Python, JS/TS, Java, C#, C/C++, Go
+- ✅ **性能优化** - 可配置的提取选项和文件大小限制
+
 **🗄️ 缓存系统 (80% 完成)**
 - ✅ **嵌入缓存** - ApiEmbedder内置InMemoryCache，支持TTL和统计
 - ✅ **查询缓存** - QueryCache和TieredQueryCache，支持LRU淘汰

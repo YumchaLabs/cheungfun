@@ -168,11 +168,51 @@ let filter = FilterConfig::new()
 - `FilterConfig::text_files_only()`: 仅处理文本文件
 - `LoaderConfig::with_enhanced_filtering()`: 启用默认增强过滤
 
+## 🔍 代码索引系统
+
+### 核心特性
+- **🌳 AST解析**: 使用tree-sitter进行语法树解析
+- **🔧 多语言支持**: 支持9+种主流编程语言
+- **📊 智能提取**: 自动提取函数、类、导入、注释等代码结构
+- **⚡ 代码感知分割**: 保持语法边界的智能文本分割
+- **📈 复杂度分析**: 计算代码复杂度指标
+
+### 支持的编程语言
+- **Rust** - 完整支持函数、结构体、trait、模块
+- **Python** - 函数、类、导入、装饰器
+- **JavaScript/TypeScript** - 函数、类、模块、接口
+- **Java** - 方法、类、接口、包导入
+- **C#** - 方法、类、命名空间、using语句
+- **C/C++** - 函数、结构体、类、预处理指令
+- **Go** - 函数、结构体、接口、包导入
+
+### 使用示例
+
+```rust
+use cheungfun_indexing::{CodeLoader, CodeLoaderConfig};
+
+// 基础代码加载
+let loader = CodeLoader::new("./src")?;
+let documents = loader.load().await?;
+
+// 高级配置
+let config = CodeLoaderConfig {
+    extract_functions: true,
+    extract_classes: true,
+    extract_imports: true,
+    extract_comments: true,
+    max_file_size: Some(5 * 1024 * 1024), // 5MB
+    ..Default::default()
+};
+
+let loader = CodeLoader::with_config("./project", config)?;
+```
+
 ## �📋 开发路线图
 
 ### 第一阶段 (核心功能)
 - [ ] cheungfun-core: 基础trait和数据结构
-- [x] cheungfun-indexing: 文件加载和文本处理 ✅ **增强文件过滤已完成**
+- [x] cheungfun-indexing: 文件加载和文本处理 ✅ **增强文件过滤 + 代码索引已完成**
 - [ ] cheungfun-query: 基础查询引擎
 - [ ] Candle嵌入生成器
 - [ ] 内存向量存储

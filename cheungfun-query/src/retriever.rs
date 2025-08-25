@@ -9,9 +9,9 @@ use std::sync::Arc;
 use tracing::{debug, info, instrument, warn};
 
 use cheungfun_core::{
-    Result,
     traits::{Embedder, Retriever, VectorStore},
     types::{Query, ScoredNode, SearchMode},
+    Result,
 };
 
 /// A retriever that uses vector stores for similarity search.

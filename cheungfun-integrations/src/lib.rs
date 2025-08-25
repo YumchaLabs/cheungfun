@@ -10,6 +10,10 @@
 pub mod embedders;
 pub mod vector_stores;
 
+// Storage implementations
+#[cfg(feature = "storage")]
+pub mod storage;
+
 // High-performance SIMD operations
 #[cfg(feature = "simd")]
 pub mod simd;
@@ -29,3 +33,9 @@ pub use embedders::FastEmbedder;
 
 #[cfg(feature = "api")]
 pub use embedders::ApiEmbedder;
+
+// Storage exports
+#[cfg(feature = "storage")]
+pub use storage::{
+    DatabasePool, SqlxChatStore, SqlxDocumentStore, SqlxIndexStore, SqlxStorageConfig,
+};

@@ -193,8 +193,11 @@ mod tests {
         );
         assert_eq!(ModelPreset::HighQuality.dimension(), 1024);
 
-        assert_eq!(ModelPreset::Multilingual.model_name(), "BAAI/bge-m3");
-        assert_eq!(ModelPreset::Multilingual.dimension(), 1024);
+        assert_eq!(
+            ModelPreset::Multilingual.model_name(),
+            "intfloat/multilingual-e5-base"
+        );
+        assert_eq!(ModelPreset::Multilingual.dimension(), 768);
 
         assert_eq!(
             ModelPreset::Fast.model_name(),
@@ -202,7 +205,10 @@ mod tests {
         );
         assert_eq!(ModelPreset::Fast.dimension(), 384);
 
-        assert_eq!(ModelPreset::Code.model_name(), "microsoft/codebert-base");
+        assert_eq!(
+            ModelPreset::Code.model_name(),
+            "jinaai/jina-embeddings-v2-base-code"
+        );
         assert_eq!(ModelPreset::Code.dimension(), 768);
     }
 

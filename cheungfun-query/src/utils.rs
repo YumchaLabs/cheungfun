@@ -8,8 +8,8 @@ use std::time::{Duration, Instant};
 use tracing::{debug, info};
 
 use cheungfun_core::{
-    Result,
     types::{GeneratedResponse, Query, ScoredNode},
+    Result,
 };
 
 /// Query optimizer for improving query performance and relevance.

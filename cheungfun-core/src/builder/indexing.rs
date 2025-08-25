@@ -6,10 +6,10 @@
 use std::sync::Arc;
 
 use crate::{
-    Result,
     config::{EmbedderConfig, IndexingPipelineConfig, VectorStoreConfig},
     factory::{EmbedderFactoryRegistry, VectorStoreFactoryRegistry},
     traits::{Embedder, IndexingPipeline, Loader, Transformer, VectorStore},
+    Result,
 };
 
 /// Builder for creating indexing pipelines.

@@ -22,7 +22,7 @@ use cheungfun_core::{
 };
 use cheungfun_integrations::vector_stores::qdrant::{QdrantConfig, QdrantVectorStore};
 use serde_json::Value;
-use tracing::{Level, info};
+use tracing::{info, Level};
 use uuid::Uuid;
 
 #[tokio::main]

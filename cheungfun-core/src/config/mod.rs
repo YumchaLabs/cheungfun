@@ -5,12 +5,16 @@
 //! serializable and validatable.
 
 pub mod embedder;
+pub mod extensions;
 pub mod llm;
+pub mod manager;
 pub mod pipeline;
 pub mod storage;
 
 // Re-export all config types for convenience
 pub use embedder::*;
+pub use extensions::*;
 pub use llm::*;
+pub use manager::*;
 pub use pipeline::*;
 pub use storage::*;

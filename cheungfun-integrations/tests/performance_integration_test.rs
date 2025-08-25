@@ -7,9 +7,9 @@
 //! - Optimized vector stores
 
 use cheungfun_core::{
-    DistanceMetric,
     traits::VectorStore,
     types::{ChunkInfo, Node, Query},
+    DistanceMetric,
 };
 use cheungfun_integrations::vector_stores::{
     memory::InMemoryVectorStore, memory_optimized::OptimizedInMemoryVectorStore,

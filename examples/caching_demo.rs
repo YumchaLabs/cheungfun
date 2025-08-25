@@ -10,7 +10,7 @@ use cheungfun_core::{
 };
 use std::collections::HashMap;
 use std::time::{Duration, Instant};
-use tracing::{Level, info};
+use tracing::{info, Level};
 use tracing_subscriber;
 use uuid::Uuid;
 
@@ -125,14 +125,18 @@ async fn demo_file_cache() -> Result<(), Box<dyn std::error::Error>> {
     };
 
     info!("Storing custom data in file cache...");
-    let serialized_data = bincode::serialize(&custom_data).unwrap();
+    let serialized_data =
+        bincode::serde::encode_to_vec(&custom_data, bincode::config::standard()).unwrap();
     cache
         .put_data_bytes("custom_data", serialized_data, ttl)
         .await?;
 
     info!("Retrieving custom data from file cache...");
     if let Some(cached_bytes) = cache.get_data_bytes("custom_data").await? {
-        if let Ok(cached_data) = bincode::deserialize::<CustomData>(&cached_bytes) {
+        if let Ok((cached_data, _)) = bincode::serde::decode_from_slice::<CustomData, _>(
+            &cached_bytes,
+            bincode::config::standard(),
+        ) {
             info!("✅ Retrieved custom data: {:?}", cached_data);
         } else {
             info!("❌ Failed to deserialize custom data");

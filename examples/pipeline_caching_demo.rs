@@ -4,14 +4,14 @@
 //! to dramatically speed up development workflows.
 
 use cheungfun_core::{
-    Document, Node,
     cache::{FileCache, MemoryCache},
     traits::PipelineCache,
+    Document, Node,
 };
 use cheungfun_indexing::pipeline::{DefaultIndexingPipeline, PipelineConfig};
 use std::sync::Arc;
 use std::time::{Duration, Instant};
-use tracing::{Level, info};
+use tracing::{info, Level};
 use tracing_subscriber;
 
 #[tokio::main]

@@ -3,10 +3,10 @@
 //! This module provides utilities for creating and managing Qdrant client connections,
 //! including collection management and health checks.
 
-use cheungfun_core::{Result, traits::DistanceMetric};
+use cheungfun_core::{traits::DistanceMetric, Result};
 use qdrant_client::{
-    Qdrant, QdrantError,
     qdrant::{CreateCollectionBuilder, Distance, VectorParamsBuilder},
+    Qdrant, QdrantError,
 };
 use std::sync::Arc;
 use tracing::{debug, error, info, warn};

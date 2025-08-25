@@ -2,7 +2,7 @@
 
 use crate::{
     error::{AgentError, Result},
-    tool::{Tool, ToolContext, ToolResult, create_simple_schema, number_param, string_param},
+    tool::{create_simple_schema, number_param, string_param, Tool, ToolContext, ToolResult},
     types::ToolSchema,
 };
 use async_trait::async_trait;
@@ -286,12 +286,10 @@ mod tests {
         let result = tool.execute(args, &context).await.unwrap();
         // Should fail because no retriever is available
         assert!(!result.success);
-        assert!(
-            result
-                .error_message()
-                .unwrap()
-                .contains("No search retriever")
-        );
+        assert!(result
+            .error_message()
+            .unwrap()
+            .contains("No search retriever"));
     }
 
     #[tokio::test]
@@ -342,12 +340,10 @@ mod tests {
 
         let result = tool.execute(args, &context).await.unwrap();
         assert!(!result.success);
-        assert!(
-            result
-                .error_message()
-                .unwrap()
-                .contains("between 0.0 and 1.0")
-        );
+        assert!(result
+            .error_message()
+            .unwrap()
+            .contains("between 0.0 and 1.0"));
     }
 
     #[test]

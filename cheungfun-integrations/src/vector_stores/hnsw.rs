@@ -9,9 +9,9 @@
 
 use async_trait::async_trait;
 use cheungfun_core::{
-    CheungfunError, Result,
     traits::{DistanceMetric, VectorStore},
     types::{Node, Query, ScoredNode},
+    CheungfunError, Result,
 };
 use std::collections::HashMap;
 use std::sync::{Arc, RwLock};

@@ -1,0 +1,19 @@
+[package]
+name = "cheungfun-tools"
+version.workspace = true
+authors.workspace = true
+edition.workspace = true
+license.workspace = true
+repository.workspace = true
+homepage.workspace = true
+documentation.workspace = true
+keywords.workspace = true
+description = "Development tools for Cheungfun"
+categories.workspace = true
+
+[[bin]]
+name = "run_tests"
+path = "src/run_tests.rs"
+
+[dependencies]
+# No external dependencies needed for the test runner

@@ -78,7 +78,7 @@ pub mod prelude {
     pub use crate::orchestration::workflow::{create_step, create_step_with_deps};
 
     // MCP components
-    pub use crate::mcp::{McpToolRegistry, server::McpServerBuilder};
+    pub use crate::mcp::{server::McpServerBuilder, McpToolRegistry};
 
     // Common types
     pub use crate::types::{

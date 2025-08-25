@@ -12,9 +12,9 @@ use std::sync::Arc;
 use tracing::{debug, info, instrument};
 
 use cheungfun_core::{
-    Result,
     traits::{QueryPipeline, ResponseGenerator, Retriever},
     types::{ChatMessage, GenerationOptions, Query, QueryResponse, RetrievalContext, SearchMode},
+    Result,
 };
 
 use crate::engine::{QueryEngine, QueryEngineConfig, QueryEngineOptions};

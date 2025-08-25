@@ -49,6 +49,7 @@ pub mod cache;
 pub mod config;
 pub mod error;
 pub mod factory;
+pub mod multilingual;
 pub mod traits;
 pub mod types;
 

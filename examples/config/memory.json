@@ -1,0 +1,9 @@
+{
+  "max_tokens": 4000,
+  "max_messages": 50,
+  "preserve_system_messages": true,
+  "preserve_recent_pair": true,
+  "token_counter": "approximate",
+  "summarize_truncated": false,
+  "summary_prompt": "Summarize the previous conversation context in a concise manner."
+}

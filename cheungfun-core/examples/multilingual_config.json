@@ -1,0 +1,163 @@
+{
+  "default_language": "English",
+  "languages": {
+    "English": {
+      "code": "en",
+      "name": "English",
+      "enabled": true,
+      "text_processing": {
+        "chunk_size": 512,
+        "chunk_overlap": 50,
+        "use_language_tokenizer": true,
+        "stop_words": ["the", "a", "an", "and", "or", "but", "in", "on", "at", "to", "for", "of", "with", "by"],
+        "apply_preprocessing": true
+      },
+      "embedding": {
+        "preferred_model": "text-embedding-3-small",
+        "dimension_override": null,
+        "use_multilingual": true,
+        "parameters": {}
+      }
+    },
+    "Chinese": {
+      "code": "zh",
+      "name": "Chinese (中文)",
+      "enabled": true,
+      "text_processing": {
+        "chunk_size": 256,
+        "chunk_overlap": 25,
+        "use_language_tokenizer": true,
+        "stop_words": ["的", "了", "在", "是", "我", "有", "和", "就", "不", "人", "都", "一", "个", "上", "也", "很", "到", "说", "要", "去"],
+        "apply_preprocessing": true
+      },
+      "embedding": {
+        "preferred_model": "intfloat/multilingual-e5-base",
+        "dimension_override": null,
+        "use_multilingual": true,
+        "parameters": {}
+      }
+    },
+    "Japanese": {
+      "code": "ja",
+      "name": "Japanese (日本語)",
+      "enabled": true,
+      "text_processing": {
+        "chunk_size": 256,
+        "chunk_overlap": 25,
+        "use_language_tokenizer": true,
+        "stop_words": ["の", "に", "は", "を", "が", "で", "と", "から", "まで", "より", "も", "だ", "である", "です", "ます"],
+        "apply_preprocessing": true
+      },
+      "embedding": {
+        "preferred_model": "intfloat/multilingual-e5-base",
+        "dimension_override": null,
+        "use_multilingual": true,
+        "parameters": {}
+      }
+    },
+    "Korean": {
+      "code": "ko",
+      "name": "Korean (한국어)",
+      "enabled": true,
+      "text_processing": {
+        "chunk_size": 256,
+        "chunk_overlap": 25,
+        "use_language_tokenizer": true,
+        "stop_words": [],
+        "apply_preprocessing": true
+      },
+      "embedding": {
+        "preferred_model": "intfloat/multilingual-e5-base",
+        "dimension_override": null,
+        "use_multilingual": true,
+        "parameters": {}
+      }
+    },
+    "Spanish": {
+      "code": "es",
+      "name": "Spanish (Español)",
+      "enabled": true,
+      "text_processing": {
+        "chunk_size": 512,
+        "chunk_overlap": 50,
+        "use_language_tokenizer": true,
+        "stop_words": ["el", "la", "de", "que", "y", "a", "en", "un", "es", "se", "no", "te", "lo", "le", "da", "su", "por", "son", "con", "para"],
+        "apply_preprocessing": true
+      },
+      "embedding": {
+        "preferred_model": "intfloat/multilingual-e5-base",
+        "dimension_override": null,
+        "use_multilingual": true,
+        "parameters": {}
+      }
+    },
+    "French": {
+      "code": "fr",
+      "name": "French (Français)",
+      "enabled": true,
+      "text_processing": {
+        "chunk_size": 512,
+        "chunk_overlap": 50,
+        "use_language_tokenizer": true,
+        "stop_words": ["le", "de", "et", "à", "un", "il", "être", "et", "en", "avoir", "que", "pour", "dans", "ce", "son", "une", "sur", "avec", "ne", "se"],
+        "apply_preprocessing": true
+      },
+      "embedding": {
+        "preferred_model": "intfloat/multilingual-e5-base",
+        "dimension_override": null,
+        "use_multilingual": true,
+        "parameters": {}
+      }
+    },
+    "German": {
+      "code": "de",
+      "name": "German (Deutsch)",
+      "enabled": true,
+      "text_processing": {
+        "chunk_size": 512,
+        "chunk_overlap": 50,
+        "use_language_tokenizer": true,
+        "stop_words": ["der", "die", "und", "in", "den", "von", "zu", "das", "mit", "sich", "des", "auf", "für", "ist", "im", "dem", "nicht", "ein", "eine", "als"],
+        "apply_preprocessing": true
+      },
+      "embedding": {
+        "preferred_model": "intfloat/multilingual-e5-base",
+        "dimension_override": null,
+        "use_multilingual": true,
+        "parameters": {}
+      }
+    },
+    "Russian": {
+      "code": "ru",
+      "name": "Russian (Русский)",
+      "enabled": true,
+      "text_processing": {
+        "chunk_size": 512,
+        "chunk_overlap": 50,
+        "use_language_tokenizer": true,
+        "stop_words": ["в", "и", "не", "на", "я", "быть", "с", "он", "а", "как", "по", "это", "она", "к", "но", "мы", "что", "за", "из", "у"],
+        "apply_preprocessing": true
+      },
+      "embedding": {
+        "preferred_model": "intfloat/multilingual-e5-base",
+        "dimension_override": null,
+        "use_multilingual": true,
+        "parameters": {}
+      }
+    }
+  },
+  "global_settings": {
+    "auto_detect_language": true,
+    "enable_cross_language_search": true,
+    "enable_query_translation": false,
+    "max_detection_languages": 10,
+    "cache_detection_results": true
+  },
+  "detection": {
+    "min_confidence": 0.7,
+    "min_relative_distance": 0.1,
+    "low_accuracy_mode": false,
+    "preload_models": true,
+    "target_languages": null
+  }
+}

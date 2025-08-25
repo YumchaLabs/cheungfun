@@ -2,12 +2,12 @@
 
 use async_trait::async_trait;
 use cheungfun_core::{
-    Document, IndexingProgress, IndexingStats, Node, Result as CoreResult,
     cache::UnifiedCache,
     traits::{
-        Embedder, IndexingPipeline, Loader, NodeTransformer, PipelineCache, Transformer,
-        VectorStore,
+        DocumentStore, Embedder, IndexStore, IndexingPipeline, Loader, NodeTransformer,
+        PipelineCache, StorageContext, Transformer, VectorStore,
     },
+    Document, IndexingProgress, IndexingStats, Node, Result as CoreResult,
 };
 use futures::future::join_all;
 use std::sync::Arc;
@@ -93,8 +93,10 @@ pub struct DefaultIndexingPipeline {
     node_transformers: Vec<Arc<dyn NodeTransformer>>,
     /// Embedder for generating vector representations.
     embedder: Option<Arc<dyn Embedder>>,
-    /// Vector store for persisting nodes.
+    /// Vector store for persisting nodes (legacy, use storage_context instead).
     vector_store: Option<Arc<dyn VectorStore>>,
+    /// Storage context for unified storage management.
+    storage_context: Option<Arc<StorageContext>>,
     /// Cache for embeddings and processed nodes.
     cache: Option<UnifiedCache>,
     /// Pipeline configuration.
@@ -312,10 +314,35 @@ impl DefaultIndexingPipeline {
         Ok(())
     }
 
-    /// Store nodes in vector database.
+    /// Store nodes in vector database and document store.
     async fn store_nodes(&self, nodes: Vec<Node>) -> Result<Vec<uuid::Uuid>> {
-        if let Some(vector_store) = &self.vector_store {
-            info!("Storing {} nodes in vector store", nodes.len());
+        if nodes.is_empty() {
+            return Ok(vec![]);
+        }
+
+        // Prefer storage context over direct vector store
+        if let Some(storage_context) = &self.storage_context {
+            info!("Storing {} nodes using storage context", nodes.len());
+
+            // Store nodes in vector store
+            let node_ids = storage_context
+                .vector_store()
+                .add(nodes.clone())
+                .await
+                .map_err(|e| {
+                    IndexingError::pipeline(format!("Vector store operation failed: {e}"))
+                })?;
+
+            // TODO: Store documents in document store if needed
+            // This would require converting nodes back to documents or storing original documents
+
+            info!("Stored {} nodes using storage context", node_ids.len());
+            Ok(node_ids)
+        } else if let Some(vector_store) = &self.vector_store {
+            info!(
+                "Storing {} nodes in vector store (legacy mode)",
+                nodes.len()
+            );
 
             let node_ids = vector_store.add(nodes).await.map_err(|e| {
                 IndexingError::pipeline(format!("Vector store operation failed: {e}"))
@@ -324,7 +351,7 @@ impl DefaultIndexingPipeline {
             info!("Stored {} nodes in vector store", node_ids.len());
             Ok(node_ids)
         } else {
-            debug!("No vector store configured, skipping storage");
+            debug!("No storage configured, skipping storage");
             Ok(vec![])
         }
     }
@@ -561,6 +588,7 @@ pub struct PipelineBuilder {
     node_transformers: Vec<Arc<dyn NodeTransformer>>,
     embedder: Option<Arc<dyn Embedder>>,
     vector_store: Option<Arc<dyn VectorStore>>,
+    storage_context: Option<Arc<StorageContext>>,
     cache: Option<UnifiedCache>,
     config: Option<PipelineConfig>,
 }
@@ -602,6 +630,12 @@ impl PipelineBuilder {
         self
     }
 
+    /// Set the storage context (preferred over individual stores).
+    pub fn with_storage_context(mut self, storage_context: Arc<StorageContext>) -> Self {
+        self.storage_context = Some(storage_context);
+        self
+    }
+
     /// Set the cache for embeddings and processed nodes.
     #[must_use]
     pub fn with_cache(mut self, cache: UnifiedCache) -> Self {
@@ -636,6 +670,7 @@ impl PipelineBuilder {
             node_transformers: self.node_transformers,
             embedder: self.embedder,
             vector_store: self.vector_store,
+            storage_context: self.storage_context,
             cache: self.cache,
             config,
         })

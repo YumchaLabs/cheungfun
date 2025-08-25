@@ -44,8 +44,8 @@
 //! ```
 
 use cheungfun_core::{
-    Result,
     traits::{Embedder, Loader, NodeTransformer, QueryPipeline, Transformer, VectorStore},
+    Result,
 };
 use cheungfun_indexing::{
     loaders::DirectoryLoader,
@@ -61,7 +61,7 @@ use std::path::Path;
 use std::sync::Arc;
 use tempfile::TempDir;
 use tokio::fs;
-use tracing::{Level, info, warn};
+use tracing::{info, warn, Level};
 
 #[tokio::main]
 async fn main() -> Result<()> {

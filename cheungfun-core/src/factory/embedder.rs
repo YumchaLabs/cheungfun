@@ -6,7 +6,7 @@
 use async_trait::async_trait;
 use std::sync::Arc;
 
-use crate::{Result, config::EmbedderConfig, traits::Embedder};
+use crate::{config::EmbedderConfig, traits::Embedder, Result};
 
 /// Factory for creating embedders from configuration.
 ///

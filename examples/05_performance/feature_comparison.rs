@@ -29,10 +29,10 @@
 //! cargo run --bin feature_comparison --features "benchmarks,candle-cuda"
 //! ```
 
-use cheungfun_core::{Result, traits::Embedder};
+use cheungfun_core::{traits::Embedder, Result};
 use cheungfun_integrations::{CandleEmbedder, InMemoryVectorStore};
 use std::time::{Duration, Instant};
-use tracing::{Level, info};
+use tracing::{info, Level};
 
 #[tokio::main]
 async fn main() -> Result<()> {

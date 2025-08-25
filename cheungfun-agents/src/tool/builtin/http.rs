@@ -2,7 +2,7 @@
 
 use crate::{
     error::{AgentError, Result},
-    tool::{Tool, ToolContext, ToolResult, create_simple_schema, string_param},
+    tool::{create_simple_schema, string_param, Tool, ToolContext, ToolResult},
     types::ToolSchema,
 };
 use async_trait::async_trait;

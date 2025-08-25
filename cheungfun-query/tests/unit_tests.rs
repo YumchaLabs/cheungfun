@@ -5,8 +5,8 @@ use std::time::Duration;
 
 use cheungfun_core::types::{GeneratedResponse, Query, SearchMode};
 use cheungfun_query::utils::{
-    CitationFormat, QueryCache, QueryOptimizer, QueryOptimizerConfig, ResponsePostProcessor,
-    ResponsePostProcessorConfig, query_utils, response_utils,
+    query_utils, response_utils, CitationFormat, QueryCache, QueryOptimizer, QueryOptimizerConfig,
+    ResponsePostProcessor, ResponsePostProcessorConfig,
 };
 
 #[test]
@@ -157,8 +157,8 @@ fn test_query_utils_extract_keywords() {
     assert!(keywords.contains(&"machine".to_string()));
     assert!(keywords.contains(&"learning".to_string()));
     assert!(!keywords.contains(&"is".to_string())); // Too short
-    // Note: "and" might be included if it's 3+ characters, which it is
-    // So we test for a definitely short word instead
+                                                    // Note: "and" might be included if it's 3+ characters, which it is
+                                                    // So we test for a definitely short word instead
     assert!(!keywords.contains(&"is".to_string())); // Too short
 }
 

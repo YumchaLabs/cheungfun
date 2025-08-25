@@ -4,8 +4,8 @@
 //! batch processing, advanced search with filters, and performance optimization.
 
 use cheungfun_core::{
-    Result,
     types::{Node, ScoredNode},
+    Result,
 };
 use qdrant_client::qdrant::{CreateFieldIndexCollectionBuilder, FieldType, SearchPointsBuilder};
 use serde_json::Value;
