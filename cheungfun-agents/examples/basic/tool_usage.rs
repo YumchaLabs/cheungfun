@@ -45,7 +45,7 @@ async fn main() -> Result<()> {
 /// Basic tool usage - Register and use all available tools
 async fn basic_tool_usage() -> Result<()> {
     println!("📚 Pattern 1: Basic Tool Registration and Usage");
-    println!("-".repeat(30));
+    println!("{}", "-".repeat(30));
 
     // Setup LLM
     let llm_client = SiumaiLlmClient::openai(
@@ -86,7 +86,7 @@ async fn basic_tool_usage() -> Result<()> {
 /// Selective tool usage - Only register specific tools for focused tasks
 async fn selective_tool_usage() -> Result<()> {
     println!("🎯 Pattern 2: Selective Tool Usage");
-    println!("-".repeat(30));
+    println!("{}", "-".repeat(30));
 
     let llm_client = SiumaiLlmClient::openai(
         std::env::var("OPENAI_API_KEY").unwrap_or_else(|_| "demo-key".to_string()),
@@ -137,7 +137,7 @@ async fn selective_tool_usage() -> Result<()> {
 /// Tool chaining - Using multiple tools in sequence for complex tasks
 async fn tool_chaining_example() -> Result<()> {
     println!("🔗 Pattern 3: Tool Chaining for Complex Tasks");
-    println!("-".repeat(30));
+    println!("{}", "-".repeat(30));
 
     let llm_client = SiumaiLlmClient::openai(
         std::env::var("OPENAI_API_KEY").unwrap_or_else(|_| "demo-key".to_string()),
@@ -184,7 +184,7 @@ async fn tool_chaining_example() -> Result<()> {
 #[allow(dead_code)]
 async fn custom_tool_configuration_example() -> Result<()> {
     println!("⚙️ Pattern 4: Custom Tool Configuration");
-    println!("-".repeat(30));
+    println!("{}", "-".repeat(30));
 
     let llm_client = SiumaiLlmClient::openai(
         std::env::var("OPENAI_API_KEY").unwrap_or_else(|_| "demo-key".to_string()),

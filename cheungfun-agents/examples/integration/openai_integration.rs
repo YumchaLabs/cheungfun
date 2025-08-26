@@ -63,7 +63,7 @@ async fn main() -> Result<()> {
 /// Basic OpenAI integration with GPT-4
 async fn basic_openai_integration(api_key: &str) -> Result<()> {
     println!("🔗 Example 1: Basic OpenAI Integration (GPT-4)");
-    println!("-".repeat(35));
+    println!("{}", "-".repeat(35));
 
     // Create OpenAI client with GPT-4
     let llm_client = SiumaiLlmClient::openai(api_key, "gpt-4").await?;
@@ -102,7 +102,7 @@ async fn basic_openai_integration(api_key: &str) -> Result<()> {
 /// Compare different OpenAI models
 async fn different_models_comparison(api_key: &str) -> Result<()> {
     println!("⚖️ Example 2: Different Models Comparison");
-    println!("-".repeat(35));
+    println!("{}", "-".repeat(35));
 
     // Test with GPT-3.5-turbo for speed
     println!("Testing GPT-3.5-turbo (faster, more economical):");
@@ -166,7 +166,7 @@ async fn different_models_comparison(api_key: &str) -> Result<()> {
 /// Advanced configuration with custom parameters
 async fn advanced_configuration_example(api_key: &str) -> Result<()> {
     println!("⚙️ Example 3: Advanced Configuration");
-    println!("-".repeat(30));
+    println!("{}", "-".repeat(30));
 
     // Create client with custom configuration
     // Note: SiumaiLlmClient currently uses default settings,
@@ -211,7 +211,7 @@ async fn advanced_configuration_example(api_key: &str) -> Result<()> {
 /// Real-world assistant example with comprehensive capabilities
 async fn real_world_assistant_example(api_key: &str) -> Result<()> {
     println!("🌟 Example 4: Real-World Assistant");
-    println!("-".repeat(25));
+    println!("{}", "-".repeat(25));
 
     let llm_client = SiumaiLlmClient::openai(api_key, "gpt-4").await?;
 
@@ -277,7 +277,7 @@ async fn real_world_assistant_example(api_key: &str) -> Result<()> {
 /// Demo mode when API key is not available
 async fn demo_mode_example() -> Result<()> {
     println!("🎭 Demo Mode: Simulated OpenAI Integration");
-    println!("-".repeat(35));
+    println!("{}", "-".repeat(35));
 
     println!("This would demonstrate:");
     println!("✅ Real OpenAI API integration with various models");

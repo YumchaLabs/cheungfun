@@ -82,7 +82,7 @@ async fn main() -> Result<()> {
     
     // Example 1: Math calculation
     println!("\n📊 Math Example:");
-    println!("-".repeat(20));
+    println!("{}", "-".repeat(20));
     
     let math_query = AgentMessage::user(
         "What's the result of (15 + 25) * 3.14159, and what percentage is that of 500?"
@@ -97,7 +97,7 @@ async fn main() -> Result<()> {
     
     // Example 2: Weather query
     println!("\n🌤️  Weather Example:");
-    println!("-".repeat(20));
+    println!("{}", "-".repeat(20));
     
     let weather_query = AgentMessage::user(
         "What's the weather like in Tokyo? Please give me the temperature in both Celsius and Fahrenheit."
@@ -112,7 +112,7 @@ async fn main() -> Result<()> {
     
     // Example 3: Combined query
     println!("\n🔄 Combined Example:");
-    println!("-".repeat(20));
+    println!("{}", "-".repeat(20));
     
     let combined_query = AgentMessage::user(
         "If the temperature in London is 12°C, convert it to Fahrenheit. \

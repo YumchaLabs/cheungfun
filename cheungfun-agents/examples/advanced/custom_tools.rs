@@ -467,7 +467,7 @@ impl EmailValidatorTool {
 /// Demonstrate simple custom tool usage
 async fn simple_custom_tool_example() -> Result<()> {
     println!("👋 Example 1: Simple Custom Tool (Greeting Tool)");
-    println!("-".repeat(30));
+    println!("{}", "-".repeat(30));
 
     let llm_client = SiumaiLlmClient::openai(
         std::env::var("OPENAI_API_KEY").unwrap_or_else(|_| "demo-key".to_string()),
@@ -496,7 +496,7 @@ async fn simple_custom_tool_example() -> Result<()> {
 /// Demonstrate stateful tool usage
 async fn stateful_tool_example() -> Result<()> {
     println!("🔢 Example 2: Stateful Tool (Counter Tool)");
-    println!("-".repeat(30));
+    println!("{}", "-".repeat(30));
 
     let llm_client = SiumaiLlmClient::openai(
         std::env::var("OPENAI_API_KEY").unwrap_or_else(|_| "demo-key".to_string()),
@@ -525,7 +525,7 @@ async fn stateful_tool_example() -> Result<()> {
 /// Demonstrate validation tool usage
 async fn validation_tool_example() -> Result<()> {
     println!("✅ Example 3: Validation Tool (Email Validator)");
-    println!("-".repeat(30));
+    println!("{}", "-".repeat(30));
 
     let llm_client = SiumaiLlmClient::openai(
         std::env::var("OPENAI_API_KEY").unwrap_or_else(|_| "demo-key".to_string()),

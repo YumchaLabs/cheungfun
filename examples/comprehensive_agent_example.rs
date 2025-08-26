@@ -55,7 +55,7 @@ async fn main() -> Result<()> {
 /// Example 1: Single Agent with Calculator Tool (Similar to LlamaIndex basic example)
 async fn single_agent_calculator_example() -> Result<()> {
     println!("📊 Example 1: Single Agent Calculator");
-    println!("-".repeat(40));
+    println!("{}", "-".repeat(40));
 
     // Setup LLM client with OpenAI
     let llm_config = LlmClientConfig::builder()
@@ -104,7 +104,7 @@ async fn single_agent_calculator_example() -> Result<()> {
 /// Example 2: Multi-Tool Research Assistant (Similar to LlamaIndex retrieval agent)
 async fn research_assistant_example() -> Result<()> {
     println!("🔍 Example 2: Multi-Tool Research Assistant");
-    println!("-".repeat(40));
+    println!("{}", "-".repeat(40));
 
     // Setup LLM client
     let llm_config = LlmClientConfig::builder()
@@ -176,7 +176,7 @@ async fn research_assistant_example() -> Result<()> {
 /// Example 3: Multi-Agent Research Pipeline (Similar to LlamaIndex multi-agent workflow)
 async fn multi_agent_research_pipeline() -> Result<()> {
     println!("👥 Example 3: Multi-Agent Research Pipeline");
-    println!("-".repeat(40));
+    println!("{}", "-".repeat(40));
 
     // Setup base LLM config
     let base_config = LlmClientConfig::builder()

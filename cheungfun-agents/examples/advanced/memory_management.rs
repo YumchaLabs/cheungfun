@@ -44,7 +44,7 @@ async fn main() -> Result<()> {
 /// Shows how to use AgentContext for single conversations
 async fn basic_context_usage() -> Result<()> {
     println!("📝 Example 1: Basic Context Usage");
-    println!("-".repeat(30));
+    println!("{}", "-".repeat(30));
 
     let llm_client = SiumaiLlmClient::openai(
         std::env::var("OPENAI_API_KEY").unwrap_or_else(|_| "demo-key".to_string()),
@@ -70,8 +70,8 @@ async fn basic_context_usage() -> Result<()> {
     let mut context = AgentContext::new();
 
     // Add some initial context data
-    context.set_data("user_name".to_string(), serde_json::json!("Alice"));
-    context.set_data(
+    context.set_variable("user_name".to_string(), serde_json::json!("Alice"));
+    context.set_variable(
         "conversation_topic".to_string(),
         serde_json::json!("memory management"),
     );
@@ -92,10 +92,10 @@ async fn basic_context_usage() -> Result<()> {
 
     // Show context data
     println!("\nContext Data:");
-    if let Some(name) = context.get_data("user_name") {
+    if let Some(name) = context.get_variable("user_name") {
         println!("- User Name: {}", name);
     }
-    if let Some(topic) = context.get_data("conversation_topic") {
+    if let Some(topic) = context.get_variable("conversation_topic") {
         println!("- Topic: {}", topic);
     }
 
@@ -106,7 +106,7 @@ async fn basic_context_usage() -> Result<()> {
 /// Shows how to serialize and restore context across sessions
 async fn persistent_context_example() -> Result<()> {
     println!("💾 Example 2: Persistent Context (Serialization)");
-    println!("-".repeat(30));
+    println!("{}", "-".repeat(30));
 
     let llm_client = SiumaiLlmClient::openai(
         std::env::var("OPENAI_API_KEY").unwrap_or_else(|_| "demo-key".to_string()),
@@ -126,7 +126,7 @@ async fn persistent_context_example() -> Result<()> {
     // === Session 1: Create and save context ===
     println!("Session 1: Creating context...");
     let mut session1_context = AgentContext::new();
-    session1_context.set_data(
+    session1_context.set_variable(
         "user_preferences".to_string(),
         serde_json::json!({
             "name": "Bob",
@@ -162,7 +162,7 @@ async fn persistent_context_example() -> Result<()> {
 /// Shows how to share context data between different agents
 async fn context_sharing_example() -> Result<()> {
     println!("🤝 Example 3: Context Sharing Between Agents");
-    println!("-".repeat(30));
+    println!("{}", "-".repeat(30));
 
     let llm_client = SiumaiLlmClient::openai(
         std::env::var("OPENAI_API_KEY").unwrap_or_else(|_| "demo-key".to_string()),
@@ -191,7 +191,7 @@ async fn context_sharing_example() -> Result<()> {
 
     // === Phase 1: Information Collection ===
     println!("Phase 1: Information Collection Agent");
-    shared_context.set_data("phase".to_string(), serde_json::json!("collection"));
+    shared_context.set_variable("phase".to_string(), serde_json::json!("collection"));
 
     let collect_message = AgentMessage::user("Please collect information: The user likes coffee, works in tech, and lives in San Francisco.");
     println!("User: {}", collect_message.content);
@@ -201,7 +201,7 @@ async fn context_sharing_example() -> Result<()> {
     println!("Information Agent: {}", collect_response.content);
 
     // Information agent adds data to shared context
-    shared_context.set_data(
+    shared_context.set_variable(
         "user_profile".to_string(),
         serde_json::json!({
             "preferences": ["coffee"],
@@ -215,7 +215,7 @@ async fn context_sharing_example() -> Result<()> {
 
     // === Phase 2: Analysis ===
     println!("Phase 2: Analysis Agent (using shared context)");
-    shared_context.set_data("phase".to_string(), serde_json::json!("analysis"));
+    shared_context.set_variable("phase".to_string(), serde_json::json!("analysis"));
 
     let analyze_message =
         AgentMessage::user("Based on the collected information, what insights can you provide?");
@@ -227,13 +227,13 @@ async fn context_sharing_example() -> Result<()> {
 
     // Show shared context data
     println!("\nShared Context Data:");
-    if let Some(profile) = shared_context.get_data("user_profile") {
+    if let Some(profile) = shared_context.get_variable("user_profile") {
         println!(
             "- User Profile: {}",
             serde_json::to_string_pretty(&profile).unwrap_or_default()
         );
     }
-    if let Some(phase) = shared_context.get_data("phase") {
+    if let Some(phase) = shared_context.get_variable("phase") {
         println!("- Current Phase: {}", phase);
     }
 
@@ -275,15 +275,15 @@ fn deserialize_context(context_json: &str) -> Result<AgentContext> {
 
     // Restore data
     for (key, value) in serializable.data {
-        context.set_data(key, value);
+        context.set_variable(key, value);
     }
 
     // Add restoration metadata
-    context.set_data(
+    context.set_variable(
         "restored_at".to_string(),
         serde_json::json!(chrono::Utc::now().to_rfc3339()),
     );
-    context.set_data(
+    context.set_variable(
         "original_timestamp".to_string(),
         serde_json::json!(serializable.timestamp),
     );
@@ -299,9 +299,9 @@ mod context_utils {
     /// Utility to create a context with user session data
     pub fn create_user_session_context(user_id: &str, session_id: &str) -> AgentContext {
         let mut context = AgentContext::new();
-        context.set_data("user_id".to_string(), serde_json::json!(user_id));
-        context.set_data("session_id".to_string(), serde_json::json!(session_id));
-        context.set_data(
+        context.set_variable("user_id".to_string(), serde_json::json!(user_id));
+        context.set_variable("session_id".to_string(), serde_json::json!(session_id));
+        context.set_variable(
             "created_at".to_string(),
             serde_json::json!(chrono::Utc::now().to_rfc3339()),
         );
@@ -312,8 +312,8 @@ mod context_utils {
     pub fn merge_contexts(base: &mut AgentContext, other: &AgentContext) {
         for (key, value) in other.get_all_data() {
             // Only merge if key doesn't exist in base (don't overwrite)
-            if base.get_data(key).is_none() {
-                base.set_data(key.clone(), value.clone());
+            if base.get_variable(key).is_none() {
+                base.set_variable(key.clone(), value.clone());
             }
         }
     }
@@ -324,7 +324,7 @@ mod context_utils {
 
         // Remove entries with timestamps older than cutoff
         // This is a simplified example - in practice you'd need to track timestamps per entry
-        if let Some(created_at) = context.get_data("created_at") {
+        if let Some(created_at) = context.get_variable("created_at") {
             if let Ok(timestamp) = created_at
                 .as_str()
                 .unwrap_or("")
@@ -370,7 +370,7 @@ mod tests {
     #[test]
     fn test_context_serialization() {
         let mut context = AgentContext::new();
-        context.set_data("test_key".to_string(), serde_json::json!("test_value"));
+        context.set_variable("test_key".to_string(), serde_json::json!("test_value"));
 
         // Test serialization
         let serialized = serialize_context(&context).unwrap();
@@ -378,7 +378,7 @@ mod tests {
 
         // Test deserialization
         let deserialized = deserialize_context(&serialized).unwrap();
-        let value = deserialized.get_data("test_key").unwrap();
+        let value = deserialized.get_variable("test_key").unwrap();
         assert_eq!(value.as_str().unwrap(), "test_value");
     }
 }
