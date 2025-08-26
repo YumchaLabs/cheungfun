@@ -618,7 +618,7 @@ async fn await_ast_parsing_demo(temp_dir: &TempDir) -> Result<(), Box<dyn std::e
         ("sample.go", "Go"),
     ];
 
-    for (filename, language_name) in files {
+    for (filename, _language_name) in files {
         let file_path = temp_dir.path().join(filename);
 
         // Test with full AST parsing enabled

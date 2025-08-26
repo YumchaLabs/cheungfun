@@ -23,7 +23,7 @@ use axum::{
     routing::post,
     Router,
 };
-use rmcp::{model::*, tool, Error as McpError, ServerHandler};
+use rmcp::{model::*, ServerHandler};
 use serde::{Deserialize, Serialize};
 use serde_json::{json, Value};
 use std::sync::Arc;

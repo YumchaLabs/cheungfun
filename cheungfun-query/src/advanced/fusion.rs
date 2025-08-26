@@ -1,6 +1,6 @@
 // Fusion Algorithms Implementation
 
-use super::{ExternalCache, FusionMethod, RerankModel, VectorStore};
+use super::FusionMethod;
 use cheungfun_core::ScoredNode;
 use std::collections::HashMap;
 use tracing::{debug, info};

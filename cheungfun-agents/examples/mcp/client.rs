@@ -18,7 +18,6 @@
 use serde::{Deserialize, Serialize};
 use serde_json::json;
 use siumai::prelude::*;
-use std::collections::HashMap;
 
 /// JSON-RPC request structure for MCP communication
 #[derive(Debug, Serialize)]

@@ -4,8 +4,8 @@ use async_trait::async_trait;
 use cheungfun_core::{
     cache::UnifiedCache,
     traits::{
-        DocumentStore, Embedder, IndexStore, IndexingPipeline, Loader, NodeTransformer,
-        PipelineCache, StorageContext, Transformer, VectorStore,
+        Embedder, IndexingPipeline, Loader, NodeTransformer, PipelineCache, StorageContext,
+        Transformer, VectorStore,
     },
     Document, IndexingProgress, IndexingStats, Node, Result as CoreResult,
 };

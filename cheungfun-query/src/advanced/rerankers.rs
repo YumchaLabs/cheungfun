@@ -1,6 +1,6 @@
 // Rerankers Implementation
 
-use super::{AdvancedQuery, ExternalCache, Reranker, VectorStore};
+use super::{AdvancedQuery, Reranker};
 use anyhow::{Context, Result};
 use async_trait::async_trait;
 use cheungfun_core::{ResponseGenerator, ScoredNode};

@@ -163,7 +163,7 @@ impl LlmClientManager {
         &self,
         config: &LlmConfig,
     ) -> Result<Arc<dyn ChatCapability>> {
-        let key = self.generate_client_key(config);
+        let key = Self::generate_client_key(config);
 
         // Try to get existing client
         {
@@ -210,7 +210,7 @@ impl LlmClientManager {
     }
 
     /// Generate a unique key for client caching
-    fn generate_client_key(&self, config: &LlmConfig) -> String {
+    fn generate_client_key(config: &LlmConfig) -> String {
         format!(
             "{}:{}:{}:{}",
             config.provider,
@@ -274,8 +274,8 @@ pub trait LlmAgent: Send + Sync {
                 let mapped_stream = stream.map(|chunk| {
                     chunk
                         .map(|event| match event {
-                            siumai::types::ChatStreamEvent::ContentDelta { delta, .. } => delta,
-                            siumai::types::ChatStreamEvent::ThinkingDelta { delta } => delta,
+                            siumai::types::ChatStreamEvent::ContentDelta { delta, .. }
+                            | siumai::types::ChatStreamEvent::ThinkingDelta { delta } => delta,
                             siumai::types::ChatStreamEvent::StreamEnd { response } => {
                                 response.content.all_text()
                             }

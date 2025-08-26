@@ -88,7 +88,13 @@ async fn selective_tool_usage() -> Result<()> {
     println!("🎯 Pattern 2: Selective Tool Usage");
     println!("{}", "-".repeat(30));
 
-    let llm_client = SiumaiLlmClient::openai(
+    let llm_client1 = SiumaiLlmClient::openai(
+        std::env::var("OPENAI_API_KEY").unwrap_or_else(|_| "demo-key".to_string()),
+        "gpt-4",
+    )
+    .await?;
+
+    let llm_client2 = SiumaiLlmClient::openai(
         std::env::var("OPENAI_API_KEY").unwrap_or_else(|_| "demo-key".to_string()),
         "gpt-4",
     )
@@ -101,7 +107,7 @@ async fn selective_tool_usage() -> Result<()> {
     let math_agent = ReActAgent::with_llm_client(
         ReActConfig::new("Math Specialist").with_max_iterations(3),
         Arc::new(math_tools),
-        llm_client.clone(),
+        llm_client1,
     );
 
     // Only register information tools for a research agent
@@ -111,7 +117,7 @@ async fn selective_tool_usage() -> Result<()> {
     let research_agent = ReActAgent::with_llm_client(
         ReActConfig::new("Research Specialist").with_max_iterations(3),
         Arc::new(research_tools),
-        llm_client,
+        llm_client2,
     );
 
     // Demonstrate specialized usage

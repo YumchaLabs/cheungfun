@@ -39,9 +39,10 @@ impl MessageConverter {
         let role = match message.role {
             siumai::types::MessageRole::User => MessageRole::User,
             siumai::types::MessageRole::Assistant => MessageRole::Assistant,
-            siumai::types::MessageRole::System => MessageRole::System,
+            siumai::types::MessageRole::System | siumai::types::MessageRole::Developer => {
+                MessageRole::System
+            } // Treat developer as system
             siumai::types::MessageRole::Tool => MessageRole::Tool,
-            siumai::types::MessageRole::Developer => MessageRole::System, // Treat developer as system
         };
 
         CheungfunMessage {

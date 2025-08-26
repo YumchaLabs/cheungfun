@@ -14,9 +14,8 @@ use cheungfun_agents::{
     tool::{create_simple_schema, Tool, ToolContext, ToolRegistry, ToolResult},
     types::{AgentMessage, ToolSchema},
 };
-use serde::{Deserialize, Serialize};
+use serde::Deserialize;
 use std::{collections::HashMap, sync::Arc};
-use uuid::Uuid;
 
 #[tokio::main]
 async fn main() -> Result<()> {

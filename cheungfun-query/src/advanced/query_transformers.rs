@@ -1,6 +1,6 @@
 // Query Transformers Implementation
 
-use super::{AdvancedQuery, ExternalCache, HashMap, QueryTransformer, VectorStore};
+use super::{AdvancedQuery, HashMap, QueryTransformer};
 use anyhow::{Context, Result};
 use async_trait::async_trait;
 use cheungfun_core::ResponseGenerator;
@@ -339,7 +339,7 @@ impl QueryExpansionTransformer {
     }
 
     /// Loads the synonym dictionary from a file.
-    pub async fn load_synonyms_from_file(&mut self, file_path: &str) -> Result<()> {
+    pub async fn load_synonyms_from_file(&mut self, _file_path: &str) -> Result<()> {
         // TODO: Implement synonym loading from file
         todo!("Implement synonym loading from file")
     }

@@ -126,14 +126,14 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         .with_respect_sentence_boundaries(true)
         .with_min_chunk_size(50);
 
-    let configured_splitter = TextSplitter::with_config(custom_splitter_config);
+    let _configured_splitter = TextSplitter::with_config(custom_splitter_config);
     println!("   Created splitter with custom configuration");
 
     let custom_metadata_config = MetadataConfig::new()
         .with_title_extraction(true)
         .with_statistics(true);
 
-    let configured_extractor = MetadataExtractor::with_config(custom_metadata_config);
+    let _configured_extractor = MetadataExtractor::with_config(custom_metadata_config);
     println!("   Created metadata extractor with custom configuration");
 
     println!("\n✨ Example completed successfully!");

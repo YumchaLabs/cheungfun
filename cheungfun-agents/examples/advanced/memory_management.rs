@@ -164,7 +164,13 @@ async fn context_sharing_example() -> Result<()> {
     println!("🤝 Example 3: Context Sharing Between Agents");
     println!("{}", "-".repeat(30));
 
-    let llm_client = SiumaiLlmClient::openai(
+    let llm_client1 = SiumaiLlmClient::openai(
+        std::env::var("OPENAI_API_KEY").unwrap_or_else(|_| "demo-key".to_string()),
+        "gpt-4",
+    )
+    .await?;
+
+    let llm_client2 = SiumaiLlmClient::openai(
         std::env::var("OPENAI_API_KEY").unwrap_or_else(|_| "demo-key".to_string()),
         "gpt-4",
     )
@@ -177,13 +183,13 @@ async fn context_sharing_example() -> Result<()> {
     let information_agent = ReActAgent::with_llm_client(
         ReActConfig::new("Information Collector").with_max_iterations(2),
         Arc::new(tools.clone()),
-        llm_client.clone(),
+        llm_client1,
     );
 
     let analysis_agent = ReActAgent::with_llm_client(
         ReActConfig::new("Information Analyzer").with_max_iterations(2),
         Arc::new(tools),
-        llm_client,
+        llm_client2,
     );
 
     // Shared context that both agents can access
@@ -252,7 +258,7 @@ fn serialize_context(context: &AgentContext) -> Result<String> {
     }
 
     let serializable = SerializableContext {
-        data: context.get_all_data().clone(),
+        data: context.variables.clone(),
         timestamp: chrono::Utc::now().to_rfc3339(),
     };
 
@@ -310,7 +316,7 @@ mod context_utils {
 
     /// Utility to merge contexts (useful for context sharing)
     pub fn merge_contexts(base: &mut AgentContext, other: &AgentContext) {
-        for (key, value) in other.get_all_data() {
+        for (key, value) in &other.variables {
             // Only merge if key doesn't exist in base (don't overwrite)
             if base.get_variable(key).is_none() {
                 base.set_variable(key.clone(), value.clone());
