@@ -4,13 +4,19 @@
 //! with support for various reasoning patterns and tool integration.
 
 pub mod base;
+pub mod builder;
 pub mod react;
+pub mod strategy;
 
 // Re-export core agent functionality
 pub use base::{
     utils::{default_capabilities_for, generate_agent_id, validate_config},
-    AgentBuilder, AgentContext, AgentMessageExt, AgentStatus, BaseAgent,
+    AgentBuilder as BaseAgentBuilder, AgentContext, AgentMessageExt, AgentStatus, BaseAgent,
 };
+
+// Re-export new builder system
+pub use builder::{AgentBuilder, BuiltAgent};
+pub use strategy::{AgentStrategy, DirectStrategy, FunctionCallingStrategy};
 
 // Re-export ReAct agent
 pub use react::{
@@ -107,8 +113,10 @@ impl AgentFactory {
 /// Prelude module for convenient imports
 pub mod prelude {
     pub use super::{
-        default_capabilities_for, generate_agent_id, validate_config, AgentBuilder, AgentContext,
-        AgentFactory, AgentStatus, AgentType, BaseAgent, ReActAgent, ReActConfig, ReActStats,
+        default_capabilities_for, generate_agent_id, validate_config,
+        AgentBuilder, BuiltAgent, AgentContext, AgentFactory, AgentStatus, AgentType,
+        BaseAgent, ReActAgent, ReActConfig, ReActStats,
+        AgentStrategy, DirectStrategy, FunctionCallingStrategy,
     };
     pub use crate::types::{AgentCapabilities, AgentConfig};
 }

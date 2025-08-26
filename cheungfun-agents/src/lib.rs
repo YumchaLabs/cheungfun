@@ -93,8 +93,8 @@ pub mod prelude {
 
     // Agent system
     pub use crate::agent::{
-        ActionStep, AgentBuilder, AgentContext, AgentStatus, BaseAgent, FinalAnswerStep,
+        ActionStep, AgentBuilder, BuiltAgent, AgentContext, AgentStatus, BaseAgent, FinalAnswerStep,
         ObservationStep, ReActAgent, ReActConfig, ReActStats, ReasoningStep, ReasoningStepType,
-        ReasoningTrace, ThoughtStep,
+        ReasoningTrace, ThoughtStep, AgentStrategy, DirectStrategy, FunctionCallingStrategy,
     };
 }
