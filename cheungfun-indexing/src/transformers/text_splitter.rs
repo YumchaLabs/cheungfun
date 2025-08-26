@@ -214,34 +214,63 @@ impl TextSplitter {
     /// Calculate character offsets for chunks in the original text.
     fn calculate_offsets(&self, original_text: &str, chunks: &[String]) -> Vec<(usize, usize)> {
         let mut offsets = Vec::new();
-        let mut current_pos = 0;
+        let mut current_byte_pos = 0;
 
         for chunk in chunks {
+            let chunk_trimmed = chunk.trim();
+
             // Find the chunk in the original text starting from current position
-            let search_text = if current_pos < original_text.len() {
-                &original_text[current_pos..]
+            // Use safe substring to avoid character boundary issues
+            let search_text = if current_byte_pos < original_text.len() {
+                // Find a safe character boundary at or after current_byte_pos
+                let safe_start = original_text
+                    .char_indices()
+                    .find(|(i, _)| *i >= current_byte_pos)
+                    .map(|(i, _)| i)
+                    .unwrap_or(original_text.len());
+
+                &original_text[safe_start..]
             } else {
                 ""
             };
 
-            if let Some(found_pos) = search_text.find(chunk.trim()) {
-                let start_offset = current_pos + found_pos;
-                let end_offset =
-                    std::cmp::min(start_offset + chunk.trim().len(), original_text.len());
-                offsets.push((start_offset, end_offset));
+            if let Some(found_pos) = search_text.find(chunk_trimmed) {
+                let safe_start = original_text
+                    .char_indices()
+                    .find(|(i, _)| *i >= current_byte_pos)
+                    .map(|(i, _)| i)
+                    .unwrap_or(original_text.len());
+
+                let start_byte_pos = safe_start + found_pos;
+                let end_byte_pos =
+                    std::cmp::min(start_byte_pos + chunk_trimmed.len(), original_text.len());
+
+                offsets.push((start_byte_pos, end_byte_pos));
 
                 // Update position for next search, accounting for overlap
-                current_pos = if end_offset > self.config.chunk_overlap {
-                    std::cmp::min(end_offset - self.config.chunk_overlap, original_text.len())
+                // Convert overlap from character count to byte position safely
+                let overlap_chars =
+                    std::cmp::min(self.config.chunk_overlap, chunk_trimmed.chars().count());
+                if overlap_chars > 0 {
+                    // Find the byte position that corresponds to overlap_chars from the end
+                    let chunk_chars: Vec<(usize, char)> = chunk_trimmed.char_indices().collect();
+                    if chunk_chars.len() > overlap_chars {
+                        let overlap_start_idx = chunk_chars.len() - overlap_chars;
+                        let overlap_byte_offset = chunk_chars[overlap_start_idx].0;
+                        current_byte_pos = start_byte_pos + overlap_byte_offset;
+                    } else {
+                        current_byte_pos = start_byte_pos;
+                    }
                 } else {
-                    end_offset
-                };
+                    current_byte_pos = end_byte_pos;
+                }
             } else {
                 // Fallback: estimate position
-                let start_offset = current_pos;
-                let end_offset = std::cmp::min(current_pos + chunk.len(), original_text.len());
-                offsets.push((start_offset, end_offset));
-                current_pos = end_offset;
+                let start_byte_pos = current_byte_pos;
+                let end_byte_pos =
+                    std::cmp::min(current_byte_pos + chunk_trimmed.len(), original_text.len());
+                offsets.push((start_byte_pos, end_byte_pos));
+                current_byte_pos = end_byte_pos;
             }
         }
 
