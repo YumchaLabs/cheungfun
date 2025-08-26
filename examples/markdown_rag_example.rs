@@ -240,7 +240,8 @@ impl MarkdownRagSystem {
                 i + 1,
                 documents.len(),
                 document
-                    .get_metadata_string("file_path")
+                    .get_metadata_string("source")
+                    .or_else(|| document.get_metadata_string("filename"))
                     .unwrap_or_else(|| format!("Document {}", i + 1))
             );
 
@@ -361,7 +362,8 @@ impl MarkdownRagSystem {
         for (i, scored_node) in response.retrieved_nodes.iter().take(3).enumerate() {
             let source = scored_node
                 .node
-                .get_metadata_string("file_path")
+                .get_metadata_string("source")
+                .or_else(|| scored_node.node.get_metadata_string("filename"))
                 .unwrap_or_else(|| "未知来源".to_string());
             let preview = scored_node
                 .node
