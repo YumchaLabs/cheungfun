@@ -228,6 +228,11 @@ impl ToolRegistry {
         }
     }
 
+    /// Get all tools in the registry
+    pub fn get_all_tools(&self) -> Vec<Arc<dyn Tool>> {
+        self.tools.values().map(Arc::clone).collect()
+    }
+
     /// Find tools by capability
     pub fn find_by_capability(&self, capability: &str) -> Vec<Arc<dyn Tool>> {
         self.tools

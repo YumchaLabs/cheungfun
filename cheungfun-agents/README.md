@@ -37,6 +37,12 @@ Cheungfun Agents is a powerful, production-ready agent framework that provides i
 - **Source Attribution**: Include source information in agent responses
 - **Configurable RAG**: Flexible configuration for different use cases
 
+### 🤖 LLM Integration
+- **Multi-Provider Support**: OpenAI, Anthropic, Ollama via siumai library
+- **ReAct Pattern**: Reasoning and Acting pattern implementation
+- **Flexible Configuration**: Temperature, max tokens, system prompts
+- **Error Handling**: Robust error handling and fallback mechanisms
+
 ## 🚀 Quick Start
 
 ### Basic Agent
@@ -126,6 +132,46 @@ async fn main() -> Result<()> {
 }
 ```
 
+### LLM Integration
+
+```rust
+use cheungfun_agents::{
+    agent::react::{ReActAgent, ReActConfig},
+    llm::SiumaiLlmClient,
+    tool::ToolRegistry,
+    types::{AgentConfig, AgentCapabilities, AgentMessage, MessageRole},
+};
+use std::{collections::HashMap, sync::Arc};
+
+#[tokio::main]
+async fn main() -> Result<()> {
+    // Create LLM client (supports OpenAI, Anthropic, Ollama)
+    let llm_client = SiumaiLlmClient::ollama(
+        "http://localhost:11434",
+        "llama3.2"
+    ).await?;
+
+    // Create ReAct agent with LLM
+    let config = ReActConfig::default();
+    let tools = Arc::new(ToolRegistry::new());
+    let agent = ReActAgent::with_llm_client(config, tools, llm_client);
+
+    // Chat with the agent
+    let message = AgentMessage {
+        id: uuid::Uuid::new_v4(),
+        content: "Explain quantum computing in simple terms".to_string(),
+        role: MessageRole::User,
+        metadata: HashMap::new(),
+        timestamp: chrono::Utc::now(),
+        tool_calls: Vec::new(),
+    };
+
+    let response = agent.chat(message, None).await?;
+    println!("Agent: {}", response.content);
+    Ok(())
+}
+```
+
 ## 📚 Examples
 
 The `examples/` directory contains comprehensive examples:
@@ -134,12 +180,14 @@ The `examples/` directory contains comprehensive examples:
 - **`workflow_orchestration.rs`**: Multi-agent workflow coordination
 - **`mcp_integration.rs`**: MCP client/server integration
 - **`rag_agent.rs`**: RAG-enhanced intelligent agents
+- **`react_with_llm.rs`**: ReAct agent with LLM integration
 
 Run examples with:
 ```bash
 cargo run --example basic_agent
 cargo run --example workflow_orchestration
 cargo run --example mcp_integration
+cargo run --example react_with_llm -- --provider ollama --model llama3.2
 ```
 
 ## 🏗️ Architecture

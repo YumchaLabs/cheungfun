@@ -109,6 +109,34 @@ pub enum AgentError {
         message: String,
     },
 
+    /// LLM-related errors
+    #[error("LLM error: {message}")]
+    LlmError {
+        /// Error message
+        message: String,
+    },
+
+    /// Unsupported provider error
+    #[error("Unsupported provider: {provider}")]
+    UnsupportedProvider {
+        /// Provider name
+        provider: String,
+    },
+
+    /// Missing API key error
+    #[error("Missing API key for provider: {provider}")]
+    MissingApiKey {
+        /// Provider name
+        provider: String,
+    },
+
+    /// Invalid configuration error
+    #[error("Invalid configuration: {message}")]
+    InvalidConfiguration {
+        /// Error message
+        message: String,
+    },
+
     /// Serialization/deserialization errors
     #[error("Serialization error: {0}")]
     Serialization(#[from] serde_json::Error),
@@ -117,9 +145,55 @@ pub enum AgentError {
     #[error("IO error: {0}")]
     Io(#[from] std::io::Error),
 
+    /// Invalid input error
+    #[error("Invalid input: {message}")]
+    InvalidInput {
+        /// Error message
+        message: String,
+    },
+
+    /// Not implemented error
+    #[error("Not implemented: {message}")]
+    NotImplemented {
+        /// Error message
+        message: String,
+    },
+
+    /// No tools available error
+    #[error("No tools available")]
+    NoToolsAvailable,
+
+    /// Unsupported operation error
+    #[error("Unsupported operation: {message}")]
+    UnsupportedOperation {
+        /// Error message
+        message: String,
+    },
+
     /// Generic errors with context
     #[error("Agent error: {message}")]
     Generic {
+        /// Error message
+        message: String,
+    },
+
+    /// Resource limit error
+    #[error("Resource limit error: {message}")]
+    ResourceLimit {
+        /// Error message
+        message: String,
+    },
+
+    /// Memory error
+    #[error("Memory error: {message}")]
+    Memory {
+        /// Error message
+        message: String,
+    },
+
+    /// Parsing error
+    #[error("Parsing error: {message}")]
+    Parsing {
         /// Error message
         message: String,
     },
@@ -216,6 +290,88 @@ impl AgentError {
         }
     }
 
+    /// Create a serialization error
+    pub fn serialization(message: impl Into<String>) -> Self {
+        use serde::de::Error as DeError;
+        let json_error = serde_json::Error::custom(message.into());
+        Self::Serialization(json_error)
+    }
+
+    /// Create a resource limit error
+    pub fn resource_limit(message: impl Into<String>) -> Self {
+        Self::ResourceLimit {
+            message: message.into(),
+        }
+    }
+
+    /// Create a memory error
+    pub fn memory(message: impl Into<String>) -> Self {
+        Self::Memory {
+            message: message.into(),
+        }
+    }
+
+    /// Create a parsing error
+    pub fn parsing(message: impl Into<String>) -> Self {
+        Self::Parsing {
+            message: message.into(),
+        }
+    }
+
+    /// Create an LLM error
+    pub fn llm_error<S: Into<String>>(message: S) -> Self {
+        Self::LlmError {
+            message: message.into(),
+        }
+    }
+
+    /// Create an unsupported provider error
+    pub fn unsupported_provider<S: Into<String>>(provider: S) -> Self {
+        Self::UnsupportedProvider {
+            provider: provider.into(),
+        }
+    }
+
+    /// Create a missing API key error
+    pub fn missing_api_key<S: Into<String>>(provider: S) -> Self {
+        Self::MissingApiKey {
+            provider: provider.into(),
+        }
+    }
+
+    /// Create an invalid configuration error
+    pub fn invalid_configuration<S: Into<String>>(message: S) -> Self {
+        Self::InvalidConfiguration {
+            message: message.into(),
+        }
+    }
+
+    /// Create an invalid input error
+    pub fn invalid_input<S: Into<String>>(message: S) -> Self {
+        Self::InvalidInput {
+            message: message.into(),
+        }
+    }
+
+    /// Create a not implemented error
+    pub fn not_implemented<S: Into<String>>(message: S) -> Self {
+        Self::NotImplemented {
+            message: message.into(),
+        }
+    }
+
+    /// Create a no tools available error
+    pub fn no_tools_available() -> Self {
+        Self::NoToolsAvailable
+    }
+
+    /// Create an unsupported operation error
+    pub fn unsupported_operation<S: Into<String>>(message: S) -> Self {
+        Self::UnsupportedOperation {
+            message: message.into(),
+        }
+    }
+
     /// Create a generic error
     pub fn generic(message: impl Into<String>) -> Self {
         Self::Generic {
@@ -256,6 +412,17 @@ impl AgentError {
             Self::Serialization(_) => "serialization",
             Self::Io(_) => "io",
             Self::Generic { .. } => "generic",
+            Self::LlmError { .. } => "llm_error",
+            Self::UnsupportedProvider { .. } => "unsupported_provider",
+            Self::MissingApiKey { .. } => "missing_api_key",
+            Self::InvalidConfiguration { .. } => "invalid_configuration",
+            Self::InvalidInput { .. } => "invalid_input",
+            Self::NotImplemented { .. } => "not_implemented",
+            Self::NoToolsAvailable => "no_tools_available",
+            Self::UnsupportedOperation { .. } => "unsupported_operation",
+            Self::ResourceLimit { .. } => "resource_limit",
+            Self::Memory { .. } => "memory",
+            Self::Parsing { .. } => "parsing",
         }
     }
 }

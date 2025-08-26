@@ -304,7 +304,8 @@ mod storage_tests {
     }
 }
 
-// Tests that don't require the storage feature
+// Tests that require the storage feature
+#[cfg(feature = "storage")]
 #[tokio::test]
 async fn test_storage_config_creation() {
     use cheungfun_integrations::SqlxStorageConfig;

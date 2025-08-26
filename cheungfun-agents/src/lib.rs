@@ -45,43 +45,56 @@
 // Core modules
 pub mod agent;
 pub mod error;
+pub mod llm;
 pub mod mcp;
-pub mod orchestration;
-pub mod task;
 pub mod tool;
 pub mod types;
+pub mod workflow;
 
 // Re-exports for convenience
-pub use agent::{Agent, AgentBuilder, AgentExecutor, RagAgent, RagAgentConfig};
 pub use error::{AgentError, Result};
 pub use mcp::{McpClient, McpServer, McpService};
-pub use orchestration::{AgentOrchestrator, Workflow, WorkflowBuilder};
-pub use task::{Task, TaskBuilder, TaskContext, TaskResult, TaskStatus};
 pub use tool::{Tool, ToolRegistry, ToolResult};
 pub use types::*;
+pub use workflow::{
+    utils, Workflow, WorkflowBuilder, WorkflowExecutor, WorkflowResult, WorkflowStatus,
+};
 
 /// Prelude module for convenient imports
 pub mod prelude {
+    // Core exports
     pub use crate::{
-        Agent, AgentBuilder, AgentError, AgentExecutor, AgentOrchestrator, McpClient, McpServer,
-        McpService, RagAgent, RagAgentConfig, Result, Task, TaskBuilder, TaskContext, TaskResult,
-        TaskStatus, Tool, ToolRegistry, ToolResult, Workflow, WorkflowBuilder,
+        AgentError, McpClient, McpServer, McpService, Result, Tool, ToolRegistry, ToolResult,
     };
-
-    // Re-export types
-    pub use crate::types::AgentCapabilities;
 
     // Built-in tools
     pub use crate::tool::builtin::{EchoTool, FileTool, HttpTool, SearchTool};
 
-    // Orchestration helpers
-    pub use crate::orchestration::workflow::{create_step, create_step_with_deps};
+    // Memory management
+    pub use cheungfun_core::traits::BaseMemory;
+    pub use cheungfun_query::memory::{ChatMemoryBuffer, ChatMemoryConfig};
+
+    // LLM integration
+    pub use crate::llm::{LlmClientFactory, LlmClientManager, LlmConfig, MessageConverter};
 
     // MCP components
     pub use crate::mcp::{server::McpServerBuilder, McpToolRegistry};
 
     // Common types
     pub use crate::types::{
-        AgentId, AgentMessage, AgentResponse, ToolCall, ToolOutput, WorkflowStep,
+        AgentId, AgentMessage, AgentResponse, ToolCall, ToolCallId, ToolOutput, ToolSchema,
+    };
+
+    // Workflow system
+    pub use crate::workflow::{
+        utils as workflow_utils, Workflow, WorkflowBuilder, WorkflowExecutor, WorkflowResult,
+        WorkflowStatus,
+    };
+
+    // Agent system
+    pub use crate::agent::{
+        ActionStep, AgentBuilder, AgentContext, AgentStatus, BaseAgent, FinalAnswerStep,
+        ObservationStep, ReActAgent, ReActConfig, ReActStats, ReasoningStep, ReasoningStepType,
+        ReasoningTrace, ThoughtStep,
     };
 }
