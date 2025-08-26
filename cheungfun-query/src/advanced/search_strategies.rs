@@ -1,8 +1,7 @@
 // Search Strategies Implementation
 
 use super::{
-    AdvancedQuery, DistanceMetric, FusionMethod, NormalizationMethod,
-    SearchMode, SearchStrategy,
+    AdvancedQuery, DistanceMetric, FusionMethod, NormalizationMethod, SearchMode, SearchStrategy,
 };
 use anyhow::{Context, Result};
 use async_trait::async_trait;

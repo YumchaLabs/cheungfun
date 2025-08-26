@@ -5,8 +5,8 @@
 
 use async_trait::async_trait;
 use futures::{Stream, StreamExt};
-use std::{collections::HashMap, fmt::Write};
 use std::pin::Pin;
+use std::{collections::HashMap, fmt::Write};
 use tracing::{debug, info, instrument};
 
 use cheungfun_core::{

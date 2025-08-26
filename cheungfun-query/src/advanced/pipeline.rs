@@ -1,9 +1,8 @@
 // Advanced Retrieval Pipeline Implementation
 
 use super::{
-    AdvancedQuery, QueryCache, QueryTransformer, Reranker,
-    ResponseTransformer, RetrievalResponse, RetrievalStats, RetryConfig,
-    ScoredNode, SearchStrategy,
+    AdvancedQuery, QueryCache, QueryTransformer, Reranker, ResponseTransformer, RetrievalResponse,
+    RetrievalStats, RetryConfig, ScoredNode, SearchStrategy,
 };
 use anyhow::{Context, Result};
 use cheungfun_core::VectorStore;

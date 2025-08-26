@@ -168,7 +168,12 @@ impl VectorRetriever {
         let keyword_results = self.keyword_search(query).await?;
 
         // Combine and rerank results
-        Ok(Self::combine_search_results(vector_results, keyword_results, alpha, query.top_k))
+        Ok(Self::combine_search_results(
+            vector_results,
+            keyword_results,
+            alpha,
+            query.top_k,
+        ))
     }
 
     /// Combine results from vector and keyword search.

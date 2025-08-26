@@ -135,11 +135,7 @@ impl QueryCache {
     }
 
     /// Cleans up expired entries.
-    fn cleanup_expired(
-        &self,
-        cache: &mut HashMap<String, CachedResult>,
-        stats: &mut CacheStats,
-    ) {
+    fn cleanup_expired(&self, cache: &mut HashMap<String, CachedResult>, stats: &mut CacheStats) {
         let expired_keys: Vec<_> = cache
             .iter()
             .filter(|(_, cached)| cached.timestamp.elapsed() >= self.ttl)

@@ -458,7 +458,6 @@ impl MultilingualProcessor {
 mod tests {
     use super::*;
 
-
     #[tokio::test]
     async fn test_multilingual_processing() {
         let detector = Arc::new(LanguageDetector::new().unwrap());
