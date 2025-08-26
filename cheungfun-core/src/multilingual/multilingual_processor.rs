@@ -10,7 +10,7 @@ use crate::multilingual::{
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 use std::sync::Arc;
-use tracing::{debug, info, warn};
+use tracing::{debug, info};
 
 /// Result of multilingual content processing
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -457,7 +457,7 @@ impl MultilingualProcessor {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::multilingual::LanguageDetectionConfig;
+
 
     #[tokio::test]
     async fn test_multilingual_processing() {

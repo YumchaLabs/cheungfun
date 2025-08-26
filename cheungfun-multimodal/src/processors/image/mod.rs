@@ -236,7 +236,7 @@ impl MediaProcessor for ImageProcessor {
 
             // Update features
             let features = self.extract_image_features(&image);
-            processed_content.features.extend(features.into_iter());
+            processed_content.features.extend(features);
 
             Ok(processed_content)
         }

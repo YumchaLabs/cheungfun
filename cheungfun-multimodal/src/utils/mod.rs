@@ -91,11 +91,10 @@ pub fn estimate_processing_complexity(content: &MediaContent) -> f32 {
 
 /// Check if content requires preprocessing.
 pub fn requires_preprocessing(content: &MediaContent) -> bool {
-    match content.modality_type() {
-        ModalityType::Image | ModalityType::Audio | ModalityType::Video => true,
-        ModalityType::Document => true,
-        _ => false,
-    }
+    matches!(
+        content.modality_type(),
+        ModalityType::Image | ModalityType::Audio | ModalityType::Video | ModalityType::Document
+    )
 }
 
 /// Get the recommended batch size for a modality.

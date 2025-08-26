@@ -3,7 +3,7 @@
 use super::{AdvancedQuery, Reranker};
 use anyhow::{Context, Result};
 use async_trait::async_trait;
-use cheungfun_core::{ResponseGenerator, ScoredNode};
+use cheungfun_core::{types::GenerationOptions, ResponseGenerator, ScoredNode};
 use std::sync::Arc;
 use std::time::Duration;
 use tracing::{debug, info, warn};
@@ -93,7 +93,7 @@ impl LLMReranker {
         // Call the LLM.
         let response = self
             .llm_client
-            .generate_response(&prompt, vec![], &Default::default())
+            .generate_response(&prompt, vec![], &GenerationOptions::default())
             .await
             .context("LLM reranking failed")?;
 

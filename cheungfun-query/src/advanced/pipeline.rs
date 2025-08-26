@@ -1,8 +1,8 @@
 // Advanced Retrieval Pipeline Implementation
 
 use super::{
-    AdvancedQuery, ExternalCache, FusionAlgorithm, QueryCache, QueryTransformer, Reranker,
-    ResponseGenerator, ResponseTransformer, RetrievalResponse, RetrievalStats, RetryConfig,
+    AdvancedQuery, QueryCache, QueryTransformer, Reranker,
+    ResponseTransformer, RetrievalResponse, RetrievalStats, RetryConfig,
     ScoredNode, SearchStrategy,
 };
 use anyhow::{Context, Result};

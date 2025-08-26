@@ -4,7 +4,7 @@ use serde::{Deserialize, Serialize};
 use std::path::PathBuf;
 
 /// Predefined model configurations for common use cases.
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, Copy)]
 pub enum ModelPreset {
     /// Fast and lightweight model, good for most applications
     /// Model: BAAI/bge-small-en-v1.5 (384 dimensions)
@@ -46,8 +46,7 @@ impl ModelPreset {
         match self {
             ModelPreset::Default | ModelPreset::Fast => 384,
             ModelPreset::HighQuality => 1024,
-            ModelPreset::Multilingual => 768, // multilingual-e5-base has 768 dimensions
-            ModelPreset::Code => 768,
+            ModelPreset::Multilingual | ModelPreset::Code => 768, // multilingual-e5-base and code models have 768 dimensions
         }
     }
 

@@ -86,6 +86,7 @@ impl LlmClientConfig {
     }
 
     /// Set system prompt
+    #[must_use]
     pub fn with_system_prompt(mut self, prompt: impl Into<String>) -> Self {
         self.system_prompt = Some(prompt.into());
         self
@@ -99,6 +100,7 @@ impl LlmClientConfig {
     }
 
     /// Add custom parameter
+    #[must_use]
     pub fn with_custom_param(mut self, key: impl Into<String>, value: serde_json::Value) -> Self {
         self.custom_params.insert(key.into(), value);
         self

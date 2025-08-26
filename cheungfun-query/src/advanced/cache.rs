@@ -110,11 +110,11 @@ impl QueryCache {
         let mut stats = self.stats.write().await;
 
         // Clean up expired entries
-        self.cleanup_expired(&mut cache, &mut stats).await;
+        self.cleanup_expired(&mut cache, &mut stats);
 
         // If the cache is full, evict the least used entry
         if cache.len() >= self.max_size {
-            self.evict_lru(&mut cache, &mut stats).await;
+            self.evict_lru(&mut cache, &mut stats);
         }
 
         // Add the new entry
@@ -129,13 +129,13 @@ impl QueryCache {
         stats.entries = cache.len();
 
         // Update estimated size
-        stats.estimated_size_bytes = self.estimate_cache_size(&cache);
+        stats.estimated_size_bytes = Self::estimate_cache_size(&cache);
 
         info!("Cached result for query hash: {}", query_hash);
     }
 
     /// Cleans up expired entries.
-    async fn cleanup_expired(
+    fn cleanup_expired(
         &self,
         cache: &mut HashMap<String, CachedResult>,
         stats: &mut CacheStats,
@@ -157,7 +157,7 @@ impl QueryCache {
     }
 
     /// Evicts the least used entry (LFU with LRU as tie-breaker).
-    async fn evict_lru(&self, cache: &mut HashMap<String, CachedResult>, stats: &mut CacheStats) {
+    fn evict_lru(&self, cache: &mut HashMap<String, CachedResult>, stats: &mut CacheStats) {
         if let Some(lru_key) = cache
             .iter()
             .min_by_key(|(_, cached)| (cached.access_count, cached.last_accessed))
@@ -170,7 +170,7 @@ impl QueryCache {
     }
 
     /// Estimates the cache size.
-    fn estimate_cache_size(&self, cache: &HashMap<String, CachedResult>) -> usize {
+    fn estimate_cache_size(cache: &HashMap<String, CachedResult>) -> usize {
         cache
             .iter()
             .map(|(key, cached)| {
@@ -213,9 +213,7 @@ impl QueryCache {
         let usage_ratio = cache.len() as f64 / self.max_size as f64;
         let hit_rate = stats.hit_rate();
 
-        let status = if usage_ratio > 0.9 {
-            CacheHealth::Warning
-        } else if hit_rate < 0.1 && stats.hits + stats.misses > 100 {
+        let status = if usage_ratio > 0.9 || (hit_rate < 0.1 && stats.hits + stats.misses > 100) {
             CacheHealth::Warning
         } else {
             CacheHealth::Healthy

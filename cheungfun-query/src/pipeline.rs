@@ -6,9 +6,7 @@
 
 use async_trait::async_trait;
 use futures::Stream;
-use std::collections::HashMap;
-use std::pin::Pin;
-use std::sync::Arc;
+use std::{collections::HashMap, fmt::Write, pin::Pin, sync::Arc};
 use tracing::{debug, info, instrument};
 
 use cheungfun_core::{
@@ -142,7 +140,7 @@ impl DefaultQueryPipeline {
                 cheungfun_core::types::MessageRole::System => "System",
                 cheungfun_core::types::MessageRole::Tool => "Tool",
             };
-            context.push_str(&format!("{}: {}\n", role, message.content));
+            writeln!(context, "{}: {}", role, message.content).unwrap();
         }
 
         context

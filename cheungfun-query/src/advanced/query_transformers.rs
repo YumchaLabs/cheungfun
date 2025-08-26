@@ -3,7 +3,7 @@
 use super::{AdvancedQuery, HashMap, QueryTransformer};
 use anyhow::{Context, Result};
 use async_trait::async_trait;
-use cheungfun_core::ResponseGenerator;
+use cheungfun_core::{types::GenerationOptions, ResponseGenerator};
 use std::sync::Arc;
 use tracing::{debug, info, warn};
 
@@ -76,7 +76,7 @@ impl HyDETransformer {
                 .generate_response(
                     &prompt,
                     vec![], // empty context nodes
-                    &Default::default(),
+                    &GenerationOptions::default(),
                 )
                 .await
                 .context("Failed to generate hypothetical document")?;
@@ -212,7 +212,7 @@ impl SubquestionTransformer {
 
         let response = self
             .llm_client
-            .generate_response(&prompt, vec![], &Default::default())
+            .generate_response(&prompt, vec![], &GenerationOptions::default())
             .await
             .context("Failed to generate subquestions")?;
 

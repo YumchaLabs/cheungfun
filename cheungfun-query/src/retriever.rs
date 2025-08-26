@@ -168,17 +168,16 @@ impl VectorRetriever {
         let keyword_results = self.keyword_search(query).await?;
 
         // Combine and rerank results
-        self.combine_search_results(vector_results, keyword_results, alpha, query.top_k)
+        Ok(Self::combine_search_results(vector_results, keyword_results, alpha, query.top_k))
     }
 
     /// Combine results from vector and keyword search.
     fn combine_search_results(
-        &self,
         vector_results: Vec<ScoredNode>,
         keyword_results: Vec<ScoredNode>,
         alpha: f32,
         top_k: usize,
-    ) -> Result<Vec<ScoredNode>> {
+    ) -> Vec<ScoredNode> {
         let mut combined_scores: HashMap<uuid::Uuid, f32> = HashMap::new();
         let mut node_map: HashMap<uuid::Uuid, ScoredNode> = HashMap::new();
 
@@ -220,7 +219,7 @@ impl VectorRetriever {
         });
         combined_results.truncate(top_k);
 
-        Ok(combined_results)
+        combined_results
     }
 }
 

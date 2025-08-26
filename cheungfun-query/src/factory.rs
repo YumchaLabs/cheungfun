@@ -116,7 +116,7 @@ impl SiumaiLlmFactory {
     }
 
     /// Create generator configuration from LLM config.
-    fn create_generator_config(&self, config: &LlmConfig) -> SiumaiGeneratorConfig {
+    fn create_generator_config(config: &LlmConfig) -> SiumaiGeneratorConfig {
         SiumaiGeneratorConfig {
             default_model: Some(config.model.clone()),
             default_temperature: config.effective_temperature(),
@@ -141,7 +141,7 @@ impl LlmFactory for SiumaiLlmFactory {
         let siumai_client = self.create_siumai_client(config).await?;
 
         // Create generator configuration
-        let generator_config = self.create_generator_config(config);
+        let generator_config = Self::create_generator_config(config);
 
         // Create and return the response generator
         let generator = SiumaiGenerator::with_config(siumai_client, generator_config);

@@ -1,9 +1,9 @@
 // Response Transformers Implementation
 
-use super::{ExternalCache, RerankModel, ResponseTransformer, RetrievalResponse, VectorStore};
+use super::{ResponseTransformer, RetrievalResponse};
 use anyhow::{Context, Result};
 use async_trait::async_trait;
-use cheungfun_core::{ResponseGenerator, ScoredNode};
+use cheungfun_core::{types::GenerationOptions, ResponseGenerator, ScoredNode};
 use std::collections::HashSet;
 use std::sync::Arc;
 use std::time::Duration;
@@ -69,7 +69,7 @@ impl SummaryTransformer {
 
         let response = self
             .llm_client
-            .generate_response(&prompt, vec![], &Default::default())
+            .generate_response(&prompt, vec![], &GenerationOptions::default())
             .await
             .context("Failed to generate summary")?;
 

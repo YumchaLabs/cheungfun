@@ -31,7 +31,7 @@ pub use multi_agent::{
 };
 
 /// Agent types enumeration
-#[derive(Debug, Clone, PartialEq, Eq)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum AgentType {
     /// `ReAct` reasoning agent
     ReAct,
@@ -79,6 +79,9 @@ pub struct AgentFactory;
 
 impl AgentFactory {
     /// Create a new `ReAct` agent
+    ///
+    /// # Errors
+    /// Returns an error if the agent configuration is invalid
     pub fn create_react_agent(
         config: crate::types::AgentConfig,
         tools: std::sync::Arc<crate::tool::ToolRegistry>,
@@ -97,6 +100,9 @@ impl AgentFactory {
     }
 
     /// Create an agent from agent type and configuration
+    ///
+    /// # Errors
+    /// Returns an error if the agent configuration is invalid or agent creation fails
     pub fn create_agent(
         agent_type: AgentType,
         config: crate::types::AgentConfig,

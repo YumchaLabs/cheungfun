@@ -26,7 +26,7 @@ impl ReciprocalRankFusion {
 
     /// Creates an RRF fuser with default parameters.
     #[must_use]
-    pub fn default() -> Self {
+    pub fn with_default_k() -> Self {
         Self::new(60.0)
     }
 
@@ -49,7 +49,7 @@ impl ReciprocalRankFusion {
         let mut result_list_sizes = Vec::new();
 
         // Calculate RRF scores for each result list
-        for result_list in results.into_iter() {
+        for result_list in results {
             result_list_sizes.push(result_list.len());
 
             for (rank, node) in result_list.into_iter().enumerate() {
@@ -106,6 +106,12 @@ impl ReciprocalRankFusion {
     }
 }
 
+impl Default for ReciprocalRankFusion {
+    fn default() -> Self {
+        Self::new(60.0)
+    }
+}
+
 /// Weighted Average Fusion algorithm.
 #[derive(Debug, Clone)]
 pub struct WeightedAverageFusion {
@@ -140,7 +146,7 @@ impl WeightedAverageFusion {
         );
 
         assert!(
-            !(results.len() != self.weights.len()),
+            results.len() == self.weights.len(),
             "Number of result lists ({}) must match number of weights ({})",
             results.len(),
             self.weights.len()
@@ -259,7 +265,7 @@ impl LinearCombinationFusion {
         );
 
         assert!(
-            !(results.len() != self.coefficients.len()),
+            results.len() == self.coefficients.len(),
             "Number of result lists ({}) must match number of coefficients ({})",
             results.len(),
             self.coefficients.len()

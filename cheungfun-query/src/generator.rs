@@ -5,7 +5,7 @@
 
 use async_trait::async_trait;
 use futures::{Stream, StreamExt};
-use std::collections::HashMap;
+use std::{collections::HashMap, fmt::Write};
 use std::pin::Pin;
 use tracing::{debug, info, instrument};
 
@@ -142,23 +142,23 @@ impl SiumaiGenerator {
         if !context_nodes.is_empty() {
             prompt.push_str("Context:\n");
             for (i, scored_node) in context_nodes.iter().enumerate() {
-                prompt.push_str(&format!("{}. {}\n", i + 1, scored_node.node.content));
+                writeln!(prompt, "{}. {}", i + 1, scored_node.node.content).unwrap();
 
                 if self.config.include_citations || options.include_citations {
                     if let Some(source) = scored_node.node.metadata.get("source") {
-                        prompt.push_str(&format!("   Source: {source}\n"));
+                        writeln!(prompt, "   Source: {source}").unwrap();
                     }
                 }
                 prompt.push('\n');
             }
         }
 
-        prompt.push_str(&format!("Question: {query}\n\nAnswer:"));
+        write!(prompt, "Question: {query}\n\nAnswer:").unwrap();
         prompt
     }
 
     /// Extract token usage from Siumai response.
-    fn extract_token_usage(&self, response: &ChatResponse) -> Option<TokenUsage> {
+    fn extract_token_usage(response: &ChatResponse) -> Option<TokenUsage> {
         response.usage.as_ref().map(|usage| TokenUsage {
             prompt_tokens: usage.prompt_tokens as usize,
             completion_tokens: usage.completion_tokens as usize,
@@ -167,7 +167,7 @@ impl SiumaiGenerator {
     }
 
     /// Build Siumai chat messages.
-    fn build_chat_messages(&self, prompt: &str, _options: &GenerationOptions) -> Vec<ChatMessage> {
+    fn build_chat_messages(prompt: &str, _options: &GenerationOptions) -> Vec<ChatMessage> {
         vec![ChatMessage::user(prompt).build()]
     }
 }
@@ -191,7 +191,7 @@ impl ResponseGenerator for SiumaiGenerator {
         debug!("Built prompt with {} characters", prompt.len());
 
         // Build messages
-        let messages = self.build_chat_messages(&prompt, options);
+        let messages = Self::build_chat_messages(&prompt, options);
 
         // Generate response
         let response =
@@ -205,7 +205,7 @@ impl ResponseGenerator for SiumaiGenerator {
         // Extract content
         let content = match &response.content {
             siumai::MessageContent::Text(text) => text.clone(),
-            _ => {
+            siumai::MessageContent::ToolUse(_) => {
                 return Err(cheungfun_core::CheungfunError::Llm {
                     message: "Unsupported content type in LLM response".to_string(),
                 });
@@ -236,7 +236,7 @@ impl ResponseGenerator for SiumaiGenerator {
         );
 
         // Extract token usage
-        let usage = self.extract_token_usage(&response);
+        let usage = Self::extract_token_usage(&response);
 
         info!("Generated response with {} characters", content.len());
 
@@ -265,7 +265,7 @@ impl ResponseGenerator for SiumaiGenerator {
         debug!("Built prompt with {} characters", prompt.len());
 
         // Build messages
-        let messages = self.build_chat_messages(&prompt, options);
+        let messages = Self::build_chat_messages(&prompt, options);
 
         // Generate streaming response
         let stream = self.client.chat_stream(messages, None).await.map_err(|e| {

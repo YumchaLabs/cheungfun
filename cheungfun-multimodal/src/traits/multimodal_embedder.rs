@@ -195,10 +195,7 @@ pub trait ModalitySpecificEmbedder: MultimodalEmbedder {
 
     /// Check if a specific modality requires special preprocessing.
     fn requires_preprocessing(&self, modality: ModalityType) -> bool {
-        match modality {
-            ModalityType::Image | ModalityType::Audio | ModalityType::Video => true,
-            _ => false,
-        }
+        matches!(modality, ModalityType::Image | ModalityType::Audio | ModalityType::Video)
     }
 }
 

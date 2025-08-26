@@ -256,7 +256,7 @@ impl ChatMemoryBuffer {
         let mut expecting_user = true;
         for message in &self.messages {
             match message.role {
-                MessageRole::System => continue, // Skip system messages
+                MessageRole::System | MessageRole::Tool => continue, // Skip system and tool messages
                 MessageRole::User => {
                     if !expecting_user {
                         return Ok(false);
@@ -269,7 +269,6 @@ impl ChatMemoryBuffer {
                     }
                     expecting_user = true;
                 }
-                MessageRole::Tool => continue, // Skip tool messages for pattern checking
             }
         }
 

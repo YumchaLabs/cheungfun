@@ -157,7 +157,10 @@ impl McpClient {
     }
 
     /// Disconnect from the MCP server
-    pub async fn disconnect(&mut self) -> Result<()> {
+    ///
+    /// # Errors
+    /// Returns an error if disconnection fails
+    pub fn disconnect(&mut self) -> Result<()> {
         if self.connected {
             info!("Disconnecting from MCP server");
             self.connected = false;

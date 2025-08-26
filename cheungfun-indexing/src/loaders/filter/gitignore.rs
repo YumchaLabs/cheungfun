@@ -186,9 +186,8 @@ impl GitignoreMatcher {
         };
 
         match matcher.matched(relative_path, path.is_dir()) {
-            Match::None => false,
+            Match::None | Match::Whitelist(_) => false, // Not ignored or explicitly whitelisted
             Match::Ignore(_) => true,
-            Match::Whitelist(_) => false, // Explicitly whitelisted
         }
     }
 
