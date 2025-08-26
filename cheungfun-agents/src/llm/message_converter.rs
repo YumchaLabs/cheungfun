@@ -7,24 +7,14 @@ use siumai::types::ChatMessage as SiumaiMessage;
 pub struct MessageConverter;
 
 impl MessageConverter {
-    /// Convert MessageRole to string
-    fn role_to_string(role: &MessageRole) -> &'static str {
-        match role {
-            MessageRole::User => "user",
-            MessageRole::Assistant => "assistant",
-            MessageRole::System => "system",
-            MessageRole::Tool => "assistant", // Treat tool messages as assistant messages
-        }
-    }
-    /// Convert cheungfun ChatMessage to siumai ChatMessage
+    /// Convert cheungfun `ChatMessage` to siumai `ChatMessage`
+    #[must_use]
     pub fn to_siumai_messages(messages: &[CheungfunMessage]) -> Vec<SiumaiMessage> {
-        messages
-            .iter()
-            .map(|msg| Self::convert_single_message(msg))
-            .collect()
+        messages.iter().map(Self::convert_single_message).collect()
     }
 
     /// Convert a single cheungfun message to siumai format
+    #[must_use]
     pub fn convert_single_message(message: &CheungfunMessage) -> SiumaiMessage {
         match message.role {
             MessageRole::User => SiumaiMessage::user(&message.content).build(),
@@ -37,15 +27,14 @@ impl MessageConverter {
         }
     }
 
-    /// Convert siumai ChatMessage to cheungfun ChatMessage
+    /// Convert siumai `ChatMessage` to cheungfun `ChatMessage`
+    #[must_use]
     pub fn from_siumai_messages(messages: &[SiumaiMessage]) -> Vec<CheungfunMessage> {
-        messages
-            .iter()
-            .map(|msg| Self::convert_from_siumai(msg))
-            .collect()
+        messages.iter().map(Self::convert_from_siumai).collect()
     }
 
     /// Convert a single siumai message to cheungfun format
+    #[must_use]
     pub fn convert_from_siumai(message: &SiumaiMessage) -> CheungfunMessage {
         let role = match message.role {
             siumai::types::MessageRole::User => MessageRole::User,
@@ -64,21 +53,25 @@ impl MessageConverter {
     }
 
     /// Create a system message for agent instructions
+    #[must_use]
     pub fn create_system_message(instructions: &str) -> SiumaiMessage {
         SiumaiMessage::system(instructions).build()
     }
 
     /// Create a user message
+    #[must_use]
     pub fn create_user_message(content: &str) -> SiumaiMessage {
         SiumaiMessage::user(content).build()
     }
 
     /// Create an assistant message
+    #[must_use]
     pub fn create_assistant_message(content: &str) -> SiumaiMessage {
         SiumaiMessage::assistant(content).build()
     }
 
     /// Build conversation context from memory
+    #[must_use]
     pub fn build_conversation_context(
         system_prompt: Option<&str>,
         memory_messages: &[CheungfunMessage],
@@ -101,6 +94,7 @@ impl MessageConverter {
     }
 
     /// Extract tool calls from assistant message content
+    #[must_use]
     pub fn extract_tool_calls(content: &str) -> Vec<ToolCallExtraction> {
         let mut tool_calls = Vec::new();
 
@@ -120,7 +114,7 @@ impl MessageConverter {
                         tool_calls.push(ToolCallExtraction {
                             tool_name,
                             arguments: args,
-                            raw_text: line.to_string(),
+                            raw_text: (*line).to_string(),
                         });
                     }
                 }
@@ -161,21 +155,25 @@ impl MessageConverter {
     }
 
     /// Format tool result for inclusion in conversation
+    #[must_use]
     pub fn format_tool_result(tool_name: &str, result: &str) -> String {
-        format!("Observation: Tool '{}' returned: {}", tool_name, result)
+        format!("Observation: Tool '{tool_name}' returned: {result}")
     }
 
     /// Create a ReAct-style thought message
+    #[must_use]
     pub fn create_thought_message(thought: &str) -> String {
-        format!("Thought: {}", thought)
+        format!("Thought: {thought}")
     }
 
     /// Create a ReAct-style action message
+    #[must_use]
     pub fn create_action_message(tool_name: &str, args: &serde_json::Value) -> String {
-        format!("Action: {}\nAction Input: {}", tool_name, args)
+        format!("Action: {tool_name}\nAction Input: {args}")
     }
 
     /// Parse ReAct-style response into components
+    #[must_use]
     pub fn parse_react_response(content: &str) -> ReActParsedResponse {
         let mut thoughts = Vec::new();
         let mut actions = Vec::new();
@@ -236,7 +234,7 @@ pub struct ToolCallExtraction {
     pub raw_text: String,
 }
 
-/// Parsed ReAct response components
+/// Parsed `ReAct` response components
 #[derive(Debug, Clone)]
 pub struct ReActParsedResponse {
     /// Extracted thought steps

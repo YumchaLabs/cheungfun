@@ -10,9 +10,48 @@ Basic examples (no special features required):
 cargo run --bin hello_world
 cargo run --bin basic_indexing
 cargo run --bin basic_querying
+
+# Agent examples (requires OpenAI API key)
+cargo run --example simple_agent_example
+cargo run --example comprehensive_agent_example
 ```
 
-## Feature Examples
+## Agent Examples
+
+AI agents with tool integration and real API calls:
+
+### Simple Agent Example
+Perfect for beginners - demonstrates basic agent setup with OpenAI integration:
+
+```bash
+# Set your OpenAI API key
+export OPENAI_API_KEY="your-key-here"
+
+# Run basic agent example
+cargo run --example simple_agent_example
+```
+
+Features demonstrated:
+- ReAct agent with reasoning capabilities
+- Calculator and weather tools
+- Memory management
+- Step-by-step problem solving
+
+### Comprehensive Agent Example  
+Advanced patterns inspired by LlamaIndex:
+
+```bash
+cargo run --example comprehensive_agent_example
+```
+
+Features demonstrated:
+- Multi-tool research assistant
+- Multi-agent workflow pipeline (Research → Analysis → Writing)
+- Agent coordination and handoffs
+- Complex reasoning chains
+
+See `examples/README.md` in the agent examples directory for detailed documentation.
+
 
 ### Candle ML Framework
 

@@ -223,7 +223,7 @@ impl McpService {
     pub async fn connect_all_clients(&mut self) -> Result<()> {
         info!("Connecting all MCP clients");
 
-        for (name, client) in &self.clients {
+        for name in self.clients.keys() {
             // In a real implementation, you'd have connection URLs stored
             let url = format!("ws://localhost:8080/{name}");
 

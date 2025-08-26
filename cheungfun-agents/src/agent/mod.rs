@@ -1,10 +1,11 @@
 //! Agent system for Cheungfun
 //!
-//! This module provides a complete agent framework inspired by LlamaIndex,
+//! This module provides a complete agent framework inspired by `LlamaIndex`,
 //! with support for various reasoning patterns and tool integration.
 
 pub mod base;
 pub mod builder;
+pub mod multi_agent;
 pub mod react;
 pub mod strategy;
 
@@ -24,23 +25,34 @@ pub use react::{
     ReActConfig, ReActStats, ReasoningStep, ReasoningStepType, ReasoningTrace, ThoughtStep,
 };
 
+// Re-export multi-agent system
+pub use multi_agent::{
+    AgentHandoff, AgentRole, HandoffStrategy, MultiAgentConfig, MultiAgentOrchestrator,
+};
+
 /// Agent types enumeration
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub enum AgentType {
-    /// ReAct reasoning agent
+    /// `ReAct` reasoning agent
     ReAct,
+    /// Enhanced `ReAct` with tool retrieval
+    EnhancedReAct,
     /// Function calling agent
     FunctionCalling,
     /// Custom workflow agent
     Workflow,
+    /// Multi-agent orchestration
+    MultiAgent,
 }
 
 impl std::fmt::Display for AgentType {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         match self {
             AgentType::ReAct => write!(f, "react"),
+            AgentType::EnhancedReAct => write!(f, "enhanced_react"),
             AgentType::FunctionCalling => write!(f, "function_calling"),
             AgentType::Workflow => write!(f, "workflow"),
+            AgentType::MultiAgent => write!(f, "multi_agent"),
         }
     }
 }
@@ -51,11 +63,12 @@ impl std::str::FromStr for AgentType {
     fn from_str(s: &str) -> Result<Self, Self::Err> {
         match s.to_lowercase().as_str() {
             "react" => Ok(AgentType::ReAct),
+            "enhanced_react" => Ok(AgentType::EnhancedReAct),
             "function_calling" => Ok(AgentType::FunctionCalling),
             "workflow" => Ok(AgentType::Workflow),
+            "multi_agent" => Ok(AgentType::MultiAgent),
             _ => Err(crate::error::AgentError::invalid_configuration(format!(
-                "Unknown agent type: {}",
-                s
+                "Unknown agent type: {s}"
             ))),
         }
     }
@@ -65,7 +78,7 @@ impl std::str::FromStr for AgentType {
 pub struct AgentFactory;
 
 impl AgentFactory {
-    /// Create a new ReAct agent
+    /// Create a new `ReAct` agent
     pub fn create_react_agent(
         config: crate::types::AgentConfig,
         tools: std::sync::Arc<crate::tool::ToolRegistry>,
@@ -106,6 +119,12 @@ impl AgentFactory {
                     "Workflow agent not yet implemented",
                 ))
             }
+            AgentType::EnhancedReAct | AgentType::MultiAgent => {
+                // TODO: Implement enhanced and multi-agent types
+                Err(crate::error::AgentError::not_implemented(
+                    "Enhanced ReAct and Multi-agent types not yet implemented",
+                ))
+            }
         }
     }
 }
@@ -113,10 +132,13 @@ impl AgentFactory {
 /// Prelude module for convenient imports
 pub mod prelude {
     pub use super::{
-        default_capabilities_for, generate_agent_id, validate_config,
-        AgentBuilder, BuiltAgent, AgentContext, AgentFactory, AgentStatus, AgentType,
-        BaseAgent, ReActAgent, ReActConfig, ReActStats,
-        AgentStrategy, DirectStrategy, FunctionCallingStrategy,
+        default_capabilities_for, generate_agent_id, validate_config, AgentBuilder, AgentContext,
+        AgentFactory, AgentStatus, AgentStrategy, AgentType, BaseAgent, BuiltAgent, DirectStrategy,
+        FunctionCallingStrategy, ReActAgent, ReActConfig, ReActStats,
+    };
+    pub use crate::tool::{
+        KeywordToolRetriever, RetrievableTool, RetrievalStrategy, ToolMetadata, ToolRetriever,
+        ToolRetrieverBuilder,
     };
     pub use crate::types::{AgentCapabilities, AgentConfig};
 }

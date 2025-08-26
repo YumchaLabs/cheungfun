@@ -1,27 +1,21 @@
-//! ReAct Agent Implementation
+//! `ReAct` Agent Implementation
 //!
-//! This module provides the main ReAct agent implementation that combines
-//! reasoning and acting in a structured way, following the ReAct paper's methodology.
+//! This module provides the main `ReAct` agent implementation that combines
+//! reasoning and acting in a structured way, following the `ReAct` paper's methodology.
 
-use super::reasoning::{
-    ActionStep, FinalAnswerStep, ObservationStep, ReasoningStep, ReasoningTrace, ThoughtStep,
-};
 use crate::{
     agent::base::{AgentContext, AgentStatus, BaseAgent},
     error::{AgentError, Result},
-    llm::{LlmClientConfig, SiumaiLlmClient},
-    tool::{Tool, ToolRegistry},
-    types::{
-        AgentCapabilities, AgentConfig, AgentId, AgentMessage, AgentResponse, ExecutionStats,
-        ToolCall, ToolOutput,
-    },
+    llm::SiumaiLlmClient,
+    tool::ToolRegistry,
+    types::{AgentCapabilities, AgentConfig, AgentId, AgentMessage, AgentResponse, ExecutionStats},
 };
 use async_trait::async_trait;
 use serde::{Deserialize, Serialize};
 use std::{collections::HashMap, sync::Arc, time::Instant};
 use uuid::Uuid;
 
-/// ReAct agent configuration
+/// `ReAct` agent configuration
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct ReActConfig {
     /// Base agent configuration
@@ -37,7 +31,7 @@ pub struct ReActConfig {
 }
 
 impl ReActConfig {
-    /// Create a new ReAct configuration
+    /// Create a new `ReAct` configuration
     pub fn new(name: impl Into<String>) -> Self {
         let mut capabilities = AgentCapabilities::default();
         capabilities.supports_tools = true;
@@ -62,18 +56,21 @@ impl ReActConfig {
     }
 
     /// Set maximum iterations
+    #[must_use]
     pub fn with_max_iterations(mut self, max_iterations: usize) -> Self {
         self.max_iterations = max_iterations;
         self
     }
 
     /// Set maximum thinking time
+    #[must_use]
     pub fn with_max_thinking_time(mut self, ms: u64) -> Self {
         self.max_thinking_time_ms = ms;
         self
     }
 
     /// Enable or disable trace inclusion
+    #[must_use]
     pub fn with_trace(mut self, include_trace: bool) -> Self {
         self.include_trace = include_trace;
         self
@@ -86,7 +83,7 @@ impl ReActConfig {
     }
 }
 
-/// ReAct agent execution statistics
+/// `ReAct` agent execution statistics
 #[derive(Debug, Clone, Serialize, Deserialize, Default)]
 pub struct ReActStats {
     /// Total number of executions
@@ -142,7 +139,7 @@ impl ReActStats {
     }
 }
 
-/// ReAct Agent - implements reasoning and acting pattern
+/// `ReAct` Agent - implements reasoning and acting pattern
 #[derive(Debug)]
 pub struct ReActAgent {
     /// Agent ID
@@ -160,7 +157,8 @@ pub struct ReActAgent {
 }
 
 impl ReActAgent {
-    /// Create a new ReAct agent
+    /// Create a new `ReAct` agent
+    #[must_use]
     pub fn new(config: ReActConfig, tools: Arc<ToolRegistry>) -> Self {
         Self {
             id: Uuid::new_v4(),
@@ -172,7 +170,8 @@ impl ReActAgent {
         }
     }
 
-    /// Create a new ReAct agent with LLM client
+    /// Create a new `ReAct` agent with LLM client
+    #[must_use]
     pub fn with_llm_client(
         config: ReActConfig,
         tools: Arc<ToolRegistry>,
@@ -188,12 +187,14 @@ impl ReActAgent {
         }
     }
 
-    /// Get the ReAct configuration
+    /// Get the `ReAct` configuration
+    #[must_use]
     pub fn react_config(&self) -> &ReActConfig {
         &self.config
     }
 
-    /// Get the ReAct statistics
+    /// Get the `ReAct` statistics
+    #[must_use]
     pub fn react_stats(&self) -> &ReActStats {
         &self.stats
     }
@@ -216,11 +217,12 @@ impl ReActAgent {
     }
 
     /// Get LLM client reference
+    #[must_use]
     pub fn llm_client(&self) -> Option<&SiumaiLlmClient> {
         self.llm_client.as_ref()
     }
 
-    /// Perform ReAct reasoning with LLM
+    /// Perform `ReAct` reasoning with LLM
     pub async fn reason_with_llm(&self, messages: Vec<AgentMessage>) -> Result<String> {
         if let Some(llm_client) = &self.llm_client {
             llm_client.chat(messages).await
@@ -231,10 +233,10 @@ impl ReActAgent {
         }
     }
 
-    /// Create a ReAct prompt for the given message
+    /// Create a `ReAct` prompt for the given message
     fn create_react_prompt(&self, message: &AgentMessage) -> AgentMessage {
         let system_prompt = format!(
-            r#"You are a ReAct (Reasoning and Acting) agent. Your task is to think step by step and provide a structured response.
+            r"You are a ReAct (Reasoning and Acting) agent. Your task is to think step by step and provide a structured response.
 
 Follow this format:
 1. Thought: [Your reasoning about the task]
@@ -244,7 +246,7 @@ Follow this format:
 
 Available tools: {}
 
-User's request: {}"#,
+User's request: {}",
             self.get_available_tools_description(),
             message.content
         );
@@ -315,10 +317,7 @@ impl BaseAgent for ReActAgent {
             match self.reason_with_llm(messages).await {
                 Ok(llm_response) => llm_response,
                 Err(e) => {
-                    format!(
-                        "Error during LLM reasoning: {}. Falling back to default response.",
-                        e
-                    )
+                    format!("Error during LLM reasoning: {e}. Falling back to default response.")
                 }
             }
         } else {

@@ -9,15 +9,23 @@ use async_trait::async_trait;
 use serde::Deserialize;
 use std::collections::HashMap;
 
+pub mod calculator;
 pub mod echo;
 pub mod file;
 pub mod http;
 pub mod search;
+pub mod shell;
+pub mod weather;
+pub mod wikipedia;
 
+pub use calculator::CalculatorTool;
 pub use echo::EchoTool;
 pub use file::FileTool;
 pub use http::HttpTool;
 pub use search::SearchTool;
+pub use shell::ShellTool;
+pub use weather::WeatherTool;
+pub use wikipedia::WikipediaTool;
 
 /// Math tool for basic calculations
 #[derive(Debug, Clone)]

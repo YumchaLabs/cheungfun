@@ -174,7 +174,7 @@ impl Tool for SearchTool {
 
         // Check if we have a retriever in the context
         // In a real implementation, this would integrate with cheungfun-query
-        if let Some(retriever_data) = context.get_data("retriever") {
+        if let Some(_retriever_data) = context.get_data("retriever") {
             // This is where we would integrate with the actual RAG system
             // For now, we'll simulate the search
             self.simulate_search(

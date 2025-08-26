@@ -60,6 +60,7 @@ pub struct McpClient {
 #[derive(Debug, Default)]
 pub struct McpClientHandler {
     /// Available tools cache
+    #[allow(dead_code)]
     tools_cache: Option<Vec<RmcpTool>>,
 }
 

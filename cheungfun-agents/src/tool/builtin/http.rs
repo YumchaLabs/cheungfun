@@ -228,6 +228,7 @@ impl Tool for HttpTool {
             headers: HashMap<String, String>,
             body: Option<String>,
             #[serde(default = "default_follow_redirects")]
+            #[allow(dead_code)]
             follow_redirects: bool,
         }
 

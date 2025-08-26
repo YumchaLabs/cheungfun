@@ -1,7 +1,7 @@
 //! Siumai LLM Integration
 //!
 //! This module provides integration with the siumai library for LLM interactions,
-//! supporting multiple providers like OpenAI, Anthropic, and Ollama.
+//! supporting multiple providers like `OpenAI`, Anthropic, and Ollama.
 
 use crate::{
     error::{AgentError, Result},
@@ -72,12 +72,14 @@ impl LlmClientConfig {
     }
 
     /// Set temperature
+    #[must_use]
     pub fn with_temperature(mut self, temperature: f32) -> Self {
         self.temperature = Some(temperature);
         self
     }
 
     /// Set max tokens
+    #[must_use]
     pub fn with_max_tokens(mut self, max_tokens: u32) -> Self {
         self.max_tokens = Some(max_tokens);
         self
@@ -90,6 +92,7 @@ impl LlmClientConfig {
     }
 
     /// Enable or disable tools
+    #[must_use]
     pub fn with_tools(mut self, enable: bool) -> Self {
         self.enable_tools = enable;
         self
@@ -110,7 +113,7 @@ impl SiumaiLlmClient {
         Ok(Self { client, config })
     }
 
-    /// Create an OpenAI client
+    /// Create an `OpenAI` client
     pub async fn openai(api_key: impl Into<String>, model: impl Into<String>) -> Result<Self> {
         let config = LlmClientConfig::new("openai", model);
         let client = LlmBuilder::new()
@@ -120,7 +123,7 @@ impl SiumaiLlmClient {
             .temperature(config.temperature.unwrap_or(0.7f32))
             .build()
             .await
-            .map_err(|e| AgentError::generic(format!("Failed to create OpenAI client: {}", e)))?;
+            .map_err(|e| AgentError::generic(format!("Failed to create OpenAI client: {e}")))?;
 
         Ok(Self {
             client: Box::new(client),
@@ -138,9 +141,7 @@ impl SiumaiLlmClient {
             .temperature(config.temperature.unwrap_or(0.7f32))
             .build()
             .await
-            .map_err(|e| {
-                AgentError::generic(format!("Failed to create Anthropic client: {}", e))
-            })?;
+            .map_err(|e| AgentError::generic(format!("Failed to create Anthropic client: {e}")))?;
 
         Ok(Self {
             client: Box::new(client),
@@ -158,7 +159,7 @@ impl SiumaiLlmClient {
             .temperature(config.temperature.unwrap_or(0.7f32))
             .build()
             .await
-            .map_err(|e| AgentError::generic(format!("Failed to create Ollama client: {}", e)))?;
+            .map_err(|e| AgentError::generic(format!("Failed to create Ollama client: {e}")))?;
 
         Ok(Self {
             client: Box::new(client),
@@ -188,7 +189,7 @@ impl SiumaiLlmClient {
                 }
 
                 let client = builder.build().await.map_err(|e| {
-                    AgentError::generic(format!("Failed to build OpenAI client: {}", e))
+                    AgentError::generic(format!("Failed to build OpenAI client: {e}"))
                 })?;
 
                 Box::new(client)
@@ -211,7 +212,7 @@ impl SiumaiLlmClient {
                 }
 
                 let client = builder.build().await.map_err(|e| {
-                    AgentError::generic(format!("Failed to build Anthropic client: {}", e))
+                    AgentError::generic(format!("Failed to build Anthropic client: {e}"))
                 })?;
 
                 Box::new(client)
@@ -234,7 +235,7 @@ impl SiumaiLlmClient {
                 }
 
                 let client = builder.build().await.map_err(|e| {
-                    AgentError::generic(format!("Failed to build Ollama client: {}", e))
+                    AgentError::generic(format!("Failed to build Ollama client: {e}"))
                 })?;
 
                 Box::new(client)
@@ -251,6 +252,7 @@ impl SiumaiLlmClient {
     }
 
     /// Get the client configuration
+    #[must_use]
     pub fn config(&self) -> &LlmClientConfig {
         &self.config
     }
@@ -265,7 +267,7 @@ impl SiumaiLlmClient {
             .client
             .chat(siumai_messages)
             .await
-            .map_err(|e| AgentError::generic(format!("Chat request failed: {}", e)))?;
+            .map_err(|e| AgentError::generic(format!("Chat request failed: {e}")))?;
 
         // Extract text response
         if let Some(text) = response.content_text() {
@@ -275,7 +277,7 @@ impl SiumaiLlmClient {
         }
     }
 
-    /// Convert AgentMessage to siumai ChatMessage
+    /// Convert `AgentMessage` to siumai `ChatMessage`
     fn convert_messages(&self, messages: Vec<AgentMessage>) -> Result<Vec<ChatMessage>> {
         let mut siumai_messages = Vec::new();
 

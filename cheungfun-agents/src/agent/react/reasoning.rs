@@ -1,6 +1,6 @@
-//! ReAct reasoning step definitions and logic
+//! `ReAct` reasoning step definitions and logic
 //!
-//! This module defines the core reasoning steps used in the ReAct pattern:
+//! This module defines the core reasoning steps used in the `ReAct` pattern:
 //! - Thought: Internal reasoning about the problem
 //! - Action: Tool calls or actions to take
 //! - Observation: Results from actions
@@ -11,7 +11,7 @@ use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 use uuid::Uuid;
 
-/// Type of reasoning step in the ReAct pattern
+/// Type of reasoning step in the `ReAct` pattern
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 pub enum ReasoningStepType {
     /// Internal reasoning/thinking step
@@ -24,7 +24,7 @@ pub enum ReasoningStepType {
     FinalAnswer,
 }
 
-/// A single step in the ReAct reasoning process
+/// A single step in the `ReAct` reasoning process
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub enum ReasoningStep {
     /// Thought step - internal reasoning
@@ -39,6 +39,7 @@ pub enum ReasoningStep {
 
 impl ReasoningStep {
     /// Get the type of this reasoning step
+    #[must_use]
     pub fn step_type(&self) -> ReasoningStepType {
         match self {
             ReasoningStep::Thought(_) => ReasoningStepType::Thought,
@@ -49,6 +50,7 @@ impl ReasoningStep {
     }
 
     /// Get the content of this step as a string
+    #[must_use]
     pub fn content(&self) -> &str {
         match self {
             ReasoningStep::Thought(step) => &step.content,
@@ -59,6 +61,7 @@ impl ReasoningStep {
     }
 
     /// Get the step ID
+    #[must_use]
     pub fn id(&self) -> Uuid {
         match self {
             ReasoningStep::Thought(step) => step.id,
@@ -180,8 +183,9 @@ impl ObservationStep {
     }
 
     /// Create an observation step from a tool output
+    #[must_use]
     pub fn from_tool_output(tool_output: ToolOutput) -> Self {
-        let success = tool_output.success;
+        let success = !tool_output.is_error;
         let content = tool_output.content.clone();
 
         Self {
@@ -195,6 +199,7 @@ impl ObservationStep {
     }
 
     /// Mark this observation as failed
+    #[must_use]
     pub fn failed(mut self) -> Self {
         self.success = false;
         self
@@ -235,6 +240,7 @@ impl FinalAnswerStep {
     }
 
     /// Set the confidence level
+    #[must_use]
     pub fn with_confidence(mut self, confidence: f64) -> Self {
         self.confidence = Some(confidence.clamp(0.0, 1.0));
         self
@@ -268,6 +274,7 @@ pub struct ReasoningTrace {
 
 impl ReasoningTrace {
     /// Create a new empty reasoning trace
+    #[must_use]
     pub fn new() -> Self {
         Self {
             id: Uuid::new_v4(),
@@ -286,6 +293,7 @@ impl ReasoningTrace {
     }
 
     /// Mark the trace as successful
+    #[must_use]
     pub fn mark_success(mut self) -> Self {
         self.success = true;
         self
@@ -299,12 +307,14 @@ impl ReasoningTrace {
     }
 
     /// Set the total reasoning time
+    #[must_use]
     pub fn with_total_time(mut self, ms: u64) -> Self {
         self.total_time_ms = ms;
         self
     }
 
     /// Get the final answer from the trace, if any
+    #[must_use]
     pub fn final_answer(&self) -> Option<&FinalAnswerStep> {
         self.steps.iter().rev().find_map(|step| {
             if let ReasoningStep::FinalAnswer(answer) = step {
@@ -316,6 +326,7 @@ impl ReasoningTrace {
     }
 
     /// Get all thought steps
+    #[must_use]
     pub fn thoughts(&self) -> Vec<&ThoughtStep> {
         self.steps
             .iter()
@@ -330,6 +341,7 @@ impl ReasoningTrace {
     }
 
     /// Get all action steps
+    #[must_use]
     pub fn actions(&self) -> Vec<&ActionStep> {
         self.steps
             .iter()
@@ -344,6 +356,7 @@ impl ReasoningTrace {
     }
 
     /// Get all observation steps
+    #[must_use]
     pub fn observations(&self) -> Vec<&ObservationStep> {
         self.steps
             .iter()
@@ -358,11 +371,13 @@ impl ReasoningTrace {
     }
 
     /// Get the number of steps
+    #[must_use]
     pub fn step_count(&self) -> usize {
         self.steps.len()
     }
 
     /// Check if the trace is empty
+    #[must_use]
     pub fn is_empty(&self) -> bool {
         self.steps.is_empty()
     }

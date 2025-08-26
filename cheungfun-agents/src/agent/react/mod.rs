@@ -1,9 +1,9 @@
-//! ReAct (Reasoning and Acting) agent implementation
+//! `ReAct` (Reasoning and Acting) agent implementation
 //!
-//! This module provides a complete ReAct agent implementation following the
-//! ReAct paper's methodology for combining reasoning and action in language models.
+//! This module provides a complete `ReAct` agent implementation following the
+//! `ReAct` paper's methodology for combining reasoning and action in language models.
 //!
-//! The ReAct pattern allows agents to:
+//! The `ReAct` pattern allows agents to:
 //! 1. **Reason** about the problem and plan their approach
 //! 2. **Act** by calling tools or taking actions
 //! 3. **Observe** the results of their actions
@@ -19,7 +19,7 @@ pub use reasoning::{
     ThoughtStep,
 };
 
-/// ReAct agent prelude for convenient imports
+/// `ReAct` agent prelude for convenient imports
 pub mod prelude {
     pub use super::{
         ActionStep, FinalAnswerStep, ObservationStep, ReActAgent, ReActConfig, ReActStats,

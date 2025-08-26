@@ -9,9 +9,20 @@ use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 
 pub mod builtin;
+pub mod rag_query_tool;
 pub mod registry;
+pub mod semantic_retriever;
+pub mod tool_retriever;
 
+pub use rag_query_tool::{RagQueryTool, RagQueryToolBuilder};
 pub use registry::ToolRegistry;
+pub use semantic_retriever::{
+    SemanticConfig, SemanticToolMatcher, SemanticToolRetriever, SemanticWeights,
+};
+pub use tool_retriever::{
+    metadata_helpers, KeywordToolRetriever, RetrievableTool, RetrievalStrategy, ToolMetadata,
+    ToolRetrievalResult, ToolRetriever, ToolRetrieverBuilder,
+};
 
 /// Tool execution result
 #[derive(Debug, Clone, Serialize, Deserialize)]

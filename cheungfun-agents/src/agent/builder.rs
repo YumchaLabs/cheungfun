@@ -5,9 +5,9 @@
 
 use super::strategy::{AgentStrategy, DirectStrategy, FunctionCallingStrategy};
 use crate::{
-    error::{AgentError, Result},
+    error::Result,
     tool::{Tool, ToolRegistry},
-    types::{AgentMessage, AgentResponse},
+    types::AgentResponse,
 };
 use cheungfun_core::traits::BaseMemory;
 use std::sync::Arc;
@@ -36,6 +36,7 @@ impl Default for AgentBuilder {
 
 impl AgentBuilder {
     /// Create a new agent builder
+    #[must_use]
     pub fn new() -> Self {
         Self {
             name: None,
@@ -45,63 +46,75 @@ impl AgentBuilder {
             verbose: false,
         }
     }
-    
+
     /// Set the agent name
     pub fn name(mut self, name: impl Into<String>) -> Self {
         self.name = Some(name.into());
         self
     }
-    
+
     /// Set the agent description
     pub fn description(mut self, description: impl Into<String>) -> Self {
         self.description = Some(description.into());
         self
     }
-    
+
     /// Add a tool to the agent
     pub fn tool(mut self, tool: Arc<dyn Tool>) -> Self {
         self.tools.push(tool);
         self
     }
-    
+
     /// Add multiple tools to the agent
+    #[must_use]
     pub fn tools(mut self, tools: Vec<Arc<dyn Tool>>) -> Self {
         self.tools.extend(tools);
         self
     }
-    
+
     /// Set direct strategy (no tools, simple responses)
+    #[must_use]
     pub fn direct_strategy(mut self) -> Self {
-        let agent_name = self.name.clone().unwrap_or_else(|| "DirectAgent".to_string());
+        let agent_name = self
+            .name
+            .clone()
+            .unwrap_or_else(|| "DirectAgent".to_string());
         self.strategy = Some(Box::new(DirectStrategy::new(agent_name)));
         self
     }
-    
+
     /// Set function calling strategy (uses tools)
+    #[must_use]
     pub fn function_calling_strategy(mut self) -> Self {
-        let agent_name = self.name.clone().unwrap_or_else(|| "FunctionCallingAgent".to_string());
+        let agent_name = self
+            .name
+            .clone()
+            .unwrap_or_else(|| "FunctionCallingAgent".to_string());
         self.strategy = Some(Box::new(FunctionCallingStrategy::new(agent_name)));
         self
     }
-    
+
     /// Enable verbose logging
+    #[must_use]
     pub fn verbose(mut self) -> Self {
         self.verbose = true;
         self
     }
-    
+
     /// Build the agent
     pub fn build(self) -> Result<BuiltAgent> {
         let name = self.name.unwrap_or_else(|| "Agent".to_string());
-        let description = self.description.unwrap_or_else(|| "A Cheungfun agent".to_string());
-        
+        let description = self
+            .description
+            .unwrap_or_else(|| "A Cheungfun agent".to_string());
+
         // Create tool registry
         let mut tool_registry = ToolRegistry::new();
         for tool in self.tools {
             tool_registry.register(tool)?;
         }
         let tool_registry = Arc::new(tool_registry);
-        
+
         // Set default strategy if none provided
         let strategy = self.strategy.unwrap_or_else(|| {
             if tool_registry.tool_names().is_empty() {
@@ -110,7 +123,7 @@ impl AgentBuilder {
                 Box::new(FunctionCallingStrategy::new(name.clone()))
             }
         });
-        
+
         if self.verbose {
             info!(
                 "Built agent '{}' with strategy '{}' and {} tools",
@@ -120,7 +133,7 @@ impl AgentBuilder {
             );
             debug!("Available tools: {:?}", tool_registry.tool_names());
         }
-        
+
         Ok(BuiltAgent {
             name,
             description,
@@ -148,87 +161,88 @@ pub struct BuiltAgent {
 
 impl BuiltAgent {
     /// Get the agent name
+    #[must_use]
     pub fn name(&self) -> &str {
         &self.name
     }
-    
+
     /// Get the agent description
+    #[must_use]
     pub fn description(&self) -> &str {
         &self.description
     }
-    
+
     /// Get the strategy
+    #[must_use]
     pub fn strategy(&self) -> &dyn AgentStrategy {
         self.strategy.as_ref()
     }
-    
+
     /// Get available tool names
+    #[must_use]
     pub fn tools(&self) -> Vec<String> {
         self.tool_registry.tool_names()
     }
-    
+
     /// Chat with the agent using memory
-    pub async fn chat(
-        &self,
-        message: &str,
-        memory: &mut dyn BaseMemory,
-    ) -> Result<AgentResponse> {
+    pub async fn chat(&self, message: &str, memory: &mut dyn BaseMemory) -> Result<AgentResponse> {
         if self.verbose {
             debug!("Agent '{}' processing message: {}", self.name, message);
         }
-        
-        let response = self.strategy.execute(
-            message,
-            Some(memory),
-            &self.tool_registry,
-        ).await?;
-        
+
+        let response = self
+            .strategy
+            .execute(message, Some(memory), &self.tool_registry)
+            .await?;
+
         if self.verbose {
             debug!(
                 "Agent '{}' response generated in {}ms with {} tool calls",
-                self.name,
-                response.stats.execution_time_ms,
-                response.stats.tool_calls_count
+                self.name, response.stats.execution_time_ms, response.stats.tool_calls_count
             );
         }
-        
+
         Ok(response)
     }
-    
+
     /// Chat with the agent without memory
     pub async fn chat_simple(&self, message: &str) -> Result<AgentResponse> {
         if self.verbose {
-            debug!("Agent '{}' processing simple message: {}", self.name, message);
+            debug!(
+                "Agent '{}' processing simple message: {}",
+                self.name, message
+            );
         }
-        
-        let response = self.strategy.execute(
-            message,
-            None,
-            &self.tool_registry,
-        ).await?;
-        
+
+        let response = self
+            .strategy
+            .execute(message, None, &self.tool_registry)
+            .await?;
+
         if self.verbose {
             debug!(
                 "Agent '{}' simple response generated in {}ms",
-                self.name,
-                response.stats.execution_time_ms
+                self.name, response.stats.execution_time_ms
             );
         }
-        
+
         Ok(response)
     }
-    
+
     /// Check if the agent supports tools
+    #[must_use]
     pub fn supports_tools(&self) -> bool {
         self.strategy.supports_tools()
     }
-    
+
     /// Check if the agent supports memory
+    #[must_use]
     pub fn supports_memory(&self) -> bool {
         self.strategy.supports_memory()
     }
-    
+
     /// Get tool registry reference
+    #[must_use]
     pub fn tool_registry(&self) -> &Arc<ToolRegistry> {
         &self.tool_registry
     }

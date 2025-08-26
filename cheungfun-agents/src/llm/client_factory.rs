@@ -11,6 +11,7 @@ pub struct LlmClientFactory;
 
 impl LlmClientFactory {
     /// Create a new factory instance
+    #[must_use]
     pub fn new() -> Self {
         Self
     }
@@ -31,7 +32,7 @@ impl LlmClientFactory {
         }
     }
 
-    /// Create OpenAI client
+    /// Create `OpenAI` client
     async fn create_openai_client(&self, config: &LlmConfig) -> Result<Arc<dyn ChatCapability>> {
         let api_key = config
             .api_key
@@ -57,7 +58,7 @@ impl LlmClientFactory {
         let client = builder
             .build()
             .await
-            .map_err(|e| AgentError::llm_error(format!("Failed to create OpenAI client: {}", e)))?;
+            .map_err(|e| AgentError::llm_error(format!("Failed to create OpenAI client: {e}")))?;
 
         Ok(Arc::new(client))
     }
@@ -86,7 +87,7 @@ impl LlmClientFactory {
         }
 
         let client = builder.build().await.map_err(|e| {
-            AgentError::llm_error(format!("Failed to create Anthropic client: {}", e))
+            AgentError::llm_error(format!("Failed to create Anthropic client: {e}"))
         })?;
 
         Ok(Arc::new(client))
@@ -114,7 +115,7 @@ impl LlmClientFactory {
         let client = builder
             .build()
             .await
-            .map_err(|e| AgentError::llm_error(format!("Failed to create Ollama client: {}", e)))?;
+            .map_err(|e| AgentError::llm_error(format!("Failed to create Ollama client: {e}")))?;
 
         Ok(Arc::new(client))
     }
@@ -147,6 +148,7 @@ impl LlmClientFactory {
     }
 
     /// Get recommended models for a provider
+    #[must_use]
     pub fn get_recommended_models(&self, provider: &str) -> Vec<&'static str> {
         match provider.to_lowercase().as_str() {
             "openai" => vec!["gpt-4o", "gpt-4o-mini", "gpt-4-turbo", "gpt-3.5-turbo"],

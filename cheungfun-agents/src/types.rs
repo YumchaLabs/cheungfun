@@ -77,23 +77,15 @@ pub struct ToolCall {
     pub timestamp: DateTime<Utc>,
 }
 
-/// Tool execution output
+/// Tool execution output (for compatibility with existing code)
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
 pub struct ToolOutput {
-    /// Associated tool call ID
-    pub call_id: ToolCallId,
-    /// Tool name
-    pub tool_name: String,
     /// Output content
     pub content: String,
+    /// Whether the execution was an error
+    pub is_error: bool,
     /// Output metadata
     pub metadata: HashMap<String, serde_json::Value>,
-    /// Whether the tool execution was successful
-    pub success: bool,
-    /// Error message if execution failed
-    pub error: Option<String>,
-    /// Execution timestamp
-    pub timestamp: DateTime<Utc>,
 }
 
 /// Execution statistics
@@ -176,38 +168,6 @@ pub struct ToolSchema {
     pub metadata: HashMap<String, serde_json::Value>,
 }
 
-/// Workflow step definition
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct WorkflowStep {
-    /// Step identifier
-    pub id: String,
-    /// Step name
-    pub name: String,
-    /// Step description
-    pub description: Option<String>,
-    /// Agent to execute this step
-    pub agent_id: AgentId,
-    /// Step dependencies (must complete before this step)
-    pub dependencies: Vec<String>,
-    /// Step configuration
-    pub config: HashMap<String, serde_json::Value>,
-    /// Whether this step can be retried on failure
-    pub retryable: bool,
-    /// Maximum retry attempts
-    pub max_retries: Option<usize>,
-}
-
-/// Workflow execution context
-#[derive(Debug, Clone, Serialize, Deserialize, Default)]
-pub struct WorkflowContext {
-    /// Workflow variables
-    pub variables: HashMap<String, serde_json::Value>,
-    /// Step results
-    pub step_results: HashMap<String, serde_json::Value>,
-    /// Execution metadata
-    pub metadata: HashMap<String, serde_json::Value>,
-}
-
 impl AgentMessage {
     /// Create a new user message
     pub fn user(content: impl Into<String>) -> Self {
@@ -273,36 +233,20 @@ impl ToolCall {
 
 impl ToolOutput {
     /// Create a successful tool output
-    pub fn success(
-        call_id: ToolCallId,
-        tool_name: impl Into<String>,
-        content: impl Into<String>,
-    ) -> Self {
+    pub fn success(content: impl Into<String>) -> Self {
         Self {
-            call_id,
-            tool_name: tool_name.into(),
             content: content.into(),
+            is_error: false,
             metadata: HashMap::new(),
-            success: true,
-            error: None,
-            timestamp: Utc::now(),
         }
     }
 
     /// Create a failed tool output
-    pub fn error(
-        call_id: ToolCallId,
-        tool_name: impl Into<String>,
-        error: impl Into<String>,
-    ) -> Self {
+    pub fn error(content: impl Into<String>) -> Self {
         Self {
-            call_id,
-            tool_name: tool_name.into(),
-            content: String::new(),
+            content: content.into(),
+            is_error: true,
             metadata: HashMap::new(),
-            success: false,
-            error: Some(error.into()),
-            timestamp: Utc::now(),
         }
     }
 }

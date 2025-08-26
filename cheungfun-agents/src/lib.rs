@@ -1,42 +1,78 @@
-//! Agent framework and MCP integration for Cheungfun.
+//! Cheungfun Agents Framework
 //!
-//! This crate provides intelligent agents and Model Context Protocol (MCP)
-//! integration for tool calling and complex workflows.
+//! A comprehensive agent framework for building AI-powered applications with support for
+//! `ReAct` reasoning, workflow orchestration, and tool integration.
 //!
-//! # Features
+//! ## Features
 //!
-//! - **Agent Framework**: Core agent traits and implementations
-//! - **Tool System**: Extensible tool registry and built-in tools
+//! - **Multiple Agent Types**: `ReAct`, Function Calling, and Workflow agents
+//! - **Event-Driven Architecture**: Stream-based agent interactions with real-time feedback
+//! - **Tool Integration**: Comprehensive tool system with async execution
+//! - **Memory Management**: Persistent conversation and context management
+//! - **Workflow Orchestration**: Both simple and advanced workflow execution engines
+//! - **`LlamaIndex` Compatibility**: Architecture inspired by and compatible with `LlamaIndex`
 //! - **MCP Integration**: Full Model Context Protocol support via rmcp
-//! - **Agent Orchestration**: Multi-agent coordination and workflows
-//! - **RAG Integration**: Deep integration with cheungfun-query for knowledge-enhanced agents
 //!
-//! # Quick Start
+//! ## Quick Start
 //!
-//! ```rust,no_run
+//! ```rust,ignore
 //! use cheungfun_agents::prelude::*;
-//! use cheungfun_core::Result;
 //!
 //! #[tokio::main]
 //! async fn main() -> Result<()> {
-//!     // Create a simple agent
-//!     let agent = Agent::builder()
-//!         .name("assistant")
+//!     // Create a simple ReAct agent
+//!     let agent = ReActAgent::builder()
+//!         .name("Assistant")
 //!         .description("A helpful assistant")
-//!         .tools(vec![
-//!             Box::new(EchoTool::new()),
-//!             Box::new(HttpTool::new()),
-//!         ])
+//!         .with_tools()
 //!         .build()?;
-//!
-//!     // Execute a task
-//!     let task = Task::new("Echo 'Hello, World!'");
-//!     let response = agent.execute(&task).await?;
-//!
-//!     println!("Agent response: {}", response.content);
+//!         
+//!     // Or create a workflow agent for complex interactions
+//!     let workflow_agent = ReActWorkflowAgentBuilder::new()
+//!         .name("Math Helper")
+//!         .llm(llm)
+//!         .tools(tools)
+//!         .build()?;
+//!     
+//!     // Execute with workflow engine
+//!     let mut engine = WorkflowEngineBuilder::new()
+//!         .max_iterations(10)
+//!         .build();
+//!     
+//!     let result = engine.run(
+//!         &workflow_agent,
+//!         Some("What is 2 + 2?".to_string()),
+//!         None,
+//!         None,
+//!     ).await?;
+//!     
 //!     Ok(())
 //! }
 //! ```
+//!
+//! ## Architecture
+//!
+//! The framework is built around several key concepts:
+//!
+//! ### Agents
+//! - **`BaseAgent`**: Core agent trait for basic chat functionality
+//! - **`WorkflowAgent`**: Advanced agent trait for event-driven workflows
+//! - **`ReActAgent`**: Reasoning and acting agent with tool support
+//! - **`ReActWorkflowAgent`**: `ReAct` agent integrated with workflow system
+//!
+//! ### Workflows
+//! - **Simple Workflow**: Basic step-by-step execution with dependency management
+//! - **Workflow Engine**: Event-driven execution with streaming and state management
+//! - **Context Management**: Persistent state across workflow steps
+//!
+//! ### Tools
+//! - **Tool Trait**: Async tool execution interface
+//! - **`ToolRegistry`**: Centralized tool management
+//! - **Built-in Tools**: Common utility tools (calculator, web search, etc.)
+//!
+//! ### Memory
+//! - **`BaseMemory`**: Memory management interface from cheungfun-core
+//! - **Integration**: Seamless integration with workflow contexts
 
 #![deny(missing_docs)]
 #![warn(clippy::all, clippy::pedantic)]
@@ -51,50 +87,57 @@ pub mod tool;
 pub mod types;
 pub mod workflow;
 
-// Re-exports for convenience
+// Re-export core functionality for convenience
+pub use agent::{
+    prelude as agent_prelude, AgentBuilder, AgentFactory, AgentType, BaseAgent, ReActAgent,
+};
 pub use error::{AgentError, Result};
 pub use mcp::{McpClient, McpServer, McpService};
 pub use tool::{Tool, ToolRegistry, ToolResult};
-pub use types::*;
+pub use types::{
+    AgentCapabilities, AgentConfig, AgentId, AgentMessage, AgentResponse, ExecutionStats,
+    MessageRole, ToolCall, ToolOutput, ToolSchema,
+};
+
+// Re-export workflow systems
 pub use workflow::{
-    utils, Workflow, WorkflowBuilder, WorkflowExecutor, WorkflowResult, WorkflowStatus,
+    utils as simple_workflow_utils, SimpleWorkflow, SimpleWorkflowBuilder, SimpleWorkflowExecutor,
+    SimpleWorkflowResult, SimpleWorkflowStatus, SimpleWorkflowStep,
 };
 
 /// Prelude module for convenient imports
 pub mod prelude {
-    // Core exports
+    // Core types and agent system
     pub use crate::{
-        AgentError, McpClient, McpServer, McpService, Result, Tool, ToolRegistry, ToolResult,
+        AgentBuilder, AgentCapabilities, AgentConfig, AgentError, AgentFactory, AgentId,
+        AgentMessage, AgentResponse, AgentType, BaseAgent, ReActAgent, Result, Tool, ToolRegistry,
+        ToolResult,
     };
 
-    // Built-in tools
+    // Simple workflow system
+    pub use crate::{
+        simple_workflow_utils, SimpleWorkflow, SimpleWorkflowBuilder, SimpleWorkflowExecutor,
+        SimpleWorkflowResult, SimpleWorkflowStatus, SimpleWorkflowStep,
+    };
+
+    // Tool system
     pub use crate::tool::builtin::{EchoTool, FileTool, HttpTool, SearchTool};
 
-    // Memory management
-    pub use cheungfun_core::traits::BaseMemory;
-    pub use cheungfun_query::memory::{ChatMemoryBuffer, ChatMemoryConfig};
+    // MCP integration
+    pub use crate::mcp::{server::McpServerBuilder, McpToolRegistry};
+    pub use crate::{McpClient, McpServer, McpService};
 
     // LLM integration
     pub use crate::llm::{LlmClientFactory, LlmClientManager, LlmConfig, MessageConverter};
 
-    // MCP components
-    pub use crate::mcp::{server::McpServerBuilder, McpToolRegistry};
+    // Memory management from cheungfun-core
+    pub use cheungfun_core::traits::BaseMemory;
+    // pub use cheungfun_query::memory::{ChatMemoryBuffer, ChatMemoryConfig};
 
-    // Common types
-    pub use crate::types::{
-        AgentId, AgentMessage, AgentResponse, ToolCall, ToolCallId, ToolOutput, ToolSchema,
-    };
-
-    // Workflow system
-    pub use crate::workflow::{
-        utils as workflow_utils, Workflow, WorkflowBuilder, WorkflowExecutor, WorkflowResult,
-        WorkflowStatus,
-    };
-
-    // Agent system
+    // Agent system components
     pub use crate::agent::{
-        ActionStep, AgentBuilder, BuiltAgent, AgentContext, AgentStatus, BaseAgent, FinalAnswerStep,
-        ObservationStep, ReActAgent, ReActConfig, ReActStats, ReasoningStep, ReasoningStepType,
-        ReasoningTrace, ThoughtStep, AgentStrategy, DirectStrategy, FunctionCallingStrategy,
+        ActionStep, AgentContext, AgentStatus, AgentStrategy, BuiltAgent, DirectStrategy,
+        FinalAnswerStep, FunctionCallingStrategy, ObservationStep, ReActConfig, ReActStats,
+        ReasoningStep, ReasoningStepType, ReasoningTrace, ThoughtStep,
     };
 }

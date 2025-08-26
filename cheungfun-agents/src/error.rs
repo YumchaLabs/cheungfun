@@ -361,6 +361,7 @@ impl AgentError {
     }
 
     /// Create a no tools available error
+    #[must_use]
     pub fn no_tools_available() -> Self {
         Self::NoToolsAvailable
     }

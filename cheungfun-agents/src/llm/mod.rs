@@ -1,7 +1,7 @@
 //! LLM integration module for cheungfun-agents
 //!
 //! This module provides unified LLM client management using the siumai library.
-//! It supports multiple providers (OpenAI, Anthropic, Ollama, etc.) with a
+//! It supports multiple providers (`OpenAI`, Anthropic, Ollama, etc.) with a
 //! consistent interface.
 
 use crate::error::{AgentError, Result};
@@ -56,7 +56,8 @@ impl Default for LlmConfig {
 }
 
 impl LlmConfig {
-    /// Create OpenAI configuration
+    /// Create `OpenAI` configuration
+    #[must_use]
     pub fn openai(api_key: &str, model: &str) -> Self {
         Self {
             provider: "openai".to_string(),
@@ -71,6 +72,7 @@ impl LlmConfig {
     }
 
     /// Create Anthropic configuration
+    #[must_use]
     pub fn anthropic(api_key: &str, model: &str) -> Self {
         Self {
             provider: "anthropic".to_string(),
@@ -85,6 +87,7 @@ impl LlmConfig {
     }
 
     /// Create Ollama configuration
+    #[must_use]
     pub fn ollama(model: &str) -> Self {
         Self {
             provider: "ollama".to_string(),
@@ -99,24 +102,28 @@ impl LlmConfig {
     }
 
     /// Set temperature
+    #[must_use]
     pub fn with_temperature(mut self, temperature: f32) -> Self {
         self.temperature = temperature;
         self
     }
 
     /// Set max tokens
+    #[must_use]
     pub fn with_max_tokens(mut self, max_tokens: u32) -> Self {
         self.max_tokens = Some(max_tokens);
         self
     }
 
     /// Set timeout
+    #[must_use]
     pub fn with_timeout(mut self, timeout: Duration) -> Self {
         self.timeout = timeout;
         self
     }
 
     /// Set base URL
+    #[must_use]
     pub fn with_base_url(mut self, base_url: &str) -> Self {
         self.base_url = Some(base_url.to_string());
         self
@@ -132,6 +139,7 @@ pub struct LlmClientManager {
 
 impl LlmClientManager {
     /// Create a new LLM client manager
+    #[must_use]
     pub fn new() -> Self {
         Self {
             clients: tokio::sync::RwLock::new(HashMap::new()),
@@ -141,6 +149,7 @@ impl LlmClientManager {
     }
 
     /// Create with custom max clients
+    #[must_use]
     pub fn with_max_clients(max_clients: usize) -> Self {
         Self {
             clients: tokio::sync::RwLock::new(HashMap::new()),
@@ -247,8 +256,7 @@ pub trait LlmAgent: Send + Sync {
             Err(e) => {
                 warn!("LLM generation failed: {}", e);
                 Err(AgentError::llm_error(format!(
-                    "Failed to generate response: {}",
-                    e
+                    "Failed to generate response: {e}"
                 )))
             }
         }
@@ -273,15 +281,14 @@ pub trait LlmAgent: Send + Sync {
                             }
                             _ => String::new(), // Other events don't have text content
                         })
-                        .map_err(|e| AgentError::llm_error(format!("Stream error: {}", e)))
+                        .map_err(|e| AgentError::llm_error(format!("Stream error: {e}")))
                 });
                 Ok(Box::new(mapped_stream))
             }
             Err(e) => {
                 warn!("LLM streaming failed: {}", e);
                 Err(AgentError::llm_error(format!(
-                    "Failed to start streaming: {}",
-                    e
+                    "Failed to start streaming: {e}"
                 )))
             }
         }

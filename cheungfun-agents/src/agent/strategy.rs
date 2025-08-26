@@ -1,12 +1,12 @@
 //! Agent execution strategies
 //!
 //! This module defines different strategies for agent execution, including
-//! direct response, function calling, and ReAct patterns.
+//! direct response, function calling, and `ReAct` patterns.
 
 use crate::{
     error::{AgentError, Result},
     tool::ToolRegistry,
-    types::{AgentMessage, AgentResponse},
+    types::AgentResponse,
 };
 use async_trait::async_trait;
 use cheungfun_core::traits::BaseMemory;
@@ -17,7 +17,7 @@ use std::sync::Arc;
 pub trait AgentStrategy: Send + Sync + std::fmt::Debug {
     /// Get the strategy name
     fn name(&self) -> &'static str;
-    
+
     /// Execute the strategy with a message and optional memory
     async fn execute(
         &self,
@@ -25,10 +25,10 @@ pub trait AgentStrategy: Send + Sync + std::fmt::Debug {
         memory: Option<&mut dyn BaseMemory>,
         tools: &Arc<ToolRegistry>,
     ) -> Result<AgentResponse>;
-    
+
     /// Check if this strategy supports tools
     fn supports_tools(&self) -> bool;
-    
+
     /// Check if this strategy supports memory
     fn supports_memory(&self) -> bool;
 }
@@ -42,6 +42,7 @@ pub struct DirectStrategy {
 
 impl DirectStrategy {
     /// Create a new direct strategy
+    #[must_use]
     pub fn new(agent_name: String) -> Self {
         Self { agent_name }
     }
@@ -52,7 +53,7 @@ impl AgentStrategy for DirectStrategy {
     fn name(&self) -> &'static str {
         "direct"
     }
-    
+
     async fn execute(
         &self,
         message: &str,
@@ -60,7 +61,7 @@ impl AgentStrategy for DirectStrategy {
         _tools: &Arc<ToolRegistry>,
     ) -> Result<AgentResponse> {
         let start_time = std::time::Instant::now();
-        
+
         // Simple direct response
         let response_content = format!(
             "Hello! I'm {}, a direct response agent. You said: '{}'\n\n\
@@ -70,7 +71,7 @@ impl AgentStrategy for DirectStrategy {
             function calling or ReAct strategy.",
             self.agent_name, message
         );
-        
+
         // Add to memory if available
         if let Some(mem) = memory {
             // Add user message
@@ -81,9 +82,9 @@ impl AgentStrategy for DirectStrategy {
                 metadata: None,
             };
             mem.add_message(user_msg).await.map_err(|e| {
-                AgentError::generic(format!("Failed to add user message to memory: {}", e))
+                AgentError::generic(format!("Failed to add user message to memory: {e}"))
             })?;
-            
+
             // Add assistant message
             let assistant_msg = cheungfun_core::ChatMessage {
                 role: cheungfun_core::MessageRole::Assistant,
@@ -92,12 +93,12 @@ impl AgentStrategy for DirectStrategy {
                 metadata: None,
             };
             mem.add_message(assistant_msg).await.map_err(|e| {
-                AgentError::generic(format!("Failed to add assistant message to memory: {}", e))
+                AgentError::generic(format!("Failed to add assistant message to memory: {e}"))
             })?;
         }
-        
+
         let execution_time = start_time.elapsed().as_millis() as u64;
-        
+
         Ok(AgentResponse {
             content: response_content,
             tool_calls: Vec::new(),
@@ -114,11 +115,11 @@ impl AgentStrategy for DirectStrategy {
             },
         })
     }
-    
+
     fn supports_tools(&self) -> bool {
         false
     }
-    
+
     fn supports_memory(&self) -> bool {
         true
     }
@@ -135,14 +136,16 @@ pub struct FunctionCallingStrategy {
 
 impl FunctionCallingStrategy {
     /// Create a new function calling strategy
+    #[must_use]
     pub fn new(agent_name: String) -> Self {
         Self {
             agent_name,
             max_tool_calls: 5,
         }
     }
-    
+
     /// Set maximum tool calls
+    #[must_use]
     pub fn with_max_tool_calls(mut self, max_calls: usize) -> Self {
         self.max_tool_calls = max_calls;
         self
@@ -154,7 +157,7 @@ impl AgentStrategy for FunctionCallingStrategy {
     fn name(&self) -> &'static str {
         "function_calling"
     }
-    
+
     async fn execute(
         &self,
         message: &str,
@@ -163,44 +166,47 @@ impl AgentStrategy for FunctionCallingStrategy {
     ) -> Result<AgentResponse> {
         let start_time = std::time::Instant::now();
         let mut tool_calls_made = 0;
-        
+
         // Simple function calling logic
         let mut response_content = format!(
             "Hello! I'm {}, a function calling agent. You said: '{}'\n\n",
             self.agent_name, message
         );
-        
+
         // Check if we should use tools based on the message
-        let should_use_tools = message.to_lowercase().contains("echo") 
+        let should_use_tools = message.to_lowercase().contains("echo")
             || message.to_lowercase().contains("http")
             || message.to_lowercase().contains("search")
             || message.to_lowercase().contains("file");
-        
+
         let mut tool_calls = Vec::new();
-        
+
         if should_use_tools && !tools.tool_names().is_empty() {
             // Try to use echo tool if available and message contains "echo"
             if message.to_lowercase().contains("echo") && tools.contains("echo") {
-                if let Some(echo_tool) = tools.get("echo") {
+                if let Some(_echo_tool) = tools.get("echo") {
                     // Extract text to echo (simple heuristic)
                     let echo_text = if let Some(start) = message.find("echo") {
                         let after_echo = &message[start + 4..].trim();
-                        if after_echo.starts_with("'") && after_echo.ends_with("'") {
-                            after_echo[1..after_echo.len()-1].to_string()
-                        } else if after_echo.starts_with("\"") && after_echo.ends_with("\"") {
-                            after_echo[1..after_echo.len()-1].to_string()
+                        if after_echo.starts_with('\'') && after_echo.ends_with('\'') {
+                            after_echo[1..after_echo.len() - 1].to_string()
+                        } else if after_echo.starts_with('"') && after_echo.ends_with('"') {
+                            after_echo[1..after_echo.len() - 1].to_string()
                         } else {
                             after_echo.split_whitespace().collect::<Vec<_>>().join(" ")
                         }
                     } else {
                         "Hello from function calling agent!".to_string()
                     };
-                    
+
                     let tool_input = serde_json::json!({
                         "message": echo_text
                     });
-                    
-                    match tools.execute("echo", tool_input.clone(), &crate::tool::ToolContext::new()).await {
+
+                    match tools
+                        .execute("echo", tool_input.clone(), &crate::tool::ToolContext::new())
+                        .await
+                    {
                         Ok(result) => {
                             response_content.push_str(&format!(
                                 "I used the echo tool and got: {}\n\n",
@@ -219,15 +225,14 @@ impl AgentStrategy for FunctionCallingStrategy {
                         }
                         Err(e) => {
                             response_content.push_str(&format!(
-                                "I tried to use the echo tool but got an error: {}\n\n",
-                                e
+                                "I tried to use the echo tool but got an error: {e}\n\n"
                             ));
                         }
                     }
                 }
             }
         }
-        
+
         if tool_calls_made == 0 {
             response_content.push_str(&format!(
                 "Available tools: {:?}\n\
@@ -236,7 +241,7 @@ impl AgentStrategy for FunctionCallingStrategy {
                 tools.tool_names()
             ));
         }
-        
+
         // Add to memory if available
         if let Some(mem) = memory {
             // Add user message
@@ -247,9 +252,9 @@ impl AgentStrategy for FunctionCallingStrategy {
                 metadata: None,
             };
             mem.add_message(user_msg).await.map_err(|e| {
-                AgentError::generic(format!("Failed to add user message to memory: {}", e))
+                AgentError::generic(format!("Failed to add user message to memory: {e}"))
             })?;
-            
+
             // Add assistant message
             let assistant_msg = cheungfun_core::ChatMessage {
                 role: cheungfun_core::MessageRole::Assistant,
@@ -258,12 +263,12 @@ impl AgentStrategy for FunctionCallingStrategy {
                 metadata: None,
             };
             mem.add_message(assistant_msg).await.map_err(|e| {
-                AgentError::generic(format!("Failed to add assistant message to memory: {}", e))
+                AgentError::generic(format!("Failed to add assistant message to memory: {e}"))
             })?;
         }
-        
+
         let execution_time = start_time.elapsed().as_millis() as u64;
-        
+
         Ok(AgentResponse {
             content: response_content,
             tool_calls,
@@ -273,18 +278,22 @@ impl AgentStrategy for FunctionCallingStrategy {
             stats: crate::types::ExecutionStats {
                 execution_time_ms: execution_time,
                 tool_calls_count: tool_calls_made,
-                successful_tool_calls: if tool_calls_made > 0 { tool_calls_made } else { 0 },
+                successful_tool_calls: if tool_calls_made > 0 {
+                    tool_calls_made
+                } else {
+                    0
+                },
                 failed_tool_calls: 0,
                 tokens_used: None,
                 custom_metrics: std::collections::HashMap::new(),
             },
         })
     }
-    
+
     fn supports_tools(&self) -> bool {
         true
     }
-    
+
     fn supports_memory(&self) -> bool {
         true
     }

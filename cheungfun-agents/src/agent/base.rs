@@ -1,6 +1,6 @@
 //! Base agent trait and common functionality
 //!
-//! This module defines the core agent interface following LlamaIndex's architectural
+//! This module defines the core agent interface following `LlamaIndex`'s architectural
 //! patterns, providing a clean and extensible foundation for all agent implementations.
 
 use crate::{
@@ -8,9 +8,8 @@ use crate::{
     types::{AgentCapabilities, AgentConfig, AgentId, AgentMessage, AgentResponse},
 };
 use async_trait::async_trait;
-use cheungfun_core::traits::BaseMemory;
 use serde::{Deserialize, Serialize};
-use std::{collections::HashMap, sync::Arc};
+use std::collections::HashMap;
 use uuid::Uuid;
 
 /// Agent execution context for maintaining state across interactions
@@ -28,6 +27,7 @@ pub struct AgentContext {
 
 impl AgentContext {
     /// Create a new agent context
+    #[must_use]
     pub fn new() -> Self {
         Self {
             variables: HashMap::new(),
@@ -43,6 +43,7 @@ impl AgentContext {
     }
 
     /// Get a context variable
+    #[must_use]
     pub fn get_variable(&self, key: &str) -> Option<&serde_json::Value> {
         self.variables.get(key)
     }
@@ -53,6 +54,7 @@ impl AgentContext {
     }
 
     /// Get the conversation history
+    #[must_use]
     pub fn get_history(&self) -> &[AgentMessage] {
         &self.history
     }
@@ -72,7 +74,7 @@ impl Default for AgentContext {
 /// Base agent trait that all agents must implement
 ///
 /// This trait defines the core interface for all agents in the Cheungfun system,
-/// following LlamaIndex's design patterns for consistency and extensibility.
+/// following `LlamaIndex`'s design patterns for consistency and extensibility.
 #[async_trait]
 pub trait BaseAgent: Send + Sync + std::fmt::Debug {
     /// Get the agent's unique identifier
@@ -110,8 +112,8 @@ pub trait BaseAgent: Send + Sync + std::fmt::Debug {
     /// Stream a response (if supported by the agent)
     async fn stream_chat(
         &self,
-        message: AgentMessage,
-        context: Option<&mut AgentContext>,
+        _message: AgentMessage,
+        _context: Option<&mut AgentContext>,
     ) -> Result<Box<dyn futures::Stream<Item = Result<String>> + Send + Unpin>> {
         // Default implementation for agents that don't support streaming
         if !self.capabilities().supports_streaming {
@@ -137,7 +139,7 @@ pub trait BaseAgent: Send + Sync + std::fmt::Debug {
     }
 
     /// Validate that the agent can handle a specific message
-    fn can_handle(&self, message: &AgentMessage) -> bool {
+    fn can_handle(&self, _message: &AgentMessage) -> bool {
         // Default implementation accepts all messages
         true
     }
@@ -200,42 +202,49 @@ impl AgentBuilder {
     }
 
     /// Set the agent capabilities
+    #[must_use]
     pub fn capabilities(mut self, capabilities: AgentCapabilities) -> Self {
         self.config.capabilities = capabilities;
         self
     }
 
     /// Enable tool support
+    #[must_use]
     pub fn with_tools(mut self) -> Self {
         self.config.capabilities.supports_tools = true;
         self
     }
 
     /// Enable streaming support
+    #[must_use]
     pub fn with_streaming(mut self) -> Self {
         self.config.capabilities.supports_streaming = true;
         self
     }
 
     /// Enable conversation support
+    #[must_use]
     pub fn with_conversation(mut self) -> Self {
         self.config.capabilities.supports_conversation = true;
         self
     }
 
     /// Set maximum execution time
+    #[must_use]
     pub fn max_execution_time(mut self, ms: u64) -> Self {
         self.config.max_execution_time_ms = Some(ms);
         self
     }
 
     /// Set maximum tool calls
+    #[must_use]
     pub fn max_tool_calls(mut self, count: usize) -> Self {
         self.config.max_tool_calls = Some(count);
         self
     }
 
     /// Enable verbose logging
+    #[must_use]
     pub fn verbose(mut self) -> Self {
         self.config.verbose = true;
         self
@@ -248,11 +257,13 @@ impl AgentBuilder {
     }
 
     /// Get the built configuration
+    #[must_use]
     pub fn config(&self) -> &AgentConfig {
         &self.config
     }
 
     /// Build the final configuration
+    #[must_use]
     pub fn build(self) -> AgentConfig {
         self.config
     }
@@ -260,9 +271,13 @@ impl AgentBuilder {
 
 /// Utility functions for agent management
 pub mod utils {
-    use super::*;
+    use super::{
+        AgentCapabilities, AgentConfig, AgentContext, AgentError, AgentId, AgentMessage,
+        AgentMessageExt, HashMap, Result, Uuid,
+    };
 
     /// Generate a new agent ID
+    #[must_use]
     pub fn generate_agent_id() -> AgentId {
         Uuid::new_v4()
     }
@@ -295,6 +310,7 @@ pub mod utils {
     }
 
     /// Create default capabilities for a specific agent type
+    #[must_use]
     pub fn default_capabilities_for(agent_type: &str) -> AgentCapabilities {
         match agent_type {
             "react" => AgentCapabilities {
@@ -337,12 +353,14 @@ pub mod utils {
         }
     }
 
-    /// Convert AgentMessage to a simple text representation
+    /// Convert `AgentMessage` to a simple text representation
+    #[must_use]
     pub fn message_to_text(message: &AgentMessage) -> String {
         format!("[{}] {}", message.role_to_string(), message.content)
     }
 
     /// Create a simple agent context with basic setup
+    #[must_use]
     pub fn create_basic_context() -> AgentContext {
         let mut context = AgentContext::new();
         context.set_variable(
@@ -353,7 +371,7 @@ pub mod utils {
     }
 }
 
-/// Extension trait for AgentMessage to add utility methods
+/// Extension trait for `AgentMessage` to add utility methods
 pub trait AgentMessageExt {
     /// Convert message role to string
     fn role_to_string(&self) -> &'static str;

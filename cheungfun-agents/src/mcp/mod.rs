@@ -6,7 +6,6 @@ use crate::{
     types::ToolSchema,
 };
 use async_trait::async_trait;
-use rmcp::ServerHandler;
 use std::{collections::HashMap, sync::Arc};
 use tracing::{debug, error, info};
 
@@ -177,14 +176,14 @@ impl McpToolRegistry {
                 description: tool
                     .description
                     .as_ref()
-                    .map(|d| d.to_string())
+                    .map(std::string::ToString::to_string)
                     .unwrap_or_default(),
                 schema: ToolSchema {
                     name: tool.name.to_string(),
                     description: tool
                         .description
                         .as_ref()
-                        .map(|d| d.to_string())
+                        .map(std::string::ToString::to_string)
                         .unwrap_or_default(),
                     input_schema: serde_json::Value::Object(tool.input_schema.as_ref().clone()),
                     output_schema: None,
@@ -296,14 +295,14 @@ impl McpToolRegistry {
                 description: tool
                     .description
                     .as_ref()
-                    .map(|d| d.to_string())
+                    .map(std::string::ToString::to_string)
                     .unwrap_or_default(),
                 schema: ToolSchema {
                     name: tool.name.to_string(),
                     description: tool
                         .description
                         .as_ref()
-                        .map(|d| d.to_string())
+                        .map(std::string::ToString::to_string)
                         .unwrap_or_default(),
                     input_schema: serde_json::Value::Object(tool.input_schema.as_ref().clone()),
                     output_schema: None,

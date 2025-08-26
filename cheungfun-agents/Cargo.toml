@@ -58,5 +58,50 @@ tempfile.workspace = true
 tracing-subscriber = { workspace = true }
 clap = { version = "4.4", features = ["derive"] }
 
+# Examples configuration
+[[example]]
+name = "simple_agent"
+path = "examples/basic/simple_agent.rs"
+
+[[example]]
+name = "tool_usage"
+path = "examples/basic/tool_usage.rs"
+
+[[example]]
+name = "comprehensive_agent"
+path = "examples/advanced/comprehensive_agent.rs"
+
+[[example]]
+name = "custom_tools"
+path = "examples/advanced/custom_tools.rs"
+
+[[example]]
+name = "memory_management"
+path = "examples/advanced/memory_management.rs"
+
+[[example]]
+name = "openai_integration"
+path = "examples/integration/openai_integration.rs"
+
+[[example]]
+name = "rag_integration"
+path = "examples/integration/rag_integration.rs"
+
+[[example]]
+name = "mcp_client"
+path = "examples/mcp/client.rs"
+
+[[example]]
+name = "mcp_server"
+path = "examples/mcp/server.rs"
+
+[[example]]
+name = "mcp_integration"
+path = "examples/mcp/integration.rs"
+
+[[example]]
+name = "mcp_simple_test"
+path = "examples/mcp/simple_test.rs"
+
 [features]
 default = []
