@@ -34,6 +34,7 @@ tokio-stream = { workspace = true }
 text-splitter = { workspace = true }
 tiktoken-rs = { workspace = true }
 regex = { workspace = true }
+unicode-segmentation = "1.12"
 
 # Tree-sitter for AST parsing
 tree-sitter = "0.25"

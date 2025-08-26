@@ -5,6 +5,7 @@ use cheungfun_core::traits::Transformer;
 use cheungfun_core::{ChunkInfo, Document, Node, Result as CoreResult};
 use std::collections::HashMap;
 use tracing::{debug, warn};
+use unicode_segmentation::UnicodeSegmentation;
 use uuid::Uuid;
 
 use super::{utils, SplitterConfig};
@@ -66,28 +67,53 @@ impl TextSplitter {
     fn split_text(&self, text: &str) -> Result<Vec<String>> {
         debug!("Splitting text of {} characters", text.len());
 
-        if text.len() <= self.config.chunk_size {
+        // Use grapheme clusters for proper Unicode handling
+        let graphemes: Vec<&str> = text.graphemes(true).collect();
+        let total_graphemes = graphemes.len();
+
+        if total_graphemes <= self.config.chunk_size {
             return Ok(vec![text.to_string()]);
         }
 
         let mut chunks: Vec<String> = Vec::new();
         let mut current_pos = 0;
 
-        while current_pos < text.len() {
-            let chunk_end = std::cmp::min(current_pos + self.config.chunk_size, text.len());
-            let mut chunk = &text[current_pos..chunk_end];
+        while current_pos < total_graphemes {
+            let chunk_end = std::cmp::min(current_pos + self.config.chunk_size, total_graphemes);
 
-            // Try to find a good split point using separators
-            if chunk_end < text.len() {
-                chunk = self.find_split_point(chunk, &text[chunk_end..]);
+            // Get the chunk as a string by joining graphemes
+            let chunk_graphemes = &graphemes[current_pos..chunk_end];
+            let mut chunk_text = chunk_graphemes.join("");
+
+            // Try to find a good split point using separators if not at the end
+            if chunk_end < total_graphemes {
+                // Look for separator within the chunk, starting from the end
+                let mut best_split_pos = chunk_end;
+
+                for separator in &self.config.separators {
+                    if let Some(pos) = chunk_text.rfind(separator) {
+                        // Convert byte position back to grapheme position
+                        let prefix = &chunk_text[..pos];
+                        let prefix_graphemes = prefix.graphemes(true).count();
+                        let split_grapheme_pos = current_pos + prefix_graphemes;
+
+                        // Only use this split if it's not too close to the beginning
+                        if split_grapheme_pos > current_pos + (self.config.chunk_size / 4) {
+                            best_split_pos = split_grapheme_pos + separator.graphemes(true).count();
+                            chunk_text = graphemes[current_pos..best_split_pos].join("");
+                            break;
+                        }
+                    }
+                }
             }
 
             // Clean the chunk
-            let cleaned_chunk = utils::clean_text(chunk);
+            let cleaned_chunk = utils::clean_text(&chunk_text);
+            let chunk_grapheme_len = cleaned_chunk.graphemes(true).count();
 
             // Check minimum chunk size
             if let Some(min_size) = self.config.min_chunk_size {
-                if cleaned_chunk.len() < min_size && !chunks.is_empty() {
+                if chunk_grapheme_len < min_size && !chunks.is_empty() {
                     // Merge with previous chunk if too small
                     if let Some(last_chunk) = chunks.last_mut() {
                         last_chunk.push(' ');
@@ -100,16 +126,15 @@ impl TextSplitter {
                 chunks.push(cleaned_chunk);
             }
 
-            // Calculate next position with overlap
-            let chunk_len = chunk.len();
-            if chunk_len <= self.config.chunk_overlap {
-                current_pos += chunk_len;
+            // Calculate next position with overlap using grapheme count
+            if chunk_grapheme_len <= self.config.chunk_overlap {
+                current_pos += chunk_grapheme_len;
             } else {
-                current_pos += chunk_len - self.config.chunk_overlap;
+                current_pos += chunk_grapheme_len - self.config.chunk_overlap;
             }
 
-            // Prevent infinite loop
-            if current_pos <= chunk_end - chunk_len {
+            // Prevent infinite loop - ensure we make progress
+            if current_pos <= chunk_end - chunk_grapheme_len {
                 current_pos = chunk_end;
             }
         }
@@ -122,32 +147,6 @@ impl TextSplitter {
 
         debug!("Split text into {} chunks", filtered_chunks.len());
         Ok(filtered_chunks)
-    }
-
-    /// Find the best split point using configured separators.
-    fn find_split_point<'a>(&self, chunk: &'a str, _remaining: &str) -> &'a str {
-        // Try each separator in order of preference
-        for separator in &self.config.separators {
-            if let Some(split_pos) = chunk.rfind(separator) {
-                let split_point = if self.config.keep_separators {
-                    split_pos + separator.len()
-                } else {
-                    split_pos
-                };
-
-                // Make sure we don't create too small chunks
-                if let Some(min_size) = self.config.min_chunk_size {
-                    if split_point >= min_size {
-                        return &chunk[..split_point];
-                    }
-                } else {
-                    return &chunk[..split_point];
-                }
-            }
-        }
-
-        // If no good split point found, return the original chunk
-        chunk
     }
 
     /// Create a node from a text chunk.
