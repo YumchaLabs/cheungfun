@@ -274,3 +274,10 @@ required-features = ["performance"]
 name = "comprehensive_performance_test"
 path = "comprehensive_performance_test.rs"
 required-features = ["performance"]
+
+# === RAG Examples ===
+# Markdown folder RAG Q&A system
+[[bin]]
+name = "markdown_rag_example"
+path = "markdown_rag_example.rs"
+required-features = ["fastembed"]
