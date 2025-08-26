@@ -33,7 +33,7 @@ use std::collections::HashMap;
 use std::time::Duration;
 use uuid::Uuid;
 
-use cheungfun_core::{ResponseGenerator, ScoredNode, VectorStore};
+use cheungfun_core::{ScoredNode, VectorStore};
 
 /// An extended query structure that supports various query forms.
 #[derive(Debug, Clone)]

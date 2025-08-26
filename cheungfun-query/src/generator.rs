@@ -205,10 +205,23 @@ impl ResponseGenerator for SiumaiGenerator {
         // Extract content
         let content = match &response.content {
             siumai::MessageContent::Text(text) => text.clone(),
-            siumai::MessageContent::ToolUse(_) => {
-                return Err(cheungfun_core::CheungfunError::Llm {
-                    message: "Unsupported content type in LLM response".to_string(),
-                });
+            siumai::MessageContent::MultiModal(parts) => {
+                // Extract text from multimodal content
+                let mut text_content = String::new();
+                for part in parts {
+                    if let siumai::types::ContentPart::Text { text } = part {
+                        if !text_content.is_empty() {
+                            text_content.push(' ');
+                        }
+                        text_content.push_str(text);
+                    }
+                }
+                if text_content.is_empty() {
+                    return Err(cheungfun_core::CheungfunError::Llm {
+                        message: "No text content found in multimodal response".to_string(),
+                    });
+                }
+                text_content
             }
         };
 
