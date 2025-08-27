@@ -19,149 +19,234 @@ cheungfun-query = { path = "../cheungfun-query" }
 cheungfun-integrations = { path = "../cheungfun-integrations", features = ["simd", "storage"] }
 cheungfun-agents = { path = "../cheungfun-agents" }
 
-# Core async
+# Core async and utilities
 tokio = { workspace = true }
 anyhow = { workspace = true }
-
-# Logging
 tracing = { workspace = true }
 tracing-subscriber = { workspace = true }
-
-# Additional dependencies
 async-trait = "0.1"
 uuid = { workspace = true }
 siumai = { workspace = true }
 serde = { workspace = true }
 serde_json = { workspace = true }
-bincode = { workspace = true }
 tempfile = "3.20"
 chrono = { version = "0.4", features = ["serde"] }
 thiserror = "1.0"
 ctrlc = "3.4"
+clap = "4.0"
+futures = "0.3"
+rand = "0.8"
 
 # Performance testing dependencies
-criterion = "0.5"
-plotters = "0.3"
-sysinfo = "0.32"
-rand = "0.8"
-rayon = "1.10"
-futures = "0.3"
+criterion = { version = "0.5", optional = true }
+sysinfo = { version = "0.32", optional = true }
 
 [features]
-# Default features - minimal, stable features that work everywhere
-default = ["basic-examples"]
+# Core features
+default = ["basic"]
+basic = []
 
-# Basic examples that don't require special features
-basic-examples = []
+# Application bundles
+code-analysis = ["fastembed"]
+document-analysis = ["fastembed", "candle"]
+intelligent-assistant = []
+knowledge-base = ["qdrant", "performance"]
 
-# === ML Framework Features ===
-# Candle ML framework (CPU only)
-candle = ["cheungfun-integrations/candle"]
-
-# Candle with CUDA GPU acceleration
-candle-cuda = ["candle", "cheungfun-integrations/gpu-cuda"]
-
-# Candle with Metal GPU acceleration (macOS)
-candle-metal = ["candle", "cheungfun-integrations/gpu-metal"]
-
-# FastEmbed embeddings
+# Integration features
 fastembed = ["cheungfun-integrations/fastembed"]
-
-# API-based embeddings (OpenAI, Gemini, etc.)
-api = ["cheungfun-integrations/api"]
-
-# All embedding providers
-all-embedders = ["candle", "fastembed", "api"]
-
-# === Performance Features ===
-# SIMD acceleration for vector operations
-simd = ["cheungfun-integrations/simd"]
-
-# Optimized memory management
-optimized-memory = ["cheungfun-integrations/optimized-memory"]
-
-# HNSW approximate nearest neighbor search
-hnsw = ["cheungfun-integrations/hnsw"]
-
-# === Integration Features ===
-# Qdrant vector database
+candle = ["cheungfun-integrations/candle"]
 qdrant = ["cheungfun-integrations/qdrant"]
+performance = ["cheungfun-integrations/simd", "cheungfun-integrations/hnsw"]
 
-# MCP (Model Context Protocol) tools - TODO: implement in integrations crate
-# mcp = ["cheungfun-integrations/mcp"]
+# Development features
+benchmarks = ["criterion", "sysinfo", "performance"]
+gpu = ["cheungfun-integrations/gpu-cuda", "cheungfun-integrations/gpu-metal"]
 
-# === Feature Bundles ===
-# Performance bundle - all CPU performance optimizations
-performance = ["simd", "optimized-memory", "hnsw"]
+# Full feature set
+full = ["code-analysis", "document-analysis", "intelligent-assistant", "knowledge-base", "gpu", "benchmarks"]
 
-# GPU bundle - GPU acceleration features
-gpu = ["candle-cuda", "candle-metal"]
+# === Application Examples ===
+[[bin]]
+name = "code_qa_system"
+path = "applications/code_qa_system/main.rs"
+required-features = ["code-analysis"]
 
-# Production bundle - recommended for production use
-production = ["performance", "candle", "qdrant"]
+[[bin]]
+name = "unity_csharp_rag"
+path = "applications/code_qa_system/unity_csharp_rag.rs"
+required-features = ["code-analysis"]
 
-# Full feature set - everything enabled
-full = ["performance", "gpu", "all-embedders", "qdrant"]
+[[bin]]
+name = "markdown_rag_system"
+path = "applications/document_analysis/markdown_rag.rs"
+required-features = ["document-analysis"]
 
-# === Example-specific Features ===
-# Features for performance benchmarking examples
-benchmarks = ["performance", "candle"]
+[[bin]]
+name = "comprehensive_assistant"
+path = "applications/intelligent_assistant/comprehensive_assistant.rs"
+required-features = ["intelligent-assistant"]
 
-# Features for production examples
-production-examples = ["production"]
+[[bin]]
+name = "simple_assistant"
+path = "applications/intelligent_assistant/simple_assistant.rs"
+required-features = ["intelligent-assistant"]
 
-# Features for GPU examples
-gpu-examples = ["gpu"]
+# === Integration Examples ===
+[[bin]]
+name = "kvstore_integration"
+path = "integrations/kvstore_demo.rs"
+required-features = ["basic"]
 
-# === Getting Started Examples ===
-# Basic examples that work with default features
+# === Performance Examples ===
+[[bin]]
+name = "comprehensive_performance"
+path = "performance/comprehensive_performance_test.rs"
+required-features = ["benchmarks"]
+
+[[bin]]
+name = "hybrid_performance"
+path = "performance/hybrid_performance_demo.rs"
+required-features = ["performance"]
+
+[[bin]]
+name = "performance_runner"
+path = "performance/run_performance_tests.rs"
+required-features = ["benchmarks"]
+
+[[bin]]
+name = "cache_performance"
+path = "performance/cache_performance_optimization.rs"
+required-features = ["performance"]
+
+# === Use Case Examples ===
+[[bin]]
+name = "unity_csharp_cli"
+path = "use_cases/unity_csharp_rag_cli.rs"
+required-features = ["code-analysis"]
+
+[[bin]]
+name = "advanced_rag"
+path = "use_cases/advanced_rag_example.rs"
+required-features = ["document-analysis"]
+
+[[bin]]
+name = "rag_agent"
+path = "use_cases/rag_agent_example.rs"
+required-features = ["intelligent-assistant"]
+
+[[bin]]
+name = "run_rag_agent"
+path = "use_cases/run_rag_agent.rs"
+required-features = ["intelligent-assistant"]
+
+[[bin]]
+name = "test_embedding_config"
+path = "use_cases/test_embedding_config.rs"
+required-features = ["fastembed"]
+
+# === Utility Examples ===
+[[bin]]
+name = "ast_splitter_test"
+path = "utilities/ast_splitter_test.rs"
+required-features = ["basic"]
+
+[[bin]]
+name = "debug_code_chunking"
+path = "utilities/debug_code_chunking.rs"
+required-features = ["code-analysis"]
+
+[[bin]]
+name = "enhanced_file_filtering"
+path = "utilities/enhanced_file_filtering.rs"
+required-features = ["basic"]
+
+[[bin]]
+name = "list_examples"
+path = "utilities/list_examples.rs"
+required-features = ["basic"]
+
+[[bin]]
+name = "modern_api_example"
+path = "utilities/modern_api_example.rs"
+required-features = ["basic"]
+
+[[bin]]
+name = "simple_modern_api"
+path = "utilities/simple_modern_api.rs"
+required-features = ["basic"]
+
+[[bin]]
+name = "unified_transform"
+path = "utilities/unified_transform_example.rs"
+required-features = ["basic"]
+
+[[bin]]
+name = "node_parser_demo"
+path = "utilities/node_parser_example.rs"
+required-features = ["basic"]
+
+[[bin]]
+name = "semantic_splitter"
+path = "utilities/semantic_splitter_demo.rs"
+required-features = ["basic"]
+
+[[bin]]
+name = "sentence_window"
+path = "utilities/sentence_window_demo.rs"
+required-features = ["basic"]
+
+[[bin]]
+name = "markdown_parser"
+path = "utilities/markdown_parser_demo.rs"
+required-features = ["basic"]
+
+[[bin]]
+name = "rag_tools"
+path = "utilities/rag_tools.rs"
+required-features = ["basic"]
+
+# Performance tests
+[[bin]]
+name = "simple_hnsw_test"
+path = "utilities/simple_hnsw_test.rs"
+required-features = ["performance"]
+
+[[bin]]
+name = "simple_node_parser_test"
+path = "utilities/simple_node_parser_test.rs"
+required-features = ["basic"]
+
+[[bin]]
+name = "simple_parallel_test"
+path = "utilities/simple_parallel_test.rs"
+required-features = ["performance"]
+
+[[bin]]
+name = "simple_simd_test"
+path = "utilities/simple_simd_test.rs"
+required-features = ["performance"]
+
+# === Legacy Examples (keeping for compatibility) ===
 [[bin]]
 name = "hello_world"
 path = "01_getting_started/hello_world.rs"
-required-features = ["basic-examples"]
+required-features = ["basic"]
 
 [[bin]]
 name = "basic_indexing"
 path = "01_getting_started/basic_indexing.rs"
-required-features = ["basic-examples"]
+required-features = ["basic"]
 
 [[bin]]
 name = "basic_querying"
 path = "01_getting_started/basic_querying.rs"
-required-features = ["basic-examples"]
+required-features = ["basic"]
 
 [[bin]]
-name = "node_parser_example"
-path = "node_parser_example.rs"
-required-features = ["basic-examples"]
+name = "basic_usage"
+path = "01_getting_started/basic_usage.rs"
+required-features = ["basic"]
 
-[[bin]]
-name = "simple_node_parser_test"
-path = "simple_node_parser_test.rs"
-required-features = ["basic-examples"]
-
-[[bin]]
-name = "ast_code_splitter_test"
-path = "ast_code_splitter_test.rs"
-required-features = ["basic-examples"]
-
-[[bin]]
-name = "modern_api_example"
-path = "modern_api_example.rs"
-required-features = ["basic-examples"]
-
-[[bin]]
-name = "simple_modern_api"
-path = "simple_modern_api.rs"
-required-features = ["basic-examples"]
-
-[[bin]]
-name = "unified_transform_example"
-path = "unified_transform_example.rs"
-required-features = ["basic-examples"]
-
-# === Core Components Examples ===
-# Candle embedder examples
 [[bin]]
 name = "candle_embedder_demo"
 path = "02_core_components/embedders/candle_embedder_demo.rs"
@@ -172,208 +257,57 @@ name = "candle_embedder_performance"
 path = "02_core_components/embedders/candle_embedder_performance.rs"
 required-features = ["candle", "benchmarks"]
 
-# Vector store examples
 [[bin]]
-name = "qdrant_store_demo"
+name = "qdrant_vector_store_demo"
 path = "02_core_components/vector_stores/qdrant_vector_store_demo.rs"
 required-features = ["qdrant"]
 
-# === Advanced Features Examples ===
 [[bin]]
 name = "advanced_retrieval_demo"
 path = "03_advanced_features/advanced_retrieval_demo.rs"
-required-features = ["performance", "candle"]
-
-# === Integration Examples ===
-# MCP integration example - TODO: implement MCP feature
-# [[bin]]
-# name = "mcp_integration_example"
-# path = "04_integrations/mcp_integration_example.rs"
-# required-features = ["mcp"]
-
-# === Performance Examples ===
-# Performance testing and benchmarking
-[[bin]]
-name = "run_performance_tests"
-path = "run_performance_tests.rs"
-required-features = ["benchmarks"]
+required-features = ["performance"]
 
 [[bin]]
-name = "performance_benchmark"
-path = "src/performance_benchmark.rs"
-required-features = ["benchmarks"]
-
-# Specific component benchmarks
-[[bin]]
-name = "embedder_benchmark"
-path = "05_performance/benchmarks/embedder_benchmark.rs"
-required-features = ["benchmarks", "all-embedders"]
+name = "mcp_integration_example"
+path = "04_integrations/mcp_integration_example.rs"
+required-features = ["intelligent-assistant"]
 
 [[bin]]
-name = "vector_store_benchmark"
-path = "05_performance/benchmarks/vector_store_benchmark.rs"
-required-features = ["benchmarks", "qdrant"]
-
-[[bin]]
-name = "end_to_end_benchmark"
-path = "05_performance/benchmarks/end_to_end_benchmark.rs"
-required-features = ["benchmarks", "production"]
-
-# Feature performance comparison
-[[bin]]
-name = "feature_comparison"
-path = "05_performance/feature_comparison.rs"
-required-features = ["benchmarks", "candle"]
-
-# === Production Examples ===
-# Complete production-ready examples
-[[bin]]
-name = "complete_rag_system"
+name = "complete_rag_demo"
 path = "06_production/complete_rag_demo.rs"
-required-features = ["production-examples"]
+required-features = ["knowledge-base"]
 
 [[bin]]
 name = "end_to_end_indexing"
 path = "06_production/end_to_end_indexing.rs"
-required-features = ["production-examples"]
+required-features = ["knowledge-base"]
 
 [[bin]]
 name = "end_to_end_query"
 path = "06_production/end_to_end_query.rs"
-required-features = ["production-examples"]
+required-features = ["knowledge-base"]
 
 [[bin]]
-name = "end_to_end_retrieval"
+name = "end_to_end_retrieval_demo"
 path = "06_production/end_to_end_retrieval_demo.rs"
-required-features = ["production-examples"]
+required-features = ["knowledge-base"]
 
-# === GPU Acceleration Examples ===
-# CUDA GPU examples (Linux/Windows with NVIDIA GPU)
 [[bin]]
 name = "cuda_embedder_demo"
 path = "07_gpu_acceleration/cuda_embedder_demo.rs"
-required-features = ["candle-cuda"]
+required-features = ["gpu"]
 
-# Metal GPU examples (macOS with Apple Silicon/AMD GPU)
 [[bin]]
 name = "metal_embedder_demo"
 path = "07_gpu_acceleration/metal_embedder_demo.rs"
-required-features = ["candle-metal"]
+required-features = ["gpu"]
 
-# === File Filtering Examples ===
-# Enhanced file filtering demonstration
-[[bin]]
-name = "enhanced_file_filtering"
-path = "enhanced_file_filtering.rs"
-required-features = ["basic-examples"]
-
-# === Caching Examples ===
-# Caching functionality demonstration
-[[bin]]
-name = "caching_demo"
-path = "caching_demo.rs"
-required-features = ["basic-examples"]
-
-# Pipeline-level caching demonstration
-[[bin]]
-name = "pipeline_caching_demo"
-path = "pipeline_caching_demo.rs"
-required-features = ["basic-examples"]
-
-# === Utility Examples ===
-# List all available examples and their features
-[[bin]]
-name = "list_examples"
-path = "list_examples.rs"
-required-features = ["basic-examples"]
-
-# Simple SIMD test
-[[bin]]
-name = "simple_simd_test"
-path = "simple_simd_test.rs"
-required-features = ["simd"]
-
-# Simple HNSW test
-[[bin]]
-name = "simple_hnsw_test"
-path = "simple_hnsw_test.rs"
-required-features = ["hnsw"]
-
-# Simple parallel processing test
-[[bin]]
-name = "simple_parallel_test"
-path = "simple_parallel_test.rs"
-required-features = ["performance"]
-
-# Comprehensive performance test
-[[bin]]
-name = "comprehensive_performance_test"
-path = "comprehensive_performance_test.rs"
-required-features = ["performance"]
-
-# === RAG Examples ===
-# Markdown folder RAG Q&A system
-[[bin]]
-name = "markdown_rag_example"
-path = "markdown_rag_example.rs"
-required-features = ["fastembed"]
-
-# RAG+Agent intelligent Q&A system
 [[bin]]
 name = "rag_agent_main"
 path = "08_rag_agent/main.rs"
-required-features = ["fastembed"]
+required-features = ["intelligent-assistant"]
 
-# Simplified RAG+Agent system
 [[bin]]
 name = "simple_rag_agent"
 path = "08_rag_agent/simple_main.rs"
-required-features = ["fastembed"]
-
-# Unity C# code indexing and Q&A system (example)
-[[bin]]
-name = "unity_csharp_rag_example"
-path = "unity_csharp_rag_example.rs"
-required-features = ["fastembed"]
-
-# Unity C# code indexing and Q&A CLI tool
-[[bin]]
-name = "unity_csharp_rag"
-path = "unity_csharp_rag_cli.rs"
-required-features = ["fastembed"]
-
-# Test embedding configuration
-[[bin]]
-name = "test_embedding_config"
-path = "test_embedding_config.rs"
-required-features = ["fastembed"]
-
-# Debug code chunking strategies
-[[bin]]
-name = "debug_code_chunking"
-path = "debug_code_chunking.rs"
-required-features = []
-
-# Semantic splitter demonstration
-[[bin]]
-name = "semantic_splitter_demo"
-path = "semantic_splitter_demo.rs"
-required-features = []
-
-# Sentence window node parser demonstration
-[[bin]]
-name = "sentence_window_demo"
-path = "sentence_window_demo.rs"
-required-features = []
-
-# Markdown node parser demonstration
-[[bin]]
-name = "markdown_parser_demo"
-path = "markdown_parser_demo.rs"
-required-features = []
-
-# KVStore architecture demonstration
-[[bin]]
-name = "kvstore_demo"
-path = "kvstore_demo.rs"
-required-features = ["basic-examples"]
+required-features = ["intelligent-assistant"]

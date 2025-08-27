@@ -4,7 +4,9 @@
 //! that combines Tokio for I/O operations and Rayon for CPU-intensive tasks.
 
 use cheungfun_core::{
-    cache::{MemoryCache, ParallelStrategy, PerformanceCache, PerformanceCacheConfig, UnifiedCache},
+    cache::{
+        MemoryCache, ParallelStrategy, PerformanceCache, PerformanceCacheConfig, UnifiedCache,
+    },
     traits::PipelineCache,
 };
 use std::sync::Arc;
@@ -47,7 +49,9 @@ async fn demo_strategy_comparison() -> Result<(), Box<dyn std::error::Error>> {
         .map(|i| vec![i as f32, (i + 1) as f32, (i + 2) as f32, (i + 3) as f32])
         .collect();
 
-    let keys: Vec<String> = (0..test_size).map(|i| format!("strategy_key_{}", i)).collect();
+    let keys: Vec<String> = (0..test_size)
+        .map(|i| format!("strategy_key_{}", i))
+        .collect();
 
     let strategies = vec![
         ("Tokio-only", ParallelStrategy::TokioOnly),
@@ -99,7 +103,10 @@ async fn demo_strategy_comparison() -> Result<(), Box<dyn std::error::Error>> {
         let metrics = cache.metrics().await;
         info!("  Parallel operations: {}", metrics.parallel_operations);
         info!("  SIMD operations: {}", metrics.simd_operations);
-        info!("  Performance improvement: {:.1}%", metrics.performance_improvement());
+        info!(
+            "  Performance improvement: {:.1}%",
+            metrics.performance_improvement()
+        );
     }
 
     Ok(())
@@ -117,7 +124,11 @@ async fn demo_simd_performance() -> Result<(), Box<dyn std::error::Error>> {
 
         // Generate test embeddings
         let embeddings: Vec<Vec<f32>> = (0..num_vectors)
-            .map(|i| (0..vector_size).map(|j| (i * vector_size + j) as f32 * 0.001).collect())
+            .map(|i| {
+                (0..vector_size)
+                    .map(|j| (i * vector_size + j) as f32 * 0.001)
+                    .collect()
+            })
             .collect();
 
         let query_embedding: Vec<f32> = (0..vector_size).map(|i| i as f32 * 0.002).collect();
@@ -163,8 +174,9 @@ async fn demo_simd_performance() -> Result<(), Box<dyn std::error::Error>> {
         // Get SIMD utilization
         let simd_metrics = simd_cache.metrics().await;
         let no_simd_metrics = no_simd_cache.metrics().await;
-        info!("  SIMD utilization: {:.1}% vs {:.1}%", 
-            simd_metrics.simd_utilization(), 
+        info!(
+            "  SIMD utilization: {:.1}% vs {:.1}%",
+            simd_metrics.simd_utilization(),
             no_simd_metrics.simd_utilization()
         );
     }
@@ -299,9 +311,7 @@ async fn demo_real_world_workload() -> Result<(), Box<dyn std::error::Error>> {
 
     // Get all stored embeddings for similarity comparison
     let all_keys: Vec<String> = (0..document_count)
-        .flat_map(|doc_id| {
-            (0..embeddings_per_doc).map(move |i| format!("doc_{}_{}", doc_id, i))
-        })
+        .flat_map(|doc_id| (0..embeddings_per_doc).map(move |i| format!("doc_{}_{}", doc_id, i)))
         .collect();
 
     let key_refs: Vec<&str> = all_keys.iter().map(|k| k.as_str()).collect();
@@ -313,12 +323,17 @@ async fn demo_real_world_workload() -> Result<(), Box<dyn std::error::Error>> {
         .filter_map(|opt| opt)
         .collect();
 
-    info!("  Retrieved {} embeddings for similarity search", valid_embeddings.len());
+    info!(
+        "  Retrieved {} embeddings for similarity search",
+        valid_embeddings.len()
+    );
 
     // Perform similarity searches
     for (i, query) in query_embeddings.iter().enumerate() {
-        let _similarities = cache.batch_similarity_search(query, &valid_embeddings).await;
-        
+        let _similarities = cache
+            .batch_similarity_search(query, &valid_embeddings)
+            .await;
+
         if i % 10 == 0 {
             info!("    Completed {} similarity searches", i + 1);
         }
@@ -343,16 +358,19 @@ async fn demo_real_world_workload() -> Result<(), Box<dyn std::error::Error>> {
     // Performance summary
     info!("\n📊 Performance Summary:");
     info!("  Total execution time: {:?}", total_time);
-    info!("  Ingestion time: {:?} ({:.1}%)", 
-        ingestion_time, 
+    info!(
+        "  Ingestion time: {:?} ({:.1}%)",
+        ingestion_time,
         ingestion_time.as_millis() as f64 / total_time.as_millis() as f64 * 100.0
     );
-    info!("  Search time: {:?} ({:.1}%)", 
-        search_time, 
+    info!(
+        "  Search time: {:?} ({:.1}%)",
+        search_time,
         search_time.as_millis() as f64 / total_time.as_millis() as f64 * 100.0
     );
-    info!("  Access time: {:?} ({:.1}%)", 
-        access_time, 
+    info!(
+        "  Access time: {:?} ({:.1}%)",
+        access_time,
         access_time.as_millis() as f64 / total_time.as_millis() as f64 * 100.0
     );
 
@@ -362,11 +380,20 @@ async fn demo_real_world_workload() -> Result<(), Box<dyn std::error::Error>> {
     info!("  Total operations: {}", metrics.total_operations);
     info!("  Parallel operations: {}", metrics.parallel_operations);
     info!("  SIMD operations: {}", metrics.simd_operations);
-    info!("  Operations per second: {:.1}", metrics.operations_per_second());
+    info!(
+        "  Operations per second: {:.1}",
+        metrics.operations_per_second()
+    );
     info!("  SIMD utilization: {:.1}%", metrics.simd_utilization());
-    info!("  Parallel utilization: {:.1}%", metrics.parallel_utilization());
+    info!(
+        "  Parallel utilization: {:.1}%",
+        metrics.parallel_utilization()
+    );
     info!("  Prefetch hit rate: {:.1}%", metrics.prefetch_hit_rate());
-    info!("  Performance improvement: {:.1}%", metrics.performance_improvement());
+    info!(
+        "  Performance improvement: {:.1}%",
+        metrics.performance_improvement()
+    );
 
     // Get efficiency report
     let efficiency = cache.efficiency_report().await;

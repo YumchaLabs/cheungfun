@@ -130,22 +130,20 @@ performance = ["simd", "hnsw", "optimized-memory"]
 # GPU performance (separate from core performance)
 gpu-performance = ["gpu", "performance"]
 
-# Basic examples (no feature requirements)
+# Examples demonstrating integrations functionality
+[[example]]
+name = "vector_store_performance_test"
+path = "examples/vector_store_performance.rs"
+
+[[example]]
+name = "api_embedder_example"
+path = "examples/api_embedder_example.rs"
+required-features = ["api"]
+
 [[example]]
 name = "feature_demo"
-required-features = []
+path = "examples/feature_demo.rs"
 
 [[example]]
 name = "simple_test"
-required-features = []
-
-# Embedder examples
-[[example]]
-name = "api_embedder_example"
-required-features = ["api"]
-
-# Note: FastEmbed examples are covered in feature_demo since it's the default feature
-# Note: Candle examples are not included as the implementation is still in development
-
-# Vector store and performance examples (these are actually implemented)
-# Note: Performance examples are in the main examples/ directory and workspace-level tests
+path = "examples/simple_test.rs"

@@ -6,6 +6,7 @@
 //! 3. 专业化工具集成
 //! 4. 交互式问答界面
 
+use serde::{Deserialize, Serialize};
 use std::{
     collections::HashMap,
     io::{self, Write},
@@ -13,8 +14,7 @@ use std::{
     time::Instant,
 };
 use tokio::sync::RwLock;
-use tracing::{info, warn, error};
-use serde::{Deserialize, Serialize};
+use tracing::{error, info, warn};
 
 // Cheungfun核心组件
 use cheungfun_core::{
@@ -23,9 +23,9 @@ use cheungfun_core::{
 };
 use cheungfun_indexing::{
     loaders::{DirectoryLoader, LoaderConfig},
+    node_parser::text::SentenceSplitter,
     prelude::SplitterConfig,
     transformers::MetadataExtractor,
-    node_parser::text::SentenceSplitter,
 };
 use cheungfun_integrations::{FastEmbedder, InMemoryVectorStore};
 use cheungfun_query::{
@@ -37,13 +37,13 @@ use cheungfun_query::{
 // Agent组件
 use cheungfun_agents::{
     agent::{
-        react::{ReActAgent, ReActConfig},
         base::{AgentContext, BaseAgent},
         builder::AgentBuilder,
+        react::{ReActAgent, ReActConfig},
     },
-    tool::{ToolRegistry, builtin::*},
-    types::*,
     llm::SiumaiLlmClient,
+    tool::{builtin::*, ToolRegistry},
+    types::*,
 };
 
 // Siumai LLM客户端
@@ -52,11 +52,11 @@ use siumai::prelude::*;
 /// 问题类型分类
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub enum QuestionType {
-    SimpleFactual,      // 简单事实查询："什么是RAG？"
-    ComplexAnalysis,    // 复杂分析："比较RAG和传统搜索的优缺点"
-    MultiDocument,      // 多文档对比："总结所有文档中关于AI的观点"
-    Computational,      // 需要计算："计算这些数据的平均值"
-    Conversational,     // 对话式："继续上一个话题"
+    SimpleFactual,   // 简单事实查询："什么是RAG？"
+    ComplexAnalysis, // 复杂分析："比较RAG和传统搜索的优缺点"
+    MultiDocument,   // 多文档对比："总结所有文档中关于AI的观点"
+    Computational,   // 需要计算："计算这些数据的平均值"
+    Conversational,  // 对话式："继续上一个话题"
 }
 
 /// 智能问题分类器
@@ -68,7 +68,7 @@ impl QuestionClassifier {
     pub fn new(llm_client: SiumaiLlmClient) -> Self {
         Self { llm_client }
     }
-    
+
     pub async fn classify(&self, question: &str) -> Result<QuestionType> {
         let prompt = format!(
             r#"分析以下问题的类型，只返回对应的分类名称：
@@ -85,10 +85,10 @@ impl QuestionClassifier {
 只返回分类名称："#,
             question
         );
-        
+
         let messages = vec![AgentMessage::user(prompt)];
         let response = self.llm_client.chat(messages).await?;
-        
+
         match response.trim() {
             "SimpleFactual" => Ok(QuestionType::SimpleFactual),
             "ComplexAnalysis" => Ok(QuestionType::ComplexAnalysis),
@@ -105,16 +105,16 @@ pub struct RagAgentSystem {
     // 核心RAG组件
     query_engine: QueryEngine,
     retriever: Arc<VectorRetriever>,
-    
+
     // 智能分类器
     classifier: QuestionClassifier,
-    
+
     // Agent组件
     react_agent: ReActAgent,
-    
+
     // 工具注册表
     tool_registry: Arc<ToolRegistry>,
-    
+
     // LLM客户端
     llm_client: SiumaiLlmClient,
 }
@@ -122,53 +122,51 @@ pub struct RagAgentSystem {
 impl RagAgentSystem {
     pub async fn new() -> Result<Self> {
         info!("🚀 初始化RAG+Agent智能问答系统...");
-        
+
         // 1. 初始化基础组件
         info!("  📊 初始化嵌入器...");
         let embedder = Arc::new(FastEmbedder::new().await?);
         info!("    ✅ 嵌入器就绪 (维度: {})", embedder.dimension());
-        
+
         info!("  🗄️ 初始化向量存储...");
         let vector_store = Arc::new(InMemoryVectorStore::new(embedder.dimension()));
         info!("    ✅ 向量存储就绪");
-        
+
         info!("  🤖 初始化LLM客户端...");
         let llm_client = Self::create_llm_client().await?;
         info!("    ✅ LLM客户端就绪");
-        
+
         // 2. 构建RAG索引
         info!("📚 构建文档索引...");
-        let (query_engine, retriever) = Self::build_rag_index(
-            embedder.clone(),
-            vector_store.clone(),
-            llm_client.clone(),
-        ).await?;
+        let (query_engine, retriever) =
+            Self::build_rag_index(embedder.clone(), vector_store.clone(), llm_client.clone())
+                .await?;
         info!("  ✅ RAG索引构建完成");
-        
+
         // 3. 初始化问题分类器
         let classifier = QuestionClassifier::new(llm_client.clone());
-        
+
         // 4. 初始化工具注册表
         let mut tool_registry = ToolRegistry::new();
-        
+
         // 注册内置工具
         tool_registry.register_tool(Arc::new(EchoTool::new()));
         tool_registry.register_tool(Arc::new(HttpTool::new()));
         tool_registry.register_tool(Arc::new(SearchTool::new()));
         tool_registry.register_tool(Arc::new(MathTool::new()));
-        
+
         let tool_registry = Arc::new(tool_registry);
-        
+
         // 5. 初始化ReAct Agent
         info!("  🧠 初始化ReAct Agent...");
         let react_config = ReActConfig::new("RAG-ReAct-Agent")
             .with_max_iterations(5)
             .with_include_trace(true);
-        
+
         let mut react_agent = ReActAgent::new(react_config, tool_registry.clone());
         react_agent.set_llm_client(llm_client.clone());
         info!("    ✅ ReAct Agent就绪");
-        
+
         Ok(Self {
             query_engine,
             retriever,
@@ -178,7 +176,7 @@ impl RagAgentSystem {
             llm_client,
         })
     }
-    
+
     /// 创建LLM客户端
     async fn create_llm_client() -> Result<SiumaiLlmClient> {
         // 尝试使用OpenAI，失败则使用Ollama
@@ -194,7 +192,7 @@ impl RagAgentSystem {
                 return Ok(SiumaiLlmClient::new(client));
             }
         }
-        
+
         info!("    🦙 使用本地Ollama");
         let client = Siumai::builder()
             .ollama()
@@ -204,7 +202,7 @@ impl RagAgentSystem {
             .await?;
         Ok(SiumaiLlmClient::new(client))
     }
-    
+
     /// 构建RAG索引
     async fn build_rag_index(
         embedder: Arc<FastEmbedder>,
@@ -216,7 +214,7 @@ impl RagAgentSystem {
         let loader = DirectoryLoader::new("./docs", loader_config);
         let documents = loader.load().await?;
         info!("  ✅ 加载了 {} 个文档", documents.len());
-        
+
         // 文本分割
         let splitter_config = SplitterConfig {
             chunk_size: 500,
@@ -225,54 +223,56 @@ impl RagAgentSystem {
         };
         let text_splitter = TextSplitter::new(splitter_config);
         let metadata_extractor = MetadataExtractor::new();
-        
+
         let mut all_nodes = Vec::new();
         for (i, document) in documents.iter().enumerate() {
-            info!("  📄 处理文档 {}/{}: {}", 
-                i + 1, 
+            info!(
+                "  📄 处理文档 {}/{}: {}",
+                i + 1,
                 documents.len(),
-                document.get_metadata_string("source")
+                document
+                    .get_metadata_string("source")
                     .or_else(|| document.get_metadata_string("filename"))
                     .unwrap_or_else(|| format!("Document {}", i + 1))
             );
-            
+
             let chunks = text_splitter.transform_document(document).await?;
             let nodes = metadata_extractor.transform_nodes(chunks).await?;
             all_nodes.extend(nodes);
         }
-        
+
         info!("  📊 生成了 {} 个文本块", all_nodes.len());
-        
+
         // 生成嵌入并存储
         for node in &all_nodes {
             let embedding = embedder.embed(&node.content).await?;
             vector_store.add_node(node.clone(), embedding).await?;
         }
-        
+
         info!("  💾 存储了 {} 个节点", all_nodes.len());
-        
+
         // 构建查询引擎
         let retriever = Arc::new(VectorRetriever::new(vector_store, embedder));
         let generator = SiumaiGenerator::new(llm_client);
-        
+
         let query_engine = QueryEngineBuilder::new()
             .with_retriever(retriever.clone())
             .with_generator(Arc::new(generator))
             .build();
-        
+
         Ok((query_engine, retriever))
     }
-    
+
     /// 智能问答处理
     pub async fn intelligent_query(&self, question: &str) -> Result<String> {
         let start_time = Instant::now();
-        
+
         info!("🤔 分析问题类型: {}", question);
-        
+
         // 1. 问题分类
         let question_type = self.classifier.classify(question).await?;
         info!("  📋 问题类型: {:?}", question_type);
-        
+
         // 2. 根据类型选择处理策略
         let response = match question_type {
             QuestionType::SimpleFactual => {
@@ -296,42 +296,47 @@ impl RagAgentSystem {
                 self.conversational_query(question).await?
             }
         };
-        
+
         let duration = start_time.elapsed();
         info!("⚡ 查询完成，耗时: {:?}", duration);
-        
+
         Ok(response)
     }
-    
+
     /// 简单RAG查询
     async fn simple_rag_query(&self, question: &str) -> Result<String> {
         let response = self.query_engine.query(question).await?;
         Ok(response.response)
     }
-    
+
     /// 复杂ReAct查询
     async fn complex_react_query(&self, question: &str) -> Result<String> {
         let message = AgentMessage::user(question.to_string());
         let mut context = AgentContext::new();
-        
+
         let response = self.react_agent.chat(message, Some(&mut context)).await?;
         Ok(response.content)
     }
-    
+
     /// 多文档查询
     async fn multi_document_query(&self, question: &str) -> Result<String> {
         // 使用更大的top_k来获取更多文档
         let mut query = cheungfun_core::types::Query::new(question.to_string());
         query.top_k = 10;
-        
+
         let results = self.retriever.retrieve(&query).await?;
-        
+
         // 构建多文档分析提示
-        let documents: Vec<String> = results.iter()
-            .map(|scored_node| format!("文档片段 (相似度: {:.3}):\n{}", 
-                scored_node.score, scored_node.node.content))
+        let documents: Vec<String> = results
+            .iter()
+            .map(|scored_node| {
+                format!(
+                    "文档片段 (相似度: {:.3}):\n{}",
+                    scored_node.score, scored_node.node.content
+                )
+            })
             .collect();
-        
+
         let prompt = format!(
             r#"基于以下多个文档片段，回答问题："{}"
 
@@ -342,19 +347,19 @@ impl RagAgentSystem {
             question,
             documents.join("\n\n---\n\n")
         );
-        
+
         let messages = vec![AgentMessage::user(prompt)];
         let response = self.llm_client.chat(messages).await?;
-        
+
         Ok(response)
     }
-    
+
     /// 工具增强查询
     async fn tool_enhanced_query(&self, question: &str) -> Result<String> {
         // 使用ReAct Agent处理，它会自动选择合适的工具
         self.complex_react_query(question).await
     }
-    
+
     /// 对话式查询
     async fn conversational_query(&self, question: &str) -> Result<String> {
         // 简化实现，实际应该维护对话历史
@@ -368,10 +373,10 @@ async fn main() -> Result<()> {
     tracing_subscriber::fmt()
         .with_max_level(tracing::Level::INFO)
         .init();
-    
+
     println!("🎯 RAG+Agent 智能问答系统");
     println!("=====================================");
-    
+
     // 初始化系统
     let system = match RagAgentSystem::new().await {
         Ok(system) => system,
@@ -380,7 +385,7 @@ async fn main() -> Result<()> {
             return Err(e);
         }
     };
-    
+
     println!("\n💬 智能问答系统已就绪！");
     println!("特性：");
     println!("  🧠 智能问题分类 - 自动识别问题类型");
@@ -393,25 +398,25 @@ async fn main() -> Result<()> {
     println!("  - 输入 'quit' 或 'exit' 退出");
     println!("  - 输入 'help' 查看示例问题");
     println!("==================================================\n");
-    
+
     // 交互式问答循环
     loop {
         print!("🤔 您的问题: ");
         io::stdout().flush().unwrap();
-        
+
         let mut input = String::new();
         io::stdin().read_line(&mut input).unwrap();
         let question = input.trim();
-        
+
         if question.is_empty() {
             continue;
         }
-        
+
         if question == "quit" || question == "exit" {
             println!("👋 感谢使用RAG+Agent智能问答系统！");
             break;
         }
-        
+
         if question == "help" {
             println!("\n📝 示例问题：");
             println!("  简单查询: \"什么是RAG？\"");
@@ -421,9 +426,9 @@ async fn main() -> Result<()> {
             println!("  对话式: \"继续上一个话题\"\n");
             continue;
         }
-        
+
         println!("🔍 正在智能分析和处理...");
-        
+
         match system.intelligent_query(question).await {
             Ok(response) => {
                 println!("\n🤖 AI回答:");
@@ -437,6 +442,6 @@ async fn main() -> Result<()> {
             }
         }
     }
-    
+
     Ok(())
 }

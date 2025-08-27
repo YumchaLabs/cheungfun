@@ -11,6 +11,15 @@ keywords.workspace = true
 description = "Query processing and retrieval for the Cheungfun RAG framework"
 categories.workspace = true
 
+# Examples demonstrating core query functionality
+[[example]]
+name = "query_pipeline_demo"
+path = "examples/query_pipeline.rs"
+
+[[example]]
+name = "basic_query_demo"
+path = "examples/basic_query.rs"
+
 [dependencies]
 cheungfun-core = { path = "../cheungfun-core" }
 
@@ -51,8 +60,4 @@ tracing-subscriber = { workspace = true }
 [features]
 # Default features - basic functionality without external dependencies
 default = []
-
-# Example configurations
-[[example]]
-name = "basic_query"
 

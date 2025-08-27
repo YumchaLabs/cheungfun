@@ -4,96 +4,96 @@
 
 **🎓 A Learning-Focused RAG Framework in Rust**
 
-> **⚠️ 学习项目声明**: Cheungfun 是一个**个人学习项目**，用于探索和实践 Rust 中的 RAG (Retrieval-Augmented Generation) 架构设计。虽然功能相对完整，但仍在开发中，**不建议用于生产环境**。
+> **⚠️ Learning Project Disclaimer**: Cheungfun is a **personal learning project** designed to explore and practice RAG (Retrieval-Augmented Generation) architecture design in Rust. While functionally complete, it's still in development and **not recommended for production use**.
 >
-> **📚 学习目标**:
-> - 深入学习 Rust 语言的高级特性和最佳实践
-> - 探索 RAG 系统的架构设计和实现模式
-> - 实践 LlamaIndex 的设计理念和接口模式
-> - 提供学习和参考的代码示例
+> **📚 Learning Goals**:
+> - Deep dive into Rust's advanced features and best practices
+> - Explore RAG system architecture design and implementation patterns
+> - Practice LlamaIndex design philosophy and interface patterns
+> - Provide learning and reference code examples
 
-Cheungfun 是一个高性能的 RAG 框架，采用 Rust 构建，灵感来源于 LlamaIndex。它具有模块化设计、流式处理架构和性能优化特性，主要用于学习和探索现代 RAG 系统的实现。
+Cheungfun is a high-performance RAG framework built in Rust, inspired by LlamaIndex. It features modular design, streaming processing architecture, and performance optimization capabilities, primarily designed for learning and exploring modern RAG system implementations.
 
-## ✨ 学习特性
+## ✨ Learning Features
 
-- **🚀 性能探索**: 探索 Rust 的零成本抽象和内存安全特性
-  - SIMD 加速向量操作实验
-  - HNSW 近似最近邻搜索实现
-  - 内存管理优化实践
-- **🔧 模块化设计**: 学习关注点分离和可扩展架构设计
-- **🌊 流式处理**: 实验大规模数据的流式索引和查询
-- **💻 高级代码索引**: 基于 Tree-sitter AST 解析的代码处理
-  - 提取函数、类、导入、注释和复杂度指标
-  - 保持语法边界的代码感知分割
-  - 支持 Rust、Python、JavaScript、TypeScript、Java、C#、C/C++、Go
-- **🛡️ 类型安全**: 利用 Rust 类型系统保证运行时安全
-- **🔌 统一接口**: 采用 LlamaIndex 的 Transform 接口设计模式
-- **⚡ 异步优先**: 基于 tokio 的高性能异步操作
-- **🎓 学习导向**: 提供完整的示例和文档用于学习参考
+- **🚀 Performance Exploration**: Exploring Rust's zero-cost abstractions and memory safety features
+  - SIMD-accelerated vector operations experiments
+  - HNSW approximate nearest neighbor search implementation
+  - Memory management optimization practices
+- **🔧 Modular Design**: Learning separation of concerns and scalable architecture design
+- **🌊 Streaming Processing**: Experimenting with large-scale streaming indexing and querying
+- **💻 Advanced Code Indexing**: Tree-sitter AST-based code processing
+  - Extract functions, classes, imports, comments, and complexity metrics
+  - Code-aware splitting that maintains syntax boundaries
+  - Support for Rust, Python, JavaScript, TypeScript, Java, C#, C/C++, Go
+- **🛡️ Type Safety**: Leveraging Rust's type system for runtime safety guarantees
+- **🔌 Unified Interface**: Adopting LlamaIndex's Transform interface design pattern
+- **⚡ Async-First**: High-performance async operations built on tokio
+- **🎓 Learning-Oriented**: Complete examples and documentation for learning reference
 
-## 📊 性能实验结果
+## 📊 Performance Experiment Results
 
-在学习过程中实现的性能优化效果：
+Performance optimization achievements during the learning process:
 
-| 特性 | 性能表现 | 学习收获 |
-|------|----------|----------|
-| **SIMD 向量操作** | 30.17x 加速 | 学习了 SIMD 优化技术 |
-| **向量搜索 (HNSW)** | 378+ QPS | 理解了近似最近邻算法 |
-| **内存优化** | 显著改善 | 掌握了 Rust 内存管理 |
-| **索引吞吐量** | 流式处理 | 实践了异步编程模式 |
+| Feature | Performance | Learning Outcome |
+|---------|-------------|------------------|
+| **SIMD Vector Operations** | 30.17x speedup | Learned SIMD optimization techniques |
+| **Vector Search (HNSW)** | 378+ QPS | Understanding of approximate nearest neighbor algorithms |
+| **Memory Optimization** | Significant improvement | Mastered Rust memory management |
+| **Indexing Throughput** | Streaming processing | Practiced async programming patterns |
 
-> **注意**: 这些数据来自学习实验，不代表生产环境性能保证。
+> **Note**: These data come from learning experiments and do not represent production environment performance guarantees.
 
-## 📦 学习架构
+## 📦 Learning Architecture
 
 ```text
 cheungfun/
-├── cheungfun-core/          # 核心 trait 和数据结构
-├── cheungfun-indexing/      # 统一 Transform 接口的数据加载和索引构建
-├── cheungfun-query/         # 查询处理和响应生成
-├── cheungfun-agents/        # 智能代理和工具调用 (MCP 集成)
-├── cheungfun-integrations/  # 外部服务集成 (FastEmbed, Qdrant 等)
-├── cheungfun-multimodal/    # 多模态处理 (文本、图像、音频、视频)
-└── examples/               # 学习示例和用法演示
+├── cheungfun-core/          # Core traits and data structures
+├── cheungfun-indexing/      # Data loading and indexing with unified Transform interface
+├── cheungfun-query/         # Query processing and response generation
+├── cheungfun-agents/        # Intelligent agents and tool calling (MCP integration)
+├── cheungfun-integrations/  # External service integrations (FastEmbed, Qdrant, etc.)
+├── cheungfun-multimodal/    # Multi-modal processing (text, images, audio, video)
+└── examples/               # Learning examples and usage demonstrations
 ```
 
-### 🔄 统一接口重构
+### 🔄 Unified Interface Refactoring
 
-最近完成了重大架构重构，采用了与 LlamaIndex 一致的统一 Transform 接口：
+Recently completed a major architectural refactoring, adopting a unified Transform interface consistent with LlamaIndex:
 
-- **统一接口**: 所有处理组件都实现同一个 `Transform` trait
-- **类型安全**: 使用 `TransformInput` 枚举提供编译时类型检查
-- **管道简化**: 统一的处理流程，更易于组合和扩展
+- **Unified Interface**: All processing components implement the same `Transform` trait
+- **Type Safety**: Using `TransformInput` enum for compile-time type checking
+- **Pipeline Simplification**: Unified processing flow, easier to compose and extend
 
-## 🚀 学习开始
+## 🚀 Getting Started
 
-### 安装
+### Installation
 
-添加到你的 `Cargo.toml`:
+Add to your `Cargo.toml`:
 
 ```toml
 [dependencies]
 cheungfun = "0.1.0"
-siumai = "0.4.0"  # LLM 集成
+siumai = "0.4.0"  # LLM integration
 tokio = { version = "1.0", features = ["full"] }
 ```
 
-### 特性标志
+### Feature Flags
 
-选择适合学习的特性:
+Choose features suitable for learning:
 
 ```toml
-# 默认: 稳定和安全
+# Default: stable and secure
 cheungfun = "0.1.0"
 
-# 学习实验 (包含所有特性)
+# Learning experiments (includes all features)
 cheungfun = { version = "0.1.0", features = ["performance"] }
 
 # Full feature set
 cheungfun = { version = "0.1.0", features = ["full"] }
 ```
 
-### 基本使用 (统一接口)
+### Basic Usage (Unified Interface)
 
 ```rust
 use cheungfun::prelude::*;
@@ -102,24 +102,24 @@ use siumai::prelude::*;
 
 #[tokio::main]
 async fn main() -> Result<(), Box<dyn std::error::Error>> {
-    // 1. 配置嵌入模型
+    // 1. Configure embedding model
     let embedder = SiumaiEmbedder::new("openai", "text-embedding-3-small", "your-api-key").await?;
 
-    // 2. 设置向量存储
+    // 2. Set up vector storage
     let vector_store = InMemoryVectorStore::new(384, DistanceMetric::Cosine);
 
-    // 3. 构建统一接口的索引管道
+    // 3. Build indexing pipeline with unified interface
     let indexing_pipeline = DefaultIndexingPipeline::builder()
         .with_loader(Arc::new(DirectoryLoader::new("./docs")?))
-        .with_transformer(Arc::new(SentenceSplitter::from_defaults(1000, 200)?))  // 统一接口
-        .with_transformer(Arc::new(MetadataExtractor::new()))                     // 统一接口
+        .with_transformer(Arc::new(SentenceSplitter::from_defaults(1000, 200)?))  // Unified interface
+        .with_transformer(Arc::new(MetadataExtractor::new()))                     // Unified interface
         .build()?;
 
-    // 4. 运行索引
+    // 4. Run indexing
     let stats = indexing_pipeline.run().await?;
-    println!("索引完成: {} 个文档, {} 个节点", stats.documents_processed, stats.nodes_created);
+    println!("Indexing complete: {} documents, {} nodes", stats.documents_processed, stats.nodes_created);
 
-    // 5. 配置 LLM 客户端
+    // 5. Configure LLM client
     let llm_client = Siumai::builder()
         .openai()
         .api_key("your-api-key")
@@ -127,21 +127,21 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         .build()
         .await?;
 
-    // 6. 构建查询引擎
+    // 6. Build query engine
     let query_engine = DefaultQueryPipeline::builder()
         .with_retriever(Arc::new(VectorRetriever::new(vector_store, embedder)))
         .with_synthesizer(Arc::new(SimpleResponseSynthesizer::new(llm_client)))
         .build()?;
 
-    // 7. 执行查询
-    let response = query_engine.query("文档的主要内容是什么？").await?;
-    println!("回答: {}", response.content);
+    // 7. Execute query
+    let response = query_engine.query("What is the main content of the documents?").await?;
+    println!("Answer: {}", response.content);
 
     Ok(())
 }
 ```
 
-### 统一 Transform 接口示例
+### Unified Transform Interface Example
 
 ```rust
 use cheungfun_core::traits::{Transform, TransformInput};
@@ -149,14 +149,14 @@ use cheungfun_indexing::node_parser::text::SentenceSplitter;
 
 #[tokio::main]
 async fn main() -> Result<(), Box<dyn std::error::Error>> {
-    // 创建文档分割器
+    // Create document splitter
     let splitter = SentenceSplitter::from_defaults(300, 75)?;
 
-    // 使用统一接口处理文档
+    // Use unified interface to process documents
     let input = TransformInput::Documents(documents);
     let nodes = splitter.transform(input).await?;
 
-    // 多态处理示例
+    // Polymorphic processing example
     let transforms: Vec<Box<dyn Transform>> = vec![
         Box::new(SentenceSplitter::from_defaults(200, 40)?),
         Box::new(TokenTextSplitter::from_defaults(180, 35)?),
@@ -314,16 +314,16 @@ This project is dual-licensed under:
 
 ---
 
-## 📚 学习声明
+## 📚 Learning Statement
 
-**Cheungfun** 是一个个人学习项目，主要用于：
+**Cheungfun** is a personal learning project, primarily used for:
 
-- 🦀 **学习 Rust**: 探索 Rust 语言的高级特性和最佳实践
-- 🏗️ **架构设计**: 实践现代 RAG 系统的架构模式
-- 📖 **知识分享**: 提供学习和参考的代码示例
-- 🔬 **技术实验**: 尝试新的算法和优化技术
+- 🦀 **Learning Rust**: Exploring Rust's advanced features and best practices
+- 🏗️ **Architecture Design**: Practicing modern RAG system architectural patterns
+- 📖 **Knowledge Sharing**: Providing learning and reference code examples
+- 🔬 **Technical Experimentation**: Trying new algorithms and optimization techniques
 
-虽然功能相对完整，但**不建议用于生产环境**。如果你对 RAG 系统和 Rust 开发感兴趣，欢迎学习和参考！
+While functionally complete, it's **not recommended for production use**. If you're interested in RAG systems and Rust development, welcome to learn and reference!
 
 ---
 

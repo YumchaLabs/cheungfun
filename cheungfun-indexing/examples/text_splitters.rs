@@ -1,0 +1,118 @@
+//! Text Splitters Demonstration
+//!
+//! This example showcases different text splitting strategies in cheungfun-indexing.
+//! Compare sentence-based, token-based, and semantic splitting approaches.
+
+use cheungfun_core::{traits::Transform, types::TransformInput, Document};
+use cheungfun_indexing::{
+    node_parser::{
+        config::{SentenceSplitterConfig, TokenTextSplitterConfig},
+        text::{SentenceSplitter, TokenTextSplitter},
+    },
+    TextSplitter,
+};
+use std::collections::HashMap;
+use uuid::Uuid;
+
+#[tokio::main]
+async fn main() -> Result<(), Box<dyn std::error::Error>> {
+    println!("📝 Text Splitters Comparison");
+    println!("=============================\n");
+
+    // Sample text for testing
+    let sample_text = r#"
+    Retrieval-Augmented Generation (RAG) is a powerful technique that combines the strengths of 
+    large language models with external knowledge retrieval. The process works in two main phases: 
+    indexing and querying.
+    
+    During the indexing phase, documents are loaded, split into chunks, embedded using vector 
+    representations, and stored in a vector database. This creates a searchable knowledge base.
+    
+    In the querying phase, user questions are embedded using the same model, similar chunks are 
+    retrieved from the vector store, and the language model generates responses using both the 
+    question and retrieved context.
+    
+    RAG systems excel at providing factual, up-to-date information while maintaining the 
+    conversational abilities of large language models. They're particularly useful for 
+    domain-specific applications where accuracy is paramount.
+    "#;
+
+    let document = Document {
+        id: Uuid::new_v4(),
+        content: sample_text.to_string(),
+        metadata: HashMap::new(),
+        embedding: None,
+    };
+
+    println!("📄 Original text length: {} characters", sample_text.len());
+    println!();
+
+    // Test 1: Sentence Splitter
+    println!("🔤 Sentence Splitter (1000 chars, 200 overlap)");
+    println!("-".repeat(50));
+
+    let sentence_config = SentenceSplitterConfig {
+        chunk_size: 1000,
+        chunk_overlap: 200,
+        ..Default::default()
+    };
+
+    let sentence_splitter = SentenceSplitter::from_config(sentence_config)?;
+    let input = TransformInput::Documents(vec![document.clone()]);
+    let sentence_nodes = sentence_splitter.transform(input).await?;
+
+    println!("Generated {} nodes:", sentence_nodes.len());
+    for (i, node) in sentence_nodes.iter().enumerate() {
+        println!("  Node {}: {} chars", i + 1, node.content.len());
+        println!(
+            "    Preview: {}...",
+            &node.content[..node.content.len().min(80)]
+        );
+    }
+    println!();
+
+    // Test 2: Token Text Splitter
+    println!("🎯 Token Text Splitter (200 tokens, 50 overlap)");
+    println!("-".repeat(50));
+
+    let token_config = TokenTextSplitterConfig {
+        chunk_size: 200,
+        chunk_overlap: 50,
+        ..Default::default()
+    };
+
+    let token_splitter = TokenTextSplitter::from_config(token_config)?;
+    let input = TransformInput::Documents(vec![document.clone()]);
+    let token_nodes = token_splitter.transform(input).await?;
+
+    println!("Generated {} nodes:", token_nodes.len());
+    for (i, node) in token_nodes.iter().enumerate() {
+        println!("  Node {}: {} chars", i + 1, node.content.len());
+        println!(
+            "    Preview: {}...",
+            &node.content[..node.content.len().min(80)]
+        );
+    }
+    println!();
+
+    // Test 3: Performance comparison
+    println!("⏱️  Performance Comparison");
+    println!("-".repeat(50));
+
+    let start = std::time::Instant::now();
+    let _ = sentence_splitter
+        .transform(TransformInput::Documents(vec![document.clone()]))
+        .await?;
+    let sentence_duration = start.elapsed();
+
+    let start = std::time::Instant::now();
+    let _ = token_splitter
+        .transform(TransformInput::Documents(vec![document]))
+        .await?;
+    let token_duration = start.elapsed();
+
+    println!("Sentence Splitter: {:?}", sentence_duration);
+    println!("Token Splitter:    {:?}", token_duration);
+
+    Ok(())
+}

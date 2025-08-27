@@ -34,7 +34,7 @@
 //! cargo run --bin vector_store_benchmark
 //! ```
 
-#![deny(missing_docs)]
+#![warn(missing_docs)]
 #![warn(clippy::all, clippy::pedantic)]
 #![allow(clippy::module_name_repetitions)]
 

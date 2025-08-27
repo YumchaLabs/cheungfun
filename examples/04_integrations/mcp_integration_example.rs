@@ -9,7 +9,7 @@
 use cheungfun_agents::{
     error::Result,
     mcp::{McpClient, McpServer, McpService},
-    tool::{ToolRegistry, builtin::EchoTool},
+    tool::{builtin::EchoTool, ToolRegistry},
 };
 use std::sync::Arc;
 use tokio;

@@ -2,13 +2,13 @@
 //!
 //! 这个模块实现了专门用于RAG系统的工具集合
 
-use cheungfun_core::{traits::VectorStore, Result};
-use cheungfun_query::retriever::VectorRetriever;
+use async_trait::async_trait;
 use cheungfun_agents::{
-    tool::{Tool, ToolParams, ToolResult, ToolError},
+    tool::{Tool, ToolError, ToolParams, ToolResult},
     types::*,
 };
-use async_trait::async_trait;
+use cheungfun_core::{traits::VectorStore, Result};
+use cheungfun_query::retriever::VectorRetriever;
 use serde_json::{json, Value};
 use std::sync::Arc;
 
@@ -34,11 +34,11 @@ impl Tool for RagVectorSearchTool {
     fn name(&self) -> &str {
         &self.name
     }
-    
+
     fn description(&self) -> &str {
         &self.description
     }
-    
+
     fn parameters(&self) -> Value {
         json!({
             "type": "object",
@@ -61,38 +61,42 @@ impl Tool for RagVectorSearchTool {
             "required": ["query"]
         })
     }
-    
+
     async fn execute(&self, params: ToolParams) -> ToolResult {
-        let query = params.get_string("query")
+        let query = params
+            .get_string("query")
             .map_err(|e| ToolError::InvalidParameter(format!("query parameter error: {}", e)))?;
-        
+
         let top_k = params.get_usize("top_k").unwrap_or(5);
         let similarity_threshold = params.get_f64("similarity_threshold").unwrap_or(0.0);
-        
+
         // 构建查询
         let mut search_query = cheungfun_core::types::Query::new(query);
         search_query.top_k = top_k;
         search_query.similarity_threshold = Some(similarity_threshold as f32);
-        
+
         // 执行搜索
         match self.retriever.retrieve(&search_query).await {
             Ok(results) => {
-                let search_results: Vec<Value> = results.iter().map(|scored_node| {
-                    json!({
-                        "content": scored_node.node.content,
-                        "score": scored_node.score,
-                        "metadata": scored_node.node.metadata,
-                        "id": scored_node.node.id
+                let search_results: Vec<Value> = results
+                    .iter()
+                    .map(|scored_node| {
+                        json!({
+                            "content": scored_node.node.content,
+                            "score": scored_node.score,
+                            "metadata": scored_node.node.metadata,
+                            "id": scored_node.node.id
+                        })
                     })
-                }).collect();
-                
+                    .collect();
+
                 ToolResult::success(json!({
                     "results": search_results,
                     "total_found": results.len(),
                     "query": query
                 }))
             }
-            Err(e) => ToolResult::error(format!("搜索失败: {}", e))
+            Err(e) => ToolResult::error(format!("搜索失败: {}", e)),
         }
     }
 }
@@ -119,11 +123,11 @@ impl Tool for DocumentSummarizerTool {
     fn name(&self) -> &str {
         &self.name
     }
-    
+
     fn description(&self) -> &str {
         &self.description
     }
-    
+
     fn parameters(&self) -> Value {
         json!({
             "type": "object",
@@ -146,14 +150,17 @@ impl Tool for DocumentSummarizerTool {
             "required": ["content"]
         })
     }
-    
+
     async fn execute(&self, params: ToolParams) -> ToolResult {
-        let content = params.get_string("content")
+        let content = params
+            .get_string("content")
             .map_err(|e| ToolError::InvalidParameter(format!("content parameter error: {}", e)))?;
-        
+
         let max_length = params.get_usize("max_length").unwrap_or(200);
-        let focus = params.get_string("focus").unwrap_or_else(|_| "general".to_string());
-        
+        let focus = params
+            .get_string("focus")
+            .unwrap_or_else(|_| "general".to_string());
+
         let prompt = format!(
             r#"请对以下内容进行摘要，要求：
 1. 摘要长度不超过{}个字符
@@ -167,19 +174,17 @@ impl Tool for DocumentSummarizerTool {
 摘要："#,
             max_length, focus, content
         );
-        
+
         let messages = vec![AgentMessage::user(prompt)];
-        
+
         match self.llm_client.chat(messages).await {
-            Ok(summary) => {
-                ToolResult::success(json!({
-                    "summary": summary.trim(),
-                    "original_length": content.len(),
-                    "summary_length": summary.trim().len(),
-                    "compression_ratio": content.len() as f64 / summary.trim().len() as f64
-                }))
-            }
-            Err(e) => ToolResult::error(format!("摘要生成失败: {}", e))
+            Ok(summary) => ToolResult::success(json!({
+                "summary": summary.trim(),
+                "original_length": content.len(),
+                "summary_length": summary.trim().len(),
+                "compression_ratio": content.len() as f64 / summary.trim().len() as f64
+            })),
+            Err(e) => ToolResult::error(format!("摘要生成失败: {}", e)),
         }
     }
 }
@@ -211,11 +216,11 @@ impl Tool for FactCheckerTool {
     fn name(&self) -> &str {
         &self.name
     }
-    
+
     fn description(&self) -> &str {
         &self.description
     }
-    
+
     fn parameters(&self) -> Value {
         json!({
             "type": "object",
@@ -233,27 +238,29 @@ impl Tool for FactCheckerTool {
             "required": ["claim"]
         })
     }
-    
+
     async fn execute(&self, params: ToolParams) -> ToolResult {
-        let claim = params.get_string("claim")
+        let claim = params
+            .get_string("claim")
             .map_err(|e| ToolError::InvalidParameter(format!("claim parameter error: {}", e)))?;
-        
+
         let context = params.get_string("context").unwrap_or_default();
-        
+
         // 1. 搜索相关证据
         let mut search_query = cheungfun_core::types::Query::new(claim.clone());
         search_query.top_k = 5;
-        
+
         let evidence = match self.retriever.retrieve(&search_query).await {
             Ok(results) => results,
-            Err(e) => return ToolResult::error(format!("证据搜索失败: {}", e))
+            Err(e) => return ToolResult::error(format!("证据搜索失败: {}", e)),
         };
-        
+
         // 2. 构建事实核查提示
-        let evidence_text: Vec<String> = evidence.iter()
+        let evidence_text: Vec<String> = evidence
+            .iter()
             .map(|scored_node| format!("- {}", scored_node.node.content))
             .collect();
-        
+
         let prompt = format!(
             r#"请基于以下证据核查声明的准确性：
 
@@ -282,21 +289,19 @@ impl Tool for FactCheckerTool {
             context,
             evidence_text.join("\n")
         );
-        
+
         let messages = vec![AgentMessage::user(prompt)];
-        
+
         match self.llm_client.chat(messages).await {
             Ok(response) => {
                 // 尝试解析JSON响应
                 match serde_json::from_str::<Value>(&response) {
-                    Ok(fact_check_result) => {
-                        ToolResult::success(json!({
-                            "claim": claim,
-                            "fact_check": fact_check_result,
-                            "evidence_count": evidence.len(),
-                            "evidence_sources": evidence.iter().map(|e| &e.node.id).collect::<Vec<_>>()
-                        }))
-                    }
+                    Ok(fact_check_result) => ToolResult::success(json!({
+                        "claim": claim,
+                        "fact_check": fact_check_result,
+                        "evidence_count": evidence.len(),
+                        "evidence_sources": evidence.iter().map(|e| &e.node.id).collect::<Vec<_>>()
+                    })),
                     Err(_) => {
                         // 如果JSON解析失败，返回原始响应
                         ToolResult::success(json!({
@@ -307,7 +312,7 @@ impl Tool for FactCheckerTool {
                     }
                 }
             }
-            Err(e) => ToolResult::error(format!("事实核查失败: {}", e))
+            Err(e) => ToolResult::error(format!("事实核查失败: {}", e)),
         }
     }
 }
@@ -332,11 +337,11 @@ impl Tool for CitationGeneratorTool {
     fn name(&self) -> &str {
         &self.name
     }
-    
+
     fn description(&self) -> &str {
         &self.description
     }
-    
+
     fn parameters(&self) -> Value {
         json!({
             "type": "object",
@@ -365,32 +370,37 @@ impl Tool for CitationGeneratorTool {
             "required": ["sources"]
         })
     }
-    
+
     async fn execute(&self, params: ToolParams) -> ToolResult {
-        let sources = params.get_array("sources")
+        let sources = params
+            .get_array("sources")
             .map_err(|e| ToolError::InvalidParameter(format!("sources parameter error: {}", e)))?;
-        
-        let style = params.get_string("style").unwrap_or_else(|_| "APA".to_string());
-        
+
+        let style = params
+            .get_string("style")
+            .unwrap_or_else(|_| "APA".to_string());
+
         let mut citations = Vec::new();
-        
+
         for (i, source) in sources.iter().enumerate() {
             if let Some(source_obj) = source.as_object() {
-                let title = source_obj.get("title")
+                let title = source_obj
+                    .get("title")
                     .and_then(|v| v.as_str())
                     .unwrap_or("Unknown Title");
-                
-                let author = source_obj.get("author")
+
+                let author = source_obj
+                    .get("author")
                     .and_then(|v| v.as_str())
                     .unwrap_or("Unknown Author");
-                
-                let url = source_obj.get("url")
-                    .and_then(|v| v.as_str());
-                
-                let date = source_obj.get("date")
+
+                let url = source_obj.get("url").and_then(|v| v.as_str());
+
+                let date = source_obj
+                    .get("date")
                     .and_then(|v| v.as_str())
                     .unwrap_or("n.d.");
-                
+
                 // 根据风格生成引用
                 let citation = match style.as_str() {
                     "APA" => {
@@ -407,13 +417,13 @@ impl Tool for CitationGeneratorTool {
                             format!("{}. \"{}.\" {}.", author, title, date)
                         }
                     }
-                    _ => format!("[{}] {}, \"{}\", {}", i + 1, author, title, date)
+                    _ => format!("[{}] {}, \"{}\", {}", i + 1, author, title, date),
                 };
-                
+
                 citations.push(citation);
             }
         }
-        
+
         ToolResult::success(json!({
             "citations": citations,
             "style": style,

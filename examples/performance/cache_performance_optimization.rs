@@ -52,8 +52,14 @@ async fn demo_performance_configuration() -> Result<(), Box<dyn std::error::Erro
     info!("  Parallel processing: {}", default_config.enable_parallel);
     info!("  Parallel threads: {}", default_config.parallel_threads);
     info!("  Prefetching: {}", default_config.enable_prefetching);
-    info!("  Prefetch cache size: {}", default_config.prefetch_cache_size);
-    info!("  Optimal batch size: {}", default_config.optimal_batch_size);
+    info!(
+        "  Prefetch cache size: {}",
+        default_config.prefetch_cache_size
+    );
+    info!(
+        "  Optimal batch size: {}",
+        default_config.optimal_batch_size
+    );
 
     // High-performance configuration
     let high_perf_config = PerformanceCacheConfig {
@@ -69,9 +75,18 @@ async fn demo_performance_configuration() -> Result<(), Box<dyn std::error::Erro
 
     info!("\nHigh-performance configuration:");
     info!("  Parallel threads: {}", high_perf_config.parallel_threads);
-    info!("  Prefetch cache size: {}", high_perf_config.prefetch_cache_size);
-    info!("  Prefetch threshold: {}", high_perf_config.prefetch_threshold);
-    info!("  Optimal batch size: {}", high_perf_config.optimal_batch_size);
+    info!(
+        "  Prefetch cache size: {}",
+        high_perf_config.prefetch_cache_size
+    );
+    info!(
+        "  Prefetch threshold: {}",
+        high_perf_config.prefetch_threshold
+    );
+    info!(
+        "  Optimal batch size: {}",
+        high_perf_config.optimal_batch_size
+    );
 
     // Memory-optimized configuration
     let memory_config = PerformanceCacheConfig {
@@ -89,7 +104,10 @@ async fn demo_performance_configuration() -> Result<(), Box<dyn std::error::Erro
     info!("  SIMD: {}", memory_config.enable_simd);
     info!("  Parallel: {}", memory_config.enable_parallel);
     info!("  Prefetching: {}", memory_config.enable_prefetching);
-    info!("  Memory optimization: {}", memory_config.enable_memory_optimization);
+    info!(
+        "  Memory optimization: {}",
+        memory_config.enable_memory_optimization
+    );
 
     Ok(())
 }
@@ -185,7 +203,10 @@ async fn demo_simd_acceleration() -> Result<(), Box<dyn std::error::Error>> {
 
     info!("SIMD Utilization:");
     info!("  SIMD cache: {:.1}%", simd_metrics.simd_utilization());
-    info!("  No-SIMD cache: {:.1}%", no_simd_metrics.simd_utilization());
+    info!(
+        "  No-SIMD cache: {:.1}%",
+        no_simd_metrics.simd_utilization()
+    );
 
     Ok(())
 }
@@ -497,8 +518,14 @@ async fn demo_efficiency_reporting() -> Result<(), Box<dyn std::error::Error>> {
     info!("  Total operations: {}", metrics.total_operations);
     info!("  SIMD operations: {}", metrics.simd_operations);
     info!("  Parallel operations: {}", metrics.parallel_operations);
-    info!("  Operations per second: {:.2}", metrics.operations_per_second());
-    info!("  Performance improvement: {:.1}%", metrics.performance_improvement());
+    info!(
+        "  Operations per second: {:.2}",
+        metrics.operations_per_second()
+    );
+    info!(
+        "  Performance improvement: {:.1}%",
+        metrics.performance_improvement()
+    );
 
     Ok(())
 }

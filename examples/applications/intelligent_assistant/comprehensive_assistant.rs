@@ -1,18 +1,20 @@
 //! Comprehensive Agent Example with Real OpenAI Integration
-//! 
+//!
 //! This example demonstrates practical agent usage patterns similar to LlamaIndex,
 //! including tool integration, multi-step reasoning, and real API calls.
 
 use cheungfun_agents::{
     agent::{
-        base::{BaseAgent, AgentContext},
-        multi_agent::{MultiAgentOrchestrator, MultiAgentOrchestratorBuilder, AgentRole, HandoffStrategy},
+        base::{AgentContext, BaseAgent},
+        multi_agent::{
+            AgentRole, HandoffStrategy, MultiAgentOrchestrator, MultiAgentOrchestratorBuilder,
+        },
         react::ReActAgent,
     },
     error::Result,
     llm::SiumaiLlmClient,
     tool::{
-        builtin::{CalculatorTool, WeatherTool, WikipediaTool, ShellTool},
+        builtin::{CalculatorTool, ShellTool, WeatherTool, WikipediaTool},
         ToolRegistry,
     },
     types::{AgentMessage, AgentResponse},
@@ -36,15 +38,15 @@ async fn main() -> Result<()> {
         .init();
 
     println!("🚀 Starting Comprehensive Agent Example");
-    println!("=" .repeat(60));
+    println!("=".repeat(60));
 
     // Run different example scenarios
     single_agent_calculator_example().await?;
     println!();
-    
+
     research_assistant_example().await?;
     println!();
-    
+
     multi_agent_research_pipeline().await?;
     println!();
 
@@ -73,7 +75,9 @@ async fn single_agent_calculator_example() -> Result<()> {
 
     // Setup tools
     let mut tool_registry = ToolRegistry::new();
-    tool_registry.register_tool("calculator".to_string(), Arc::new(CalculatorTool::new())).await?;
+    tool_registry
+        .register_tool("calculator".to_string(), Arc::new(CalculatorTool::new()))
+        .await?;
 
     // Create ReAct agent
     let agent = ReActAgent::builder()
@@ -87,14 +91,14 @@ async fn single_agent_calculator_example() -> Result<()> {
     // Test complex calculation
     let message = AgentMessage::user(
         "Calculate the compound interest for $10,000 invested at 5% annual rate for 10 years, \
-         compounded quarterly. Use the formula A = P(1 + r/n)^(nt)"
+         compounded quarterly. Use the formula A = P(1 + r/n)^(nt)",
     );
 
     println!("User: {}", message.content);
-    
+
     let mut context = AgentContext::new();
     let response = agent.chat(message, Some(&mut context)).await?;
-    
+
     println!("Agent: {}", response.content);
     println!("Tool calls made: {}", response.metadata.len());
 
@@ -120,10 +124,16 @@ async fn research_assistant_example() -> Result<()> {
 
     // Setup multiple tools
     let mut tool_registry = ToolRegistry::new();
-    tool_registry.register_tool("wikipedia".to_string(), Arc::new(WikipediaTool::new())).await?;
-    tool_registry.register_tool("calculator".to_string(), Arc::new(CalculatorTool::new())).await?;
-    tool_registry.register_tool("weather".to_string(), Arc::new(WeatherTool::new())).await?;
-    
+    tool_registry
+        .register_tool("wikipedia".to_string(), Arc::new(WikipediaTool::new()))
+        .await?;
+    tool_registry
+        .register_tool("calculator".to_string(), Arc::new(CalculatorTool::new()))
+        .await?;
+    tool_registry
+        .register_tool("weather".to_string(), Arc::new(WeatherTool::new()))
+        .await?;
+
     // Safe shell commands for demo
     let safe_shell = ShellTool::with_allowed_commands(vec![
         "echo".to_string(),
@@ -131,7 +141,9 @@ async fn research_assistant_example() -> Result<()> {
         "pwd".to_string(),
         "ls".to_string(),
     ]);
-    tool_registry.register_tool("shell".to_string(), Arc::new(safe_shell)).await?;
+    tool_registry
+        .register_tool("shell".to_string(), Arc::new(safe_shell))
+        .await?;
 
     // Create research assistant agent
     let agent = ReActAgent::builder()
@@ -146,7 +158,8 @@ async fn research_assistant_example() -> Result<()> {
             - Shell: For basic system commands (limited for security)
             
             Always use the most appropriate tool for each task. For complex research questions,
-            break them down into steps and use multiple tools as needed.".to_string()
+            break them down into steps and use multiple tools as needed."
+                .to_string(),
         )
         .max_iterations(8)
         .build()?;
@@ -159,16 +172,19 @@ async fn research_assistant_example() -> Result<()> {
         3. Calculate the time difference if I'm in New York (Tokyo is UTC+9, New York is UTC-5)
         4. Show me the current date and time on this system
         
-        Please provide a comprehensive summary for my trip planning."
+        Please provide a comprehensive summary for my trip planning.",
     );
 
     println!("User: {}", message.content);
-    
+
     let mut context = AgentContext::new();
     let response = agent.chat(message, Some(&mut context)).await?;
-    
+
     println!("Agent: {}", response.content);
-    println!("Research completed with {} tool interactions", response.metadata.len());
+    println!(
+        "Research completed with {} tool interactions",
+        response.metadata.len()
+    );
 
     Ok(())
 }
@@ -190,12 +206,16 @@ async fn multi_agent_research_pipeline() -> Result<()> {
 
     // 1. Research Agent - Gathers information
     let research_llm = Arc::new(SiumaiLlmClient::new(
-        base_config.clone_with_temperature(0.2)
+        base_config.clone_with_temperature(0.2),
     )?);
     let research_memory = Arc::new(Mutex::new(ChatMemoryBuffer::new(10)));
     let mut research_tools = ToolRegistry::new();
-    research_tools.register_tool("wikipedia".to_string(), Arc::new(WikipediaTool::new())).await?;
-    research_tools.register_tool("calculator".to_string(), Arc::new(CalculatorTool::new())).await?;
+    research_tools
+        .register_tool("wikipedia".to_string(), Arc::new(WikipediaTool::new()))
+        .await?;
+    research_tools
+        .register_tool("calculator".to_string(), Arc::new(CalculatorTool::new()))
+        .await?;
 
     let research_agent = Arc::new(ReActAgent::builder()
         .llm_client(research_llm)
@@ -209,37 +229,42 @@ async fn multi_agent_research_pipeline() -> Result<()> {
         .max_iterations(6)
         .build()?) as Arc<dyn BaseAgent>;
 
-    // 2. Analysis Agent - Analyzes and processes information  
+    // 2. Analysis Agent - Analyzes and processes information
     let analysis_llm = Arc::new(SiumaiLlmClient::new(
-        base_config.clone_with_temperature(0.4)
+        base_config.clone_with_temperature(0.4),
     )?);
     let analysis_memory = Arc::new(Mutex::new(ChatMemoryBuffer::new(10)));
     let mut analysis_tools = ToolRegistry::new();
-    analysis_tools.register_tool("calculator".to_string(), Arc::new(CalculatorTool::new())).await?;
+    analysis_tools
+        .register_tool("calculator".to_string(), Arc::new(CalculatorTool::new()))
+        .await?;
 
-    let analysis_agent = Arc::new(ReActAgent::builder()
-        .llm_client(analysis_llm)
-        .memory(analysis_memory)
-        .tool_registry(Arc::new(analysis_tools))
-        .system_prompt(
-            "You are a specialized analysis agent. Your role is to analyze research data, \
+    let analysis_agent = Arc::new(
+        ReActAgent::builder()
+            .llm_client(analysis_llm)
+            .memory(analysis_memory)
+            .tool_registry(Arc::new(analysis_tools))
+            .system_prompt(
+                "You are a specialized analysis agent. Your role is to analyze research data, \
              identify patterns, draw insights, and perform calculations. You receive information \
              from the research agent and provide analytical conclusions. \
-             When analysis is complete, indicate with 'ANALYSIS_COMPLETE:'".to_string()
-        )
-        .max_iterations(5)
-        .build()?) as Arc<dyn BaseAgent>;
+             When analysis is complete, indicate with 'ANALYSIS_COMPLETE:'"
+                    .to_string(),
+            )
+            .max_iterations(5)
+            .build()?,
+    ) as Arc<dyn BaseAgent>;
 
     // 3. Writer Agent - Creates final summary
     let writer_llm = Arc::new(SiumaiLlmClient::new(
-        base_config.clone_with_temperature(0.6)
+        base_config.clone_with_temperature(0.6),
     )?);
     let writer_memory = Arc::new(Mutex::new(ChatMemoryBuffer::new(10)));
     let writer_tools = ToolRegistry::new();
 
     let writer_agent = Arc::new(ReActAgent::builder()
         .llm_client(writer_llm)
-        .memory(writer_memory) 
+        .memory(writer_memory)
         .tool_registry(Arc::new(writer_tools))
         .system_prompt(
             "You are a specialized writing agent. Your role is to take research data and analysis \
@@ -254,15 +279,21 @@ async fn multi_agent_research_pipeline() -> Result<()> {
         agent_id: Uuid::new_v4(),
         role: "Researcher".to_string(),
         description: "Gathers comprehensive information using tools".to_string(),
-        capabilities: vec!["information_gathering".to_string(), "fact_checking".to_string()],
+        capabilities: vec![
+            "information_gathering".to_string(),
+            "fact_checking".to_string(),
+        ],
         preferred_tasks: vec!["research".to_string(), "data_collection".to_string()],
     };
 
     let analysis_role = AgentRole {
         agent_id: Uuid::new_v4(),
-        role: "Analyst".to_string(), 
+        role: "Analyst".to_string(),
         description: "Analyzes data and identifies insights".to_string(),
-        capabilities: vec!["data_analysis".to_string(), "pattern_recognition".to_string()],
+        capabilities: vec![
+            "data_analysis".to_string(),
+            "pattern_recognition".to_string(),
+        ],
         preferred_tasks: vec!["analysis".to_string(), "calculations".to_string()],
     };
 
@@ -280,7 +311,7 @@ async fn multi_agent_research_pipeline() -> Result<()> {
         .handoff_strategy(HandoffStrategy::Sequential)
         .max_handoffs(3)
         .add_agent(research_agent, research_role)
-        .add_agent(analysis_agent, analysis_role) 
+        .add_agent(analysis_agent, analysis_role)
         .add_agent(writer_agent, writer_role)
         .build()
         .await?;
@@ -303,7 +334,7 @@ async fn multi_agent_research_pipeline() -> Result<()> {
     println!("- Total agents involved: {}", result.responses.len());
     println!("- Handoffs completed: {}", result.handoff_count);
     println!("- Execution time: {}ms", result.execution_time_ms);
-    
+
     // Display each agent's contribution
     for (i, response) in result.responses.iter().enumerate() {
         println!("\nAgent {} Response:", i + 1);
@@ -315,7 +346,10 @@ async fn multi_agent_research_pipeline() -> Result<()> {
     if !result.handoff_history.is_empty() {
         println!("\nHandoff History:");
         for handoff in &result.handoff_history {
-            println!("- {} → {}: {}", handoff.from_agent, handoff.to_agent, handoff.reason);
+            println!(
+                "- {} → {}: {}",
+                handoff.from_agent, handoff.to_agent, handoff.reason
+            );
         }
     }
 

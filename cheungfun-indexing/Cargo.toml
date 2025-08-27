@@ -11,6 +11,24 @@ keywords.workspace = true
 description = "Document loading and indexing for the Cheungfun RAG framework"
 categories.workspace = true
 
+# Examples demonstrating core indexing functionality
+[[example]]
+name = "text_splitters_demo"
+path = "examples/text_splitters.rs"
+
+[[example]]  
+name = "code_parsing_demo"
+path = "examples/code_parsing.rs"
+required-features = ["tree-sitter"]
+
+[[example]]
+name = "basic_integration_demo"
+path = "examples/basic_integration_demo.rs"
+
+[[example]]
+name = "parser_showcase_demo" 
+path = "examples/parser_showcase.rs"
+
 [dependencies]
 cheungfun-core = { path = "../cheungfun-core" }
 
@@ -75,8 +93,3 @@ tempfile = { workspace = true }
 
 [features]
 default = []
-
-[[example]]
-name = "parser_showcase"
-path = "examples/parser_showcase.rs"
-required-features = []
