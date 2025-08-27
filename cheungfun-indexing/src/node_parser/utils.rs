@@ -181,17 +181,26 @@ fn calculate_chunk_offsets(original_text: &str, chunks: &[String]) -> Vec<(usize
     for chunk in chunks {
         let chunk_trimmed = chunk.trim();
 
+        // Ensure current_pos doesn't exceed text length
+        if current_pos >= original_text.len() {
+            // If we've reached the end, estimate remaining positions
+            let estimated_end = current_pos + chunk_trimmed.len();
+            offsets.push((current_pos, estimated_end));
+            current_pos = estimated_end;
+            continue;
+        }
+
         // Try to find the chunk in the original text starting from current position
         if let Some(found_pos) = original_text[current_pos..].find(chunk_trimmed) {
             let start_offset = current_pos + found_pos;
-            let end_offset = start_offset + chunk_trimmed.len();
+            let end_offset = (start_offset + chunk_trimmed.len()).min(original_text.len());
             offsets.push((start_offset, end_offset));
 
             // Update position for next search, accounting for potential overlap
-            current_pos = start_offset + chunk_trimmed.len();
+            current_pos = end_offset;
         } else {
             // Fallback: estimate position based on current progress
-            let end_offset = current_pos + chunk_trimmed.len();
+            let end_offset = (current_pos + chunk_trimmed.len()).min(original_text.len());
             offsets.push((current_pos, end_offset));
             current_pos = end_offset;
         }

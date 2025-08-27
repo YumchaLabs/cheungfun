@@ -122,7 +122,12 @@ impl FileLoader {
         match content_type.as_deref() {
             Some(
                 "text/plain" | "text/markdown" | "text/html" | "text/csv" | "application/json"
-                | "application/xml",
+                | "application/xml" | "text/x-rust" | "text/x-python" | "text/javascript"
+                | "text/typescript" | "text/x-java" | "text/x-csharp" | "text/x-c++"
+                | "text/x-c" | "text/x-go" | "text/x-ruby" | "text/x-php" | "text/x-swift"
+                | "text/x-kotlin" | "text/x-scala" | "text/x-haskell" | "text/x-clojure"
+                | "text/x-erlang" | "text/x-elixir" | "text/x-lua" | "text/x-shellscript"
+                | "text/x-sql" | "text/css" | "text/x-yaml" | "text/x-toml",
             ) => self.extract_text_file().await,
             Some("application/pdf") => self.extract_pdf_content().await,
             Some(

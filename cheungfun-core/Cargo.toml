@@ -58,6 +58,9 @@ regex = "1.11"
 # File watching (optional)
 notify = { version = "6.1", optional = true }
 
+# Database support (optional)
+sqlx = { version = "0.8", optional = true, features = ["runtime-tokio-rustls", "postgres", "sqlite", "chrono", "uuid"] }
+
 [dev-dependencies]
 # Testing utilities
 tokio-test = "0.4"
@@ -71,3 +74,4 @@ approx = "0.5"
 [features]
 default = []
 hot-reload = ["notify"]
+storage = ["sqlx"]

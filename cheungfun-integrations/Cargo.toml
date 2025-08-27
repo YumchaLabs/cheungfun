@@ -12,7 +12,7 @@ description = "External service integrations for Cheungfun"
 categories.workspace = true
 
 [dependencies]
-cheungfun-core = { path = "../cheungfun-core" }
+cheungfun-core = { path = "../cheungfun-core", features = ["storage"] }
 
 # Core async and error handling
 tokio = { workspace = true }

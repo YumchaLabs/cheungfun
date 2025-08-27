@@ -1022,6 +1022,7 @@ dependencies = [
  "serde",
  "serde_json",
  "siumai 0.8.1",
+ "sqlx",
  "strum",
  "temp-dir",
  "tempfile",

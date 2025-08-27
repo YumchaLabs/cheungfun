@@ -16,7 +16,7 @@ cheungfun = { path = "../cheungfun" }
 cheungfun-core = { path = "../cheungfun-core" }
 cheungfun-indexing = { path = "../cheungfun-indexing" }
 cheungfun-query = { path = "../cheungfun-query" }
-cheungfun-integrations = { path = "../cheungfun-integrations", features = ["simd"] }
+cheungfun-integrations = { path = "../cheungfun-integrations", features = ["simd", "storage"] }
 cheungfun-agents = { path = "../cheungfun-agents" }
 
 # Core async
@@ -67,8 +67,11 @@ candle-metal = ["candle", "cheungfun-integrations/gpu-metal"]
 # FastEmbed embeddings
 fastembed = ["cheungfun-integrations/fastembed"]
 
+# API-based embeddings (OpenAI, Gemini, etc.)
+api = ["cheungfun-integrations/api"]
+
 # All embedding providers
-all-embedders = ["candle", "fastembed"]
+all-embedders = ["candle", "fastembed", "api"]
 
 # === Performance Features ===
 # SIMD acceleration for vector operations
@@ -326,3 +329,51 @@ required-features = ["fastembed"]
 name = "simple_rag_agent"
 path = "08_rag_agent/simple_main.rs"
 required-features = ["fastembed"]
+
+# Unity C# code indexing and Q&A system (example)
+[[bin]]
+name = "unity_csharp_rag_example"
+path = "unity_csharp_rag_example.rs"
+required-features = ["fastembed"]
+
+# Unity C# code indexing and Q&A CLI tool
+[[bin]]
+name = "unity_csharp_rag"
+path = "unity_csharp_rag_cli.rs"
+required-features = ["fastembed"]
+
+# Test embedding configuration
+[[bin]]
+name = "test_embedding_config"
+path = "test_embedding_config.rs"
+required-features = ["fastembed"]
+
+# Debug code chunking strategies
+[[bin]]
+name = "debug_code_chunking"
+path = "debug_code_chunking.rs"
+required-features = []
+
+# Semantic splitter demonstration
+[[bin]]
+name = "semantic_splitter_demo"
+path = "semantic_splitter_demo.rs"
+required-features = []
+
+# Sentence window node parser demonstration
+[[bin]]
+name = "sentence_window_demo"
+path = "sentence_window_demo.rs"
+required-features = []
+
+# Markdown node parser demonstration
+[[bin]]
+name = "markdown_parser_demo"
+path = "markdown_parser_demo.rs"
+required-features = []
+
+# KVStore architecture demonstration
+[[bin]]
+name = "kvstore_demo"
+path = "kvstore_demo.rs"
+required-features = ["basic-examples"]

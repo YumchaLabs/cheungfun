@@ -37,5 +37,6 @@ pub use embedders::ApiEmbedder;
 // Storage exports
 #[cfg(feature = "storage")]
 pub use storage::{
-    DatabasePool, SqlxChatStore, SqlxDocumentStore, SqlxIndexStore, SqlxStorageConfig,
+    DatabasePool, SqlxKVStore, SqlxStorageConfig,
+    InMemoryKVStore, KVChatStore, KVDocumentStore, KVIndexStore,
 };

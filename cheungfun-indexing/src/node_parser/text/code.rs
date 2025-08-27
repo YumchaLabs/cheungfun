@@ -22,6 +22,63 @@ use std::sync::Arc;
 use tracing::{debug, warn};
 use tree_sitter::Parser;
 
+/// Span data structure for representing string slices (inspired by SweepAI)
+/// This is a direct port of the Span class from the chunking-improvements blog post
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub struct Span {
+    /// Start position (byte index or line number)
+    pub start: usize,
+    /// End position (byte index or line number)
+    pub end: usize,
+}
+
+impl Span {
+    /// Create a new span
+    pub fn new(start: usize, end: usize) -> Self {
+        Self { start, end }
+    }
+
+    /// Extract the corresponding substring by bytes
+    pub fn extract<'a>(&self, text: &'a str) -> &'a str {
+        &text[self.start..self.end]
+    }
+
+    /// Extract the corresponding lines (for line-based spans)
+    pub fn extract_lines<'a>(&self, text: &'a str) -> String {
+        let lines: Vec<&str> = text.lines().collect();
+        lines[self.start..self.end.min(lines.len())].join("\n")
+    }
+
+    /// Get the length of the span
+    pub fn len(&self) -> usize {
+        self.end - self.start
+    }
+
+    /// Check if the span is empty
+    pub fn is_empty(&self) -> bool {
+        self.start >= self.end
+    }
+}
+
+impl std::ops::Add<Span> for Span {
+    type Output = Span;
+
+    /// Concatenate two spans (SweepAI style)
+    /// Note: No safety checks, Span(a, b) + Span(c, d) = Span(a, d)
+    fn add(self, other: Span) -> Span {
+        Span::new(self.start, other.end)
+    }
+}
+
+impl std::ops::Add<usize> for Span {
+    type Output = Span;
+
+    /// Shift span by offset
+    fn add(self, offset: usize) -> Span {
+        Span::new(self.start + offset, self.end + offset)
+    }
+}
+
 /// AST-enhanced code splitter.
 ///
 /// This splitter provides intelligent code chunking by combining:
@@ -116,6 +173,89 @@ impl CodeSplitter {
         Self::new(config)
     }
 
+    /// Create a code splitter with a predefined chunking strategy.
+    ///
+    /// # Examples
+    ///
+    /// ```rust,no_run
+    /// use cheungfun_indexing::node_parser::{text::CodeSplitter, config::ChunkingStrategy};
+    /// use cheungfun_indexing::loaders::ProgrammingLanguage;
+    ///
+    /// // Use SweepAI-optimized strategy
+    /// let splitter = CodeSplitter::with_strategy(
+    ///     ProgrammingLanguage::Rust,
+    ///     ChunkingStrategy::SweepAI
+    /// )?;
+    ///
+    /// // Use fine-grained strategy for detailed analysis
+    /// let splitter = CodeSplitter::with_strategy(
+    ///     ProgrammingLanguage::Python,
+    ///     ChunkingStrategy::Fine
+    /// )?;
+    /// # Ok::<(), Box<dyn std::error::Error>>(())
+    /// ```
+    pub fn with_strategy(language: ProgrammingLanguage, strategy: crate::node_parser::config::ChunkingStrategy) -> CoreResult<Self> {
+        let config = CodeSplitterConfig::with_strategy(language, strategy);
+        Self::new(config)
+    }
+
+    /// Create an optimal code splitter for RAG applications (recommended default).
+    ///
+    /// This uses research-backed parameters for optimal code chunking quality
+    /// in knowledge retrieval applications.
+    ///
+    /// # Examples
+    ///
+    /// ```rust,no_run
+    /// use cheungfun_indexing::node_parser::text::CodeSplitter;
+    /// use cheungfun_indexing::loaders::ProgrammingLanguage;
+    ///
+    /// let splitter = CodeSplitter::optimal(ProgrammingLanguage::Rust)?;
+    /// # Ok::<(), Box<dyn std::error::Error>>(())
+    /// ```
+    pub fn optimal(language: ProgrammingLanguage) -> CoreResult<Self> {
+        let config = CodeSplitterConfig::optimal(language);
+        Self::new(config)
+    }
+
+    /// Create an enterprise code splitter for large codebases.
+    ///
+    /// This is specifically designed for large projects like Unity3D with
+    /// thousands of code files, providing larger context windows and better
+    /// continuity for complex class hierarchies.
+    ///
+    /// # Examples
+    ///
+    /// ```rust,no_run
+    /// use cheungfun_indexing::node_parser::text::CodeSplitter;
+    /// use cheungfun_indexing::loaders::ProgrammingLanguage;
+    ///
+    /// let splitter = CodeSplitter::enterprise(ProgrammingLanguage::CSharp)?;
+    /// # Ok::<(), Box<dyn std::error::Error>>(())
+    /// ```
+    pub fn enterprise(language: ProgrammingLanguage) -> CoreResult<Self> {
+        let config = CodeSplitterConfig::enterprise(language);
+        Self::new(config)
+    }
+
+    /// Create a fine-grained code splitter for detailed analysis.
+    pub fn fine_grained(language: ProgrammingLanguage) -> CoreResult<Self> {
+        let config = CodeSplitterConfig::fine_grained(language);
+        Self::new(config)
+    }
+
+    /// Create a balanced code splitter for general use.
+    pub fn balanced(language: ProgrammingLanguage) -> CoreResult<Self> {
+        let config = CodeSplitterConfig::balanced(language);
+        Self::new(config)
+    }
+
+    /// Create a coarse-grained code splitter for high-level overview.
+    pub fn coarse_grained(language: ProgrammingLanguage) -> CoreResult<Self> {
+        let config = CodeSplitterConfig::coarse_grained(language);
+        Self::new(config)
+    }
+
     /// Set callback manager.
     pub fn with_callback_manager(mut self, callback_manager: CallbackManager) -> Self {
         self.callback_manager = Some(callback_manager);
@@ -153,9 +293,37 @@ impl CodeSplitter {
         self.split_text_by_lines(text)
     }
 
-    /// Split text using AST analysis with the existing AstParser infrastructure.
+    /// Split text using AST analysis with SweepAI-enhanced approach first
     fn split_text_with_ast(&self, text: &str) -> CoreResult<Vec<String>> {
-        // Use the existing AstParser for comprehensive analysis
+        // Try SweepAI-enhanced AST chunking first (most advanced)
+        match self.split_with_sweepai_style(text) {
+            Ok(chunks) if !chunks.is_empty() => {
+                debug!("Using SweepAI-enhanced AST chunking: {} chunks", chunks.len());
+                return Ok(chunks);
+            }
+            Ok(_) => {
+                debug!("SweepAI-style chunking returned empty, trying LlamaIndex fallback");
+            }
+            Err(e) => {
+                debug!("SweepAI-style AST parsing failed: {}, trying LlamaIndex fallback", e);
+            }
+        }
+
+        // Fallback to LlamaIndex-style AST chunking
+        match self.split_with_llamaindex_style(text) {
+            Ok(chunks) if !chunks.is_empty() => {
+                debug!("Using LlamaIndex-style AST chunking: {} chunks", chunks.len());
+                return Ok(chunks);
+            }
+            Ok(_) => {
+                debug!("LlamaIndex-style chunking returned empty, trying structure-aware approach");
+            }
+            Err(e) => {
+                debug!("LlamaIndex-style AST parsing failed: {}, trying structure-aware approach", e);
+            }
+        }
+
+        // Fallback to our structure-aware approach
         let ast_config = AstParserConfig {
             include_function_bodies: true,
             max_depth: Some(10),
@@ -180,7 +348,7 @@ impl CodeSplitter {
         match ast_parser.parse(text, self.config.language) {
             Ok(analysis) => {
                 debug!(
-                    "AST analysis successful: {} functions, {} classes",
+                    "Structure-aware AST analysis successful: {} functions, {} classes",
                     analysis.functions.len(),
                     analysis.classes.len()
                 );
@@ -454,14 +622,20 @@ impl CodeSplitter {
                 if let Some(better_end) = self.find_better_split_point(i, end, &lines) {
                     let better_chunk_lines = &lines[i..better_end];
                     chunks.push(better_chunk_lines.join("\n"));
-                    i = better_end.saturating_sub(self.config.chunk_lines_overlap);
+                    // Ensure we always make progress: next_i must be > i
+                    let next_i = better_end.saturating_sub(self.config.chunk_lines_overlap);
+                    i = if next_i <= i { i + 1 } else { next_i };
                 } else {
                     chunks.push(chunk_text);
-                    i = end.saturating_sub(self.config.chunk_lines_overlap);
+                    // Ensure we always make progress: next_i must be > i
+                    let next_i = end.saturating_sub(self.config.chunk_lines_overlap);
+                    i = if next_i <= i { i + 1 } else { next_i };
                 }
             } else {
                 chunks.push(chunk_text);
-                i = end.saturating_sub(self.config.chunk_lines_overlap);
+                // Ensure we always make progress: next_i must be > i
+                let next_i = end.saturating_sub(self.config.chunk_lines_overlap);
+                i = if next_i <= i { i + 1 } else { next_i };
             }
         }
 
@@ -647,5 +821,308 @@ impl Transform for CodeSplitter {
 
     fn name(&self) -> &'static str {
         "CodeSplitter"
+    }
+}
+
+impl CodeSplitter {
+    /// Create a tree-sitter parser for the configured language
+    fn create_tree_sitter_parser(&self) -> CoreResult<tree_sitter::Parser> {
+        create_tree_sitter_parser(&self.config.language)
+    }
+
+    /// Count non-whitespace characters (SweepAI improvement)
+    /// This helps avoid tiny chunks that are mostly indentation
+    fn non_whitespace_len(&self, text: &str) -> usize {
+        text.chars().filter(|c| !c.is_whitespace()).count()
+    }
+
+    /// Convert byte index to line number (SweepAI improvement)
+    /// This eliminates encoding issues and ensures line-based chunks
+    fn get_line_number(&self, index: usize, source_code: &str) -> usize {
+        // Fast path: if index is 0, return 0
+        if index == 0 {
+            return 0;
+        }
+
+        // Count newlines up to the index
+        let bytes = source_code.as_bytes();
+        if index >= bytes.len() {
+            return source_code.lines().count().saturating_sub(1);
+        }
+
+        let mut line_count = 0;
+        for i in 0..index.min(bytes.len()) {
+            if bytes[i] == b'\n' {
+                line_count += 1;
+            }
+        }
+        line_count
+    }
+
+    /// Build line offset cache for efficient line number lookups
+    fn build_line_offsets(&self, source_code: &str) -> Vec<usize> {
+        let mut offsets = vec![0]; // First line starts at 0
+        for (i, byte) in source_code.bytes().enumerate() {
+            if byte == b'\n' {
+                offsets.push(i + 1); // Next line starts after newline
+            }
+        }
+        offsets
+    }
+
+    /// Convert byte index to line number using precomputed offsets
+    fn byte_to_line_with_cache(&self, index: usize, line_offsets: &[usize]) -> usize {
+        match line_offsets.binary_search(&index) {
+            Ok(line) => line,
+            Err(line) => line.saturating_sub(1),
+        }
+    }
+
+    /// Fill gaps between consecutive spans (SweepAI improvement)
+    /// This fixes tree-sitter's missing whitespace between nodes
+    fn connect_chunks(&self, chunks: &mut [Span]) {
+        for i in 0..chunks.len().saturating_sub(1) {
+            chunks[i].end = chunks[i + 1].start;
+        }
+    }
+
+    /// Coalesce small chunks with larger ones (SweepAI improvement)
+    /// This prevents over-fragmentation of code
+    fn coalesce_chunks(&self, chunks: Vec<Span>, source_code: &str, coalesce_threshold: usize) -> Vec<Span> {
+        if chunks.is_empty() {
+            return Vec::new();
+        }
+
+        let mut new_chunks = Vec::new();
+        let mut current_chunk = chunks[0]; // Start with the first chunk
+
+        for chunk in chunks.into_iter().skip(1) {
+            // Try to merge current_chunk with the next chunk
+            let merged_chunk = Span::new(current_chunk.start, chunk.end);
+
+            // Check if we can safely extract the text
+            if merged_chunk.end <= source_code.len() {
+                let chunk_text = merged_chunk.extract(source_code);
+
+                if self.non_whitespace_len(chunk_text) <= coalesce_threshold || !chunk_text.contains('\n') {
+                    // Merge the chunks
+                    current_chunk = merged_chunk;
+                } else {
+                    // Can't merge, save current and start new
+                    new_chunks.push(current_chunk);
+                    current_chunk = chunk;
+                }
+            } else {
+                // Invalid span, save current and start new
+                new_chunks.push(current_chunk);
+                current_chunk = chunk;
+            }
+        }
+
+        // Don't forget the last chunk
+        if current_chunk.len() > 0 {
+            new_chunks.push(current_chunk);
+        }
+
+        new_chunks
+    }
+
+    /// SweepAI-enhanced AST chunking implementation
+    /// This implements the complete algorithm from the chunking-improvements blog post
+    fn split_with_sweepai_style(&self, text: &str) -> CoreResult<Vec<String>> {
+        // Create tree-sitter parser
+        let mut parser = self.create_tree_sitter_parser()?;
+        let text_bytes = text.as_bytes();
+
+        // Parse the code into AST
+        let tree = parser.parse(text_bytes, None).ok_or_else(|| {
+            CheungfunError::Internal {
+                message: "Failed to parse code with tree-sitter".to_string(),
+            }
+        })?;
+
+        // Check for parsing errors
+        let root_node = tree.root_node();
+        if root_node.has_error() ||
+           (root_node.child_count() > 0 && root_node.child(0).unwrap().kind() == "ERROR") {
+            return Err(CheungfunError::Internal {
+                message: format!("Could not parse code with language {:?}", self.config.language),
+            });
+        }
+
+        // 1. Recursively form chunks based on SweepAI algorithm
+        let mut chunks = self.chunk_node_sweepai_style(&root_node, text)?;
+
+        // 2. Fill in the gaps between consecutive spans
+        self.connect_chunks(&mut chunks);
+
+        // 3. Coalesce small chunks with bigger ones
+        let coalesce_threshold = 50; // SweepAI default
+        chunks = self.coalesce_chunks(chunks, text, coalesce_threshold);
+
+        // 4. Convert byte indices to line numbers using efficient caching
+        let line_offsets = self.build_line_offsets(text);
+        let line_chunks: Vec<Span> = chunks
+            .into_iter()
+            .map(|chunk| {
+                let start_line = self.byte_to_line_with_cache(chunk.start, &line_offsets);
+                let end_line = self.byte_to_line_with_cache(chunk.end, &line_offsets);
+                Span::new(start_line, end_line)
+            })
+            .collect();
+
+        // 5. Eliminate empty chunks and extract final strings
+        let final_chunks: Vec<String> = line_chunks
+            .into_iter()
+            .filter(|chunk| !chunk.is_empty())
+            .map(|chunk| chunk.extract_lines(text))
+            .filter(|text| !text.trim().is_empty())
+            .collect();
+
+        debug!("SweepAI-style AST splitting produced {} chunks", final_chunks.len());
+        Ok(final_chunks)
+    }
+
+    /// Recursive AST node chunking following SweepAI's exact algorithm
+    fn chunk_node_sweepai_style(&self, node: &tree_sitter::Node, text: &str) -> CoreResult<Vec<Span>> {
+        let mut chunks = Vec::new();
+
+        // If node is small enough, return it as a single chunk
+        let node_size = node.end_byte() - node.start_byte();
+        if node_size <= self.config.max_chars {
+            return Ok(vec![Span::new(node.start_byte(), node.end_byte())]);
+        }
+
+        // Node is too big, need to split it
+        let mut current_start = node.start_byte();
+        let mut current_end = node.start_byte();
+
+        let mut cursor = node.walk();
+        for child in node.children(&mut cursor) {
+            let child_span = Span::new(child.start_byte(), child.end_byte());
+            let child_size = child_span.len();
+
+            if child_size > self.config.max_chars {
+                // Child is too big, save current chunk and recursively process child
+                if current_end > current_start {
+                    chunks.push(Span::new(current_start, current_end));
+                }
+                chunks.extend(self.chunk_node_sweepai_style(&child, text)?);
+                current_start = child.end_byte();
+                current_end = child.end_byte();
+            } else {
+                // Check if adding this child would exceed max_chars
+                let potential_size = child.end_byte() - current_start;
+                if potential_size > self.config.max_chars && current_end > current_start {
+                    // Save current chunk and start new one
+                    chunks.push(Span::new(current_start, current_end));
+                    current_start = child.start_byte();
+                }
+                current_end = child.end_byte();
+            }
+        }
+
+        // Don't forget the last chunk
+        if current_end > current_start {
+            chunks.push(Span::new(current_start, current_end));
+        }
+
+        Ok(chunks)
+    }
+
+    /// LlamaIndex-style AST chunking implementation (kept as fallback)
+    /// This follows the exact algorithm from LlamaIndex's CodeSplitter
+    fn split_with_llamaindex_style(&self, text: &str) -> CoreResult<Vec<String>> {
+        // Create tree-sitter parser
+        let mut parser = self.create_tree_sitter_parser()?;
+        let text_bytes = text.as_bytes();
+
+        // Parse the code into AST
+        let tree = parser.parse(text_bytes, None).ok_or_else(|| {
+            CheungfunError::Internal {
+                message: "Failed to parse code with tree-sitter".to_string(),
+            }
+        })?;
+
+        // Check for parsing errors (following LlamaIndex's error handling)
+        let root_node = tree.root_node();
+        if root_node.has_error() ||
+           (root_node.child_count() > 0 && root_node.child(0).unwrap().kind() == "ERROR") {
+            return Err(CheungfunError::Internal {
+                message: format!("Could not parse code with language {:?}", self.config.language),
+            });
+        }
+
+        // Recursively chunk the AST nodes (LlamaIndex style)
+        let chunks = self.chunk_node_recursive(&root_node, text_bytes, 0)?;
+
+        // Filter out empty chunks and trim whitespace (like LlamaIndex)
+        let filtered_chunks: Vec<String> = chunks
+            .into_iter()
+            .map(|chunk| chunk.trim().to_string())
+            .filter(|chunk| !chunk.is_empty())
+            .collect();
+
+        debug!("LlamaIndex-style AST splitting produced {} chunks", filtered_chunks.len());
+        Ok(filtered_chunks)
+    }
+
+    /// Recursive AST node chunking following LlamaIndex's exact algorithm
+    /// This is a direct port of LlamaIndex's _chunk_node method
+    fn chunk_node_recursive(
+        &self,
+        node: &tree_sitter::Node,
+        text_bytes: &[u8],
+        mut last_end: usize,
+    ) -> CoreResult<Vec<String>> {
+        let mut new_chunks = Vec::new();
+        let mut current_chunk = String::new();
+
+        // Iterate through all child nodes
+        let mut cursor = node.walk();
+        for child in node.children(&mut cursor) {
+            let child_size = child.end_byte() - child.start_byte();
+
+            if child_size > self.config.max_chars {
+                // Child is too big, recursively chunk the child
+                if !current_chunk.is_empty() {
+                    new_chunks.push(current_chunk);
+                    current_chunk = String::new();
+                }
+
+                // Recursively process the large child
+                let child_chunks = self.chunk_node_recursive(&child, text_bytes, last_end)?;
+                new_chunks.extend(child_chunks);
+            } else if current_chunk.len() + child_size > self.config.max_chars {
+                // Child would make current chunk too big, start a new chunk
+                if !current_chunk.is_empty() {
+                    new_chunks.push(current_chunk);
+                }
+
+                // Start new chunk with content from last_end to child.end_byte
+                let chunk_text = std::str::from_utf8(&text_bytes[last_end..child.end_byte()])
+                    .map_err(|e| CheungfunError::Internal {
+                        message: format!("UTF-8 decoding error: {}", e),
+                    })?;
+                current_chunk = chunk_text.to_string();
+            } else {
+                // Add child to current chunk (from last_end to child.end_byte)
+                let chunk_text = std::str::from_utf8(&text_bytes[last_end..child.end_byte()])
+                    .map_err(|e| CheungfunError::Internal {
+                        message: format!("UTF-8 decoding error: {}", e),
+                    })?;
+                current_chunk.push_str(chunk_text);
+            }
+
+            // Update last_end to child's end position
+            last_end = child.end_byte();
+        }
+
+        // Add the final chunk if it's not empty
+        if !current_chunk.is_empty() {
+            new_chunks.push(current_chunk);
+        }
+
+        Ok(new_chunks)
     }
 }

@@ -33,6 +33,10 @@ pub enum CheungfunError {
         message: String,
     },
 
+    /// Storage operation errors
+    #[error("Storage error: {0}")]
+    Storage(String),
+
     /// LLM/Response generation errors
     #[error("LLM error: {message}")]
     Llm {
@@ -204,6 +208,13 @@ impl CheungfunError {
 impl From<anyhow::Error> for CheungfunError {
     fn from(error: anyhow::Error) -> Self {
         Self::External { source: error }
+    }
+}
+
+#[cfg(feature = "storage")]
+impl From<sqlx::Error> for CheungfunError {
+    fn from(error: sqlx::Error) -> Self {
+        Self::Storage(format!("Database error: {}", error))
     }
 }
 

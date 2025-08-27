@@ -8,6 +8,7 @@
 pub mod cache;
 pub mod embedder;
 pub mod generator;
+pub mod kvstore;
 pub mod loader;
 pub mod memory;
 pub mod pipeline;
@@ -19,6 +20,7 @@ pub mod transformer;
 pub use cache::*;
 pub use embedder::*;
 pub use generator::*;
+pub use kvstore::*;
 pub use loader::*;
 pub use memory::*;
 pub use pipeline::*;

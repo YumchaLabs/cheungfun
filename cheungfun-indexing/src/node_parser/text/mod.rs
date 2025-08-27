@@ -6,13 +6,19 @@
 //! performance and safety features.
 
 pub mod code;
+pub mod markdown;
+pub mod semantic;
 pub mod sentence;
+pub mod sentence_window;
 pub mod token;
 pub mod utils;
 
 // Re-export commonly used types
 pub use code::CodeSplitter;
+pub use markdown::MarkdownNodeParser;
+pub use semantic::SemanticSplitter;
 pub use sentence::SentenceSplitter;
+pub use sentence_window::SentenceWindowNodeParser;
 pub use token::TokenTextSplitter;
 pub use utils::*;
 
@@ -270,7 +276,7 @@ impl SplitFunction for SplitByCharacter {
 }
 
 /// Factory functions for creating common tokenizers and split functions.
-
+///
 /// Create a tokenizer by name.
 pub fn create_tokenizer(name: &str) -> CoreResult<Box<dyn Tokenizer>> {
     match name {

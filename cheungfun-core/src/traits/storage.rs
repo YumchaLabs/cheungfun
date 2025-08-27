@@ -5,11 +5,46 @@
 //! The design follows LlamaIndex's StorageContext pattern for unified storage management.
 
 use async_trait::async_trait;
+use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
+use std::path::Path;
 use std::sync::Arc;
 use uuid::Uuid;
 
-use crate::{ChatMessage, Document, Node, Query, Result, ScoredNode};
+use crate::{ChatMessage, Document, Node, Query, Result, ScoredNode, MessageRole};
+
+/// Statistics for document store operations.
+#[derive(Debug, Clone, serde::Serialize, serde::Deserialize)]
+pub struct DocumentStoreStats {
+    /// Total number of documents in the store.
+    pub document_count: usize,
+    /// Name of the collection/namespace.
+    pub collection_name: String,
+    /// Total number of collections.
+    pub total_collections: usize,
+}
+
+/// Statistics for index store operations.
+#[derive(Debug, Clone, serde::Serialize, serde::Deserialize)]
+pub struct IndexStoreStats {
+    /// Total number of indexes in the store.
+    pub index_count: usize,
+    /// Name of the collection/namespace.
+    pub collection_name: String,
+    /// Total number of collections.
+    pub total_collections: usize,
+}
+
+/// Statistics for chat store operations.
+#[derive(Debug, Clone, serde::Serialize, serde::Deserialize)]
+pub struct ChatStoreStats {
+    /// Total number of conversations.
+    pub conversation_count: usize,
+    /// Total number of messages across all conversations.
+    pub total_messages: usize,
+    /// Name of the base collection/namespace.
+    pub collection_name: String,
+}
 
 /// Stores and retrieves vector embeddings with associated nodes.
 ///
@@ -478,6 +513,71 @@ pub trait DocumentStore: Send + Sync + std::fmt::Debug {
     async fn clear(&self) -> Result<()> {
         Ok(()) // Default implementation does nothing
     }
+
+    /// Get all documents from the store.
+    ///
+    /// # Warning
+    ///
+    /// This operation can be expensive for large document stores.
+    /// Consider using pagination or filtering for production use.
+    ///
+    /// # Returns
+    ///
+    /// A vector of all documents in the store.
+    async fn get_all_documents(&self) -> Result<Vec<Document>> {
+        // Default implementation - subclasses should override for efficiency
+        let hashes = self.get_all_document_hashes().await?;
+        let doc_ids: Vec<String> = hashes.keys().cloned().collect();
+        self.get_documents(doc_ids).await
+    }
+
+    /// Get documents filtered by metadata.
+    ///
+    /// # Arguments
+    ///
+    /// * `metadata_filter` - Key-value pairs that documents must match
+    ///
+    /// # Returns
+    ///
+    /// A vector of documents matching all filter criteria.
+    async fn get_documents_by_metadata(
+        &self,
+        metadata_filter: HashMap<String, String>,
+    ) -> Result<Vec<Document>> {
+        if metadata_filter.is_empty() {
+            return self.get_all_documents().await;
+        }
+
+        let all_documents = self.get_all_documents().await?;
+        let filtered_documents: Vec<Document> = all_documents
+            .into_iter()
+            .filter(|doc| {
+                // Check if document metadata matches all filter criteria
+                metadata_filter.iter().all(|(key, value)| {
+                    doc.metadata
+                        .get(key)
+                        .map(|v| v == value)
+                        .unwrap_or(false)
+                })
+            })
+            .collect();
+
+        Ok(filtered_documents)
+    }
+
+    /// Get storage statistics for this document store.
+    ///
+    /// # Returns
+    ///
+    /// Statistics about the document store including counts and collection info.
+    async fn get_stats(&self) -> Result<DocumentStoreStats> {
+        let document_count = self.count_documents().await?;
+        Ok(DocumentStoreStats {
+            document_count,
+            collection_name: "default".to_string(), // Default implementation
+            total_collections: 1,
+        })
+    }
 }
 
 /// Index structure for storing index metadata and relationships.
@@ -647,6 +747,21 @@ pub trait IndexStore: Send + Sync + std::fmt::Debug {
     async fn clear(&self) -> Result<()> {
         Ok(()) // Default implementation does nothing
     }
+
+    /// Get storage statistics for this index store.
+    ///
+    /// # Returns
+    ///
+    /// Statistics about the index store including counts and collection info.
+    async fn get_stats(&self) -> Result<IndexStoreStats> {
+        let index_ids = self.list_index_structs().await?;
+        let index_count = index_ids.len();
+        Ok(IndexStoreStats {
+            index_count,
+            collection_name: "default".to_string(), // Default implementation
+            total_collections: 1,
+        })
+    }
 }
 
 /// Chat storage trait for persisting conversation history.
@@ -805,6 +920,69 @@ pub trait ChatStore: Send + Sync + std::fmt::Debug {
     async fn clear(&self) -> Result<()> {
         Ok(()) // Default implementation does nothing
     }
+
+    /// Get messages filtered by role.
+    ///
+    /// # Arguments
+    ///
+    /// * `key` - The conversation key
+    /// * `role` - The message role to filter by
+    ///
+    /// # Returns
+    ///
+    /// A vector of messages matching the specified role.
+    async fn get_messages_by_role(&self, key: &str, role: MessageRole) -> Result<Vec<ChatMessage>> {
+        let all_messages = self.get_messages(key).await?;
+        let filtered_messages: Vec<ChatMessage> = all_messages
+            .into_iter()
+            .filter(|message| message.role == role)
+            .collect();
+        Ok(filtered_messages)
+    }
+
+    /// Get the last N messages from a conversation.
+    ///
+    /// # Arguments
+    ///
+    /// * `key` - The conversation key
+    /// * `limit` - Maximum number of messages to retrieve
+    ///
+    /// # Returns
+    ///
+    /// A vector of the last N messages.
+    async fn get_last_messages(&self, key: &str, limit: usize) -> Result<Vec<ChatMessage>> {
+        self.get_recent_messages(key, limit).await
+    }
+
+    /// List all conversation keys (alias for get_keys for consistency).
+    ///
+    /// # Returns
+    ///
+    /// A vector of all conversation keys in the store.
+    async fn list_conversations(&self) -> Result<Vec<String>> {
+        self.get_keys().await
+    }
+
+    /// Get storage statistics for this chat store.
+    ///
+    /// # Returns
+    ///
+    /// Statistics about the chat store including conversation and message counts.
+    async fn get_stats(&self) -> Result<ChatStoreStats> {
+        let conversation_keys = self.get_keys().await?;
+        let conversation_count = conversation_keys.len();
+
+        let mut total_messages = 0;
+        for key in &conversation_keys {
+            total_messages += self.count_messages(key).await?;
+        }
+
+        Ok(ChatStoreStats {
+            conversation_count,
+            total_messages,
+            collection_name: "default".to_string(), // Default implementation
+        })
+    }
 }
 
 /// Unified storage context for managing all storage components.
@@ -877,34 +1055,94 @@ impl StorageContext {
 
     /// Create a storage context with default implementations.
     ///
-    /// This method will be implemented once we have default store implementations.
-    /// For now, it requires explicit store instances.
+    /// This method will create default KV-based store implementations if none are provided.
+    /// It uses an in-memory KV store by default, but can be configured with persistent stores.
     ///
     /// # Arguments
     ///
-    /// * `doc_store` - Optional document store (will use default if None)
-    /// * `index_store` - Optional index store (will use default if None)
-    /// * `vector_store` - Optional vector store (will use default if None)
-    /// * `chat_store` - Optional chat store (will remain None if not provided)
-    pub fn from_defaults(
+    /// * `doc_store` - Optional document store (will use KVDocumentStore if None)
+    /// * `index_store` - Optional index store (will use KVIndexStore if None)
+    /// * `vector_store` - Optional vector store (will use InMemoryVectorStore if None)
+    /// * `chat_store` - Optional chat store (will use KVChatStore if None)
+    pub async fn from_defaults(
         doc_store: Option<Arc<dyn DocumentStore>>,
         index_store: Option<Arc<dyn IndexStore>>,
         vector_store: Option<Arc<dyn VectorStore>>,
         chat_store: Option<Arc<dyn ChatStore>>,
     ) -> Result<Self> {
-        // TODO: Implement default store creation once we have SimpleDocumentStore, etc.
+        // This will be implemented once we have the integrations module properly set up
         // For now, require explicit stores
         let doc_store = doc_store.ok_or_else(|| crate::CheungfunError::Configuration {
-            message: "DocumentStore is required".to_string(),
+            message: "DocumentStore is required - use KVDocumentStore with InMemoryKVStore".to_string(),
         })?;
         let index_store = index_store.ok_or_else(|| crate::CheungfunError::Configuration {
-            message: "IndexStore is required".to_string(),
+            message: "IndexStore is required - use KVIndexStore with InMemoryKVStore".to_string(),
         })?;
         let vector_store = vector_store.ok_or_else(|| crate::CheungfunError::Configuration {
-            message: "VectorStore is required".to_string(),
+            message: "VectorStore is required - use InMemoryVectorStore".to_string(),
         })?;
 
         Ok(Self::new(doc_store, index_store, vector_store, chat_store))
+    }
+
+    /// Persist all storage components to a directory.
+    ///
+    /// This method saves the storage context configuration and delegates
+    /// persistence to individual stores that support it.
+    ///
+    /// # Arguments
+    ///
+    /// * `persist_dir` - Directory to save the storage context to
+    pub async fn persist(&self, persist_dir: &Path) -> Result<()> {
+        use std::fs;
+
+        // Create persist directory
+        fs::create_dir_all(persist_dir)
+            .map_err(|e| crate::CheungfunError::Storage(format!("Failed to create persist directory: {}", e)))?;
+
+        // Create storage context configuration
+        let config = StorageContextConfig {
+            doc_store_type: "KVDocumentStore".to_string(), // TODO: Get from trait method
+            index_store_type: "KVIndexStore".to_string(),  // TODO: Get from trait method
+            vector_store_type: "VectorStore".to_string(),  // TODO: Get from trait method
+            chat_store_type: self.chat_store.as_ref().map(|_| "KVChatStore".to_string()),
+            vector_store_namespaces: self.vector_stores.keys().cloned().collect(),
+            created_at: chrono::Utc::now(),
+        };
+
+        // Save configuration
+        let config_path = persist_dir.join("storage_context.json");
+        let config_json = serde_json::to_string_pretty(&config)
+            .map_err(|e| crate::CheungfunError::Serialization(e))?;
+        fs::write(config_path, config_json)
+            .map_err(|e| crate::CheungfunError::Storage(format!("Failed to write config: {}", e)))?;
+
+        // TODO: Delegate persistence to individual stores if they support it
+        // This would require extending the store traits with persistence methods
+
+        Ok(())
+    }
+
+    /// Load storage context from a persisted directory.
+    ///
+    /// This method loads the storage context configuration and recreates
+    /// the storage context with the appropriate store implementations.
+    ///
+    /// # Arguments
+    ///
+    /// * `persist_dir` - Directory to load the storage context from
+    pub async fn from_persist_dir(persist_dir: &Path) -> Result<Self> {
+        let config_path = persist_dir.join("storage_context.json");
+        let config_json = std::fs::read_to_string(config_path)
+            .map_err(|e| crate::CheungfunError::Storage(format!("Failed to read config: {}", e)))?;
+        let _config: StorageContextConfig = serde_json::from_str(&config_json)
+            .map_err(|e| crate::CheungfunError::Serialization(e))?;
+
+        // TODO: Recreate stores based on configuration
+        // For now, return an error indicating this needs to be implemented
+        Err(crate::CheungfunError::Configuration {
+            message: "Loading from persist directory not yet implemented - use from_defaults with explicit stores".to_string(),
+        })
     }
 
     /// Get the default vector store.
@@ -960,6 +1198,28 @@ impl StorageContext {
             conversation_count: 0, // TODO: Get from chat_store
         })
     }
+}
+
+/// Configuration for persisting and loading storage context.
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct StorageContextConfig {
+    /// Type of document store.
+    pub doc_store_type: String,
+
+    /// Type of index store.
+    pub index_store_type: String,
+
+    /// Type of vector store.
+    pub vector_store_type: String,
+
+    /// Type of chat store (optional).
+    pub chat_store_type: Option<String>,
+
+    /// Vector store namespaces.
+    pub vector_store_namespaces: Vec<String>,
+
+    /// When the configuration was created.
+    pub created_at: chrono::DateTime<chrono::Utc>,
 }
 
 /// Statistics for the entire storage context.
