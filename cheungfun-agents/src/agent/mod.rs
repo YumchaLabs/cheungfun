@@ -170,6 +170,8 @@ mod tests {
 
     #[test]
     fn test_agent_config_builder() {
+        use crate::agent::base::AgentBuilder;
+
         let config = AgentBuilder::new("test_agent")
             .description("A test agent")
             .instructions("You are a helpful assistant")

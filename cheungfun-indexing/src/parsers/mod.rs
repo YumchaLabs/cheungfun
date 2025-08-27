@@ -164,5 +164,13 @@ pub enum AstError {
     LanguageInitError(String),
 }
 
+impl From<AstError> for cheungfun_core::error::CheungfunError {
+    fn from(err: AstError) -> Self {
+        cheungfun_core::error::CheungfunError::Pipeline {
+            message: err.to_string(),
+        }
+    }
+}
+
 /// Result type for AST operations.
 pub type AstResult<T> = std::result::Result<T, AstError>;

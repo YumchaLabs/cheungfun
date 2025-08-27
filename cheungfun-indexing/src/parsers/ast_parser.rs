@@ -11,7 +11,7 @@ use tracing::{debug, error, warn};
 use tree_sitter::{Language, Parser, Query, QueryCursor, StreamingIterator, Tree};
 
 /// Configuration for AST parsing.
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, PartialEq, serde::Serialize, serde::Deserialize)]
 pub struct AstParserConfig {
     /// Whether to extract function information.
     pub extract_functions: bool,
@@ -41,6 +41,7 @@ impl Default for AstParserConfig {
 }
 
 /// AST parser that uses tree-sitter for code analysis.
+#[derive(Debug)]
 pub struct AstParser {
     /// Parser configuration.
     config: AstParserConfig,

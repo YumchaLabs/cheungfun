@@ -3,6 +3,7 @@
 //! This example shows the enhanced code loading infrastructure
 //! with AST parsing temporarily disabled to test the integration.
 
+use cheungfun_core::traits::Loader;
 use cheungfun_indexing::{
     loaders::{CodeLoader, CodeLoaderConfig},
     prelude::*,

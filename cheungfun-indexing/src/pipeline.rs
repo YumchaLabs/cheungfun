@@ -4,8 +4,7 @@ use async_trait::async_trait;
 use cheungfun_core::{
     cache::UnifiedCache,
     traits::{
-        Embedder, IndexingPipeline, Loader, NodeTransformer, PipelineCache, StorageContext,
-        Transformer, VectorStore,
+        Embedder, IndexingPipeline, Loader, PipelineCache, StorageContext, Transform, VectorStore,
     },
     Document, IndexingProgress, IndexingStats, Node, Result as CoreResult,
 };
@@ -64,20 +63,23 @@ impl Default for PipelineConfig {
 /// ```rust,no_run
 /// use cheungfun_indexing::pipeline::{DefaultIndexingPipeline, PipelineConfig};
 /// use cheungfun_indexing::loaders::FileLoader;
-/// use cheungfun_indexing::transformers::TextSplitter;
+/// use cheungfun_indexing::node_parser::text::SentenceSplitter;
+/// use cheungfun_indexing::transformers::MetadataExtractor;
 /// use cheungfun_core::traits::IndexingPipeline;
 /// use std::sync::Arc;
 ///
 /// #[tokio::main]
 /// async fn main() -> Result<(), Box<dyn std::error::Error>> {
 ///     let loader = Arc::new(FileLoader::new("document.txt")?);
-///     let transformer = Arc::new(TextSplitter::new(1000, 200));
-///     
+///     let splitter = Arc::new(SentenceSplitter::from_defaults(1000, 200)?);
+///     let metadata_extractor = Arc::new(MetadataExtractor::new());
+///
 ///     let pipeline = DefaultIndexingPipeline::builder()
 ///         .with_loader(loader)
-///         .with_transformer(transformer)
+///         .with_transformer(splitter)
+///         .with_node_transformer(metadata_extractor)
 ///         .build()?;
-///     
+///
 ///     let stats = pipeline.run().await?;
 ///     println!("Processed {} documents", stats.documents_processed);
 ///     Ok(())
@@ -87,10 +89,8 @@ impl Default for PipelineConfig {
 pub struct DefaultIndexingPipeline {
     /// Document loader.
     loader: Arc<dyn Loader>,
-    /// Document transformers (applied in order).
-    transformers: Vec<Arc<dyn Transformer>>,
-    /// Node transformers (applied in order).
-    node_transformers: Vec<Arc<dyn NodeTransformer>>,
+    /// Transform components (applied in order) - unified interface for all transformations.
+    transforms: Vec<Arc<dyn Transform>>,
     /// Embedder for generating vector representations.
     embedder: Option<Arc<dyn Embedder>>,
     /// Vector store for persisting nodes (legacy, use storage_context instead).
@@ -117,27 +117,42 @@ impl DefaultIndexingPipeline {
         }
 
         info!(
-            "Processing {} documents through transformation pipeline",
+            "Processing {} documents through unified transformation pipeline",
             documents.len()
         );
 
-        // Stage 1: Apply document transformers
-        let mut all_nodes = Vec::new();
-        for transformer in &self.transformers {
-            debug!("Applying transformer: {}", transformer.name());
+        use cheungfun_core::traits::TransformInput;
 
-            let nodes = transformer
-                .transform_batch(documents.clone())
+        // Start with documents as input
+        let mut current_input = TransformInput::Documents(documents.clone());
+        let mut all_nodes = Vec::new();
+
+        // Apply all transforms in sequence
+        for (i, transform) in self.transforms.iter().enumerate() {
+            debug!("Applying transform {}: {}", i + 1, transform.name());
+
+            let nodes = transform
+                .transform(current_input.clone())
                 .await
                 .map_err(|e| {
-                    IndexingError::pipeline(format!(
-                        "Transformer {} failed: {}",
-                        transformer.name(),
-                        e
-                    ))
+                    IndexingError::pipeline(format!("Transform {} failed: {}", transform.name(), e))
                 })?;
 
-            all_nodes.extend(nodes);
+            if i == 0 {
+                // First transform should convert documents to nodes
+                all_nodes = nodes;
+                current_input = TransformInput::Nodes(all_nodes.clone());
+            } else {
+                // Subsequent transforms process nodes
+                all_nodes = nodes;
+                current_input = TransformInput::Nodes(all_nodes.clone());
+            }
+
+            debug!(
+                "Transform {} produced {} nodes",
+                transform.name(),
+                all_nodes.len()
+            );
         }
 
         if all_nodes.is_empty() {
@@ -146,26 +161,11 @@ impl DefaultIndexingPipeline {
         }
 
         info!(
-            "Created {} nodes from {} documents",
+            "Pipeline created {} nodes from {} documents using {} transforms",
             all_nodes.len(),
-            documents.len()
+            documents.len(),
+            self.transforms.len()
         );
-
-        // Stage 2: Apply node transformers
-        for node_transformer in &self.node_transformers {
-            debug!("Applying node transformer: {}", node_transformer.name());
-
-            all_nodes = node_transformer
-                .transform_batch(all_nodes)
-                .await
-                .map_err(|e| {
-                    IndexingError::pipeline(format!(
-                        "Node transformer {} failed: {}",
-                        node_transformer.name(),
-                        e
-                    ))
-                })?;
-        }
 
         Ok(all_nodes)
     }
@@ -566,7 +566,7 @@ impl IndexingPipeline for DefaultIndexingPipeline {
 
     fn validate(&self) -> CoreResult<()> {
         // Check that required components are present
-        if self.transformers.is_empty() {
+        if self.transforms.is_empty() {
             return Err(cheungfun_core::error::CheungfunError::Configuration {
                 message: "At least one transformer is required".to_string(),
             });
@@ -584,8 +584,7 @@ impl IndexingPipeline for DefaultIndexingPipeline {
 #[derive(Debug, Default)]
 pub struct PipelineBuilder {
     loader: Option<Arc<dyn Loader>>,
-    transformers: Vec<Arc<dyn Transformer>>,
-    node_transformers: Vec<Arc<dyn NodeTransformer>>,
+    transforms: Vec<Arc<dyn Transform>>,
     embedder: Option<Arc<dyn Embedder>>,
     vector_store: Option<Arc<dyn VectorStore>>,
     storage_context: Option<Arc<StorageContext>>,
@@ -606,15 +605,15 @@ impl PipelineBuilder {
         self
     }
 
-    /// Add a document transformer.
-    pub fn with_transformer(mut self, transformer: Arc<dyn Transformer>) -> Self {
-        self.transformers.push(transformer);
+    /// Add a transform component (unified interface for all transformations).
+    pub fn with_transformer(mut self, transform: Arc<dyn Transform>) -> Self {
+        self.transforms.push(transform);
         self
     }
 
-    /// Add a node transformer.
-    pub fn with_node_transformer(mut self, transformer: Arc<dyn NodeTransformer>) -> Self {
-        self.node_transformers.push(transformer);
+    /// Add a transform component (alias for with_transformer for backward compatibility).
+    pub fn with_transform(mut self, transform: Arc<dyn Transform>) -> Self {
+        self.transforms.push(transform);
         self
     }
 
@@ -656,9 +655,9 @@ impl PipelineBuilder {
             .loader
             .ok_or_else(|| IndexingError::configuration("Loader is required"))?;
 
-        if self.transformers.is_empty() {
+        if self.transforms.is_empty() {
             return Err(IndexingError::configuration(
-                "At least one transformer is required",
+                "At least one transform component is required",
             ));
         }
 
@@ -666,8 +665,7 @@ impl PipelineBuilder {
 
         Ok(DefaultIndexingPipeline {
             loader,
-            transformers: self.transformers,
-            node_transformers: self.node_transformers,
+            transforms: self.transforms,
             embedder: self.embedder,
             vector_store: self.vector_store,
             storage_context: self.storage_context,

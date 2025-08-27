@@ -1,79 +1,125 @@
-//! Document and node transformation traits.
+//! Unified transformation interface for document and node processing.
 //!
-//! This module defines traits for transforming documents into nodes and
-//! for processing nodes to extract metadata, relationships, and other
-//! enrichments.
+//! This module defines a unified transformation interface following LlamaIndex's
+//! TransformComponent design pattern. All processing components (document splitters,
+//! metadata extractors, etc.) implement the same Transform trait for maximum
+//! flexibility and composability.
 
 use async_trait::async_trait;
 
 use crate::{Document, Node, Result};
 
-/// Transforms documents into nodes (chunking, preprocessing).
+/// Unified input type for transformations.
 ///
-/// This trait handles the conversion of raw documents into searchable nodes.
-/// Common implementations include text splitters, table extractors, and
-/// other document processing components.
+/// This enum allows transformations to accept either documents or nodes,
+/// providing flexibility for different types of processing components.
+#[derive(Debug, Clone)]
+pub enum TransformInput {
+    /// Document input for document-to-nodes transformations (e.g., text splitters).
+    Document(Document),
+    /// Node input for node-to-node transformations (e.g., metadata extractors).
+    Node(Node),
+    /// Batch of documents for efficient batch processing.
+    Documents(Vec<Document>),
+    /// Batch of nodes for efficient batch processing.
+    Nodes(Vec<Node>),
+}
+
+impl TransformInput {
+    /// Create a document input.
+    pub fn document(document: Document) -> Self {
+        Self::Document(document)
+    }
+
+    /// Create a node input.
+    pub fn node(node: Node) -> Self {
+        Self::Node(node)
+    }
+
+    /// Create a batch of documents input.
+    pub fn documents(documents: Vec<Document>) -> Self {
+        Self::Documents(documents)
+    }
+
+    /// Create a batch of nodes input.
+    pub fn nodes(nodes: Vec<Node>) -> Self {
+        Self::Nodes(nodes)
+    }
+}
+
+/// Unified transformation trait for all processing components.
+///
+/// This trait provides a single interface for all types of transformations,
+/// whether they process documents into nodes or nodes into nodes. This design
+/// follows LlamaIndex's TransformComponent pattern for maximum flexibility.
 ///
 /// # Examples
 ///
 /// ```rust,no_run
-/// use cheungfun_core::traits::Transformer;
-/// use cheungfun_core::{Document, Node, ChunkInfo, Result};
+/// use cheungfun_core::traits::{Transform, TransformInput};
+/// use cheungfun_core::{Document, Node, Result, CheungfunError};
 /// use async_trait::async_trait;
 ///
-/// struct TextSplitter {
+/// struct SentenceSplitter {
 ///     chunk_size: usize,
 ///     overlap: usize,
 /// }
 ///
 /// #[async_trait]
-/// impl Transformer for TextSplitter {
-///     async fn transform(&self, document: Document) -> Result<Vec<Node>> {
-///         // Implementation would split the document into chunks
-///         let chunk_info = ChunkInfo::new(0, document.content.len(), 0);
-///         Ok(vec![Node::new(document.content, document.id, chunk_info)])
+/// impl Transform for SentenceSplitter {
+///     async fn transform(&self, input: TransformInput) -> Result<Vec<Node>> {
+///         match input {
+///             TransformInput::Document(doc) => {
+///                 // Split document into sentence-based chunks
+///                 // Implementation here...
+///                 Ok(vec![])
+///             }
+///             _ => Err(CheungfunError::InvalidInput(
+///                 "SentenceSplitter only accepts documents".into()
+///             ))
+///         }
 ///     }
 /// }
 /// ```
 #[async_trait]
-pub trait Transformer: Send + Sync + std::fmt::Debug {
-    /// Transform a single document into multiple nodes.
+pub trait Transform: Send + Sync + std::fmt::Debug {
+    /// Transform input into nodes.
     ///
-    /// This method takes a document and converts it into one or more nodes
-    /// that can be indexed and searched. The transformation might involve
-    /// chunking, cleaning, or extracting specific content.
+    /// This is the core transformation method that all components must implement.
+    /// The input can be documents, nodes, or batches thereof, allowing maximum
+    /// flexibility for different types of processing components.
     ///
     /// # Arguments
     ///
-    /// * `document` - The document to transform
+    /// * `input` - The input to transform (documents or nodes)
     ///
     /// # Returns
     ///
-    /// A vector of nodes created from the document. An empty vector
-    /// indicates that the document should be skipped.
+    /// A vector of nodes created from the input. An empty vector
+    /// indicates that the input should be skipped.
     ///
     /// # Errors
     ///
     /// Returns an error if the transformation fails due to invalid
-    /// content or processing errors.
-    async fn transform(&self, document: Document) -> Result<Vec<Node>>;
+    /// input, processing errors, or unsupported input types.
+    async fn transform(&self, input: TransformInput) -> Result<Vec<Node>>;
 
-    /// Transform multiple documents in batch for better performance.
+    /// Transform multiple inputs in batch for better performance.
     ///
-    /// The default implementation processes documents one by one, but
+    /// The default implementation processes inputs one by one, but
     /// implementations can override this for batch optimization.
     ///
     /// # Arguments
     ///
-    /// * `documents` - Vector of documents to transform
+    /// * `inputs` - Vector of inputs to transform
     ///
     /// # Returns
     ///
-    /// A vector containing all nodes from all documents.
-    async fn transform_batch(&self, documents: Vec<Document>) -> Result<Vec<Node>> {
+    /// A vector containing all nodes from all inputs.
+    async fn transform_batch(&self, inputs: Vec<TransformInput>) -> Result<Vec<Node>> {
         let mut all_nodes = Vec::new();
-        for document in documents {
-            let nodes = self.transform(document).await?;
+        for input in inputs {
+            let nodes = self.transform(input).await?;
             all_nodes.extend(nodes);
         }
         Ok(all_nodes)
@@ -84,12 +130,12 @@ pub trait Transformer: Send + Sync + std::fmt::Debug {
         std::any::type_name::<Self>()
     }
 
-    /// Validate that the transformer can process the given document.
+    /// Validate that the transformer can process the given input.
     ///
-    /// This method can be used to check if a document is compatible
+    /// This method can be used to check if an input is compatible
     /// with this transformer before attempting transformation.
-    async fn can_transform(&self, _document: &Document) -> bool {
-        // Default implementation accepts all documents
+    async fn can_transform(&self, _input: &TransformInput) -> bool {
+        // Default implementation accepts all inputs
         true
     }
 
@@ -100,82 +146,29 @@ pub trait Transformer: Send + Sync + std::fmt::Debug {
     }
 }
 
-/// Transforms nodes (metadata extraction, enrichment).
-///
-/// This trait is used for post-processing nodes to add metadata,
-/// extract entities, create relationships, or perform other enrichments.
-///
-/// # Examples
-///
-/// ```rust,no_run
-/// use cheungfun_core::traits::NodeTransformer;
-/// use cheungfun_core::{Node, Result};
-/// use async_trait::async_trait;
-///
-/// struct MetadataExtractor;
-///
-/// #[async_trait]
-/// impl NodeTransformer for MetadataExtractor {
-///     async fn transform_node(&self, mut node: Node) -> Result<Node> {
-///         // Extract metadata from node content
-///         node.metadata.insert(
-///             "word_count".to_string(),
-///             serde_json::Value::Number(
-///                 node.content.split_whitespace().count().into()
-///             )
-///         );
-///         Ok(node)
-///     }
-/// }
-/// ```
-#[async_trait]
-pub trait NodeTransformer: Send + Sync + std::fmt::Debug {
-    /// Transform a single node.
-    ///
-    /// This method takes a node and enriches it with additional metadata,
-    /// relationships, or other information. The node content may also be
-    /// modified if needed.
-    ///
-    /// # Arguments
-    ///
-    /// * `node` - The node to transform
-    ///
-    /// # Returns
-    ///
-    /// The transformed node with additional metadata or modifications.
-    ///
-    /// # Errors
-    ///
-    /// Returns an error if the transformation fails.
-    async fn transform_node(&self, node: Node) -> Result<Node>;
+// Convenience functions for creating TransformInput
 
-    /// Transform multiple nodes in batch for better performance.
-    ///
-    /// The default implementation processes nodes one by one, but
-    /// implementations can override this for batch optimization.
-    async fn transform_batch(&self, nodes: Vec<Node>) -> Result<Vec<Node>> {
-        let mut results = Vec::new();
-        for node in nodes {
-            results.push(self.transform_node(node).await?);
-        }
-        Ok(results)
+impl From<Document> for TransformInput {
+    fn from(document: Document) -> Self {
+        Self::Document(document)
     }
+}
 
-    /// Get a human-readable name for this transformer.
-    fn name(&self) -> &'static str {
-        std::any::type_name::<Self>()
+impl From<Node> for TransformInput {
+    fn from(node: Node) -> Self {
+        Self::Node(node)
     }
+}
 
-    /// Check if this transformer can process the given node.
-    async fn can_transform(&self, _node: &Node) -> bool {
-        // Default implementation accepts all nodes
-        true
+impl From<Vec<Document>> for TransformInput {
+    fn from(documents: Vec<Document>) -> Self {
+        Self::Documents(documents)
     }
+}
 
-    /// Get configuration information about this transformer.
-    fn config(&self) -> std::collections::HashMap<String, serde_json::Value> {
-        // Default implementation returns empty config
-        std::collections::HashMap::new()
+impl From<Vec<Node>> for TransformInput {
+    fn from(nodes: Vec<Node>) -> Self {
+        Self::Nodes(nodes)
     }
 }
 

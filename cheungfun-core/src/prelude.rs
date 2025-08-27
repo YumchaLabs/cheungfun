@@ -48,10 +48,10 @@ pub use crate::types::{
 pub use crate::traits::{
     DistanceMetric, Embedder, EmbeddingConfig, EmbeddingStats, EnsembleRetriever, GenerationCost,
     GenerationStats, GeneratorConfig, IndexConfig, IndexInfo, IndexingPipeline, IndexingProgress,
-    IndexingStats, Loader, LoaderConfig, LoadingStats, ModelFeature, ModelInfo, NodeTransformer,
-    PipelineStatus, QueryOptions, QueryPipeline, QueryStats, ResponseGenerator, RetrievalConfig,
+    IndexingStats, Loader, LoaderConfig, LoadingStats, ModelFeature, ModelInfo, PipelineStatus,
+    QueryOptions, QueryPipeline, QueryStats, ResponseGenerator, RetrievalConfig,
     RetrievalExplanation, RetrievalStats, RetrievalStep, Retriever, SparseEmbedder, StorageStats,
-    StreamingLoader, TransformConfig, TransformStats, Transformer, VectorStore,
+    StreamingLoader, Transform, TransformConfig, TransformInput, TransformStats, VectorStore,
 };
 
 // Re-export configuration types

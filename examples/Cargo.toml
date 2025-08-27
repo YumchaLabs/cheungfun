@@ -35,6 +35,9 @@ serde = { workspace = true }
 serde_json = { workspace = true }
 bincode = { workspace = true }
 tempfile = "3.20"
+chrono = { version = "0.4", features = ["serde"] }
+thiserror = "1.0"
+ctrlc = "3.4"
 
 # Performance testing dependencies
 criterion = "0.5"
@@ -122,6 +125,36 @@ required-features = ["basic-examples"]
 [[bin]]
 name = "basic_querying"
 path = "01_getting_started/basic_querying.rs"
+required-features = ["basic-examples"]
+
+[[bin]]
+name = "node_parser_example"
+path = "node_parser_example.rs"
+required-features = ["basic-examples"]
+
+[[bin]]
+name = "simple_node_parser_test"
+path = "simple_node_parser_test.rs"
+required-features = ["basic-examples"]
+
+[[bin]]
+name = "ast_code_splitter_test"
+path = "ast_code_splitter_test.rs"
+required-features = ["basic-examples"]
+
+[[bin]]
+name = "modern_api_example"
+path = "modern_api_example.rs"
+required-features = ["basic-examples"]
+
+[[bin]]
+name = "simple_modern_api"
+path = "simple_modern_api.rs"
+required-features = ["basic-examples"]
+
+[[bin]]
+name = "unified_transform_example"
+path = "unified_transform_example.rs"
 required-features = ["basic-examples"]
 
 # === Core Components Examples ===
@@ -280,4 +313,16 @@ required-features = ["performance"]
 [[bin]]
 name = "markdown_rag_example"
 path = "markdown_rag_example.rs"
+required-features = ["fastembed"]
+
+# RAG+Agent intelligent Q&A system
+[[bin]]
+name = "rag_agent_main"
+path = "08_rag_agent/main.rs"
+required-features = ["fastembed"]
+
+# Simplified RAG+Agent system
+[[bin]]
+name = "simple_rag_agent"
+path = "08_rag_agent/simple_main.rs"
 required-features = ["fastembed"]

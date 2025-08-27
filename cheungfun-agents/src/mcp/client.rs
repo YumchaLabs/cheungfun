@@ -367,7 +367,7 @@ mod tests {
         assert_eq!(client.status().client_name, "test_client");
 
         // Test disconnection
-        client.disconnect().await.unwrap();
+        client.disconnect().unwrap();
         assert!(!client.is_connected());
     }
 

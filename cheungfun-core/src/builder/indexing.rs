@@ -8,7 +8,7 @@ use std::sync::Arc;
 use crate::{
     config::{EmbedderConfig, IndexingPipelineConfig, VectorStoreConfig},
     factory::{EmbedderFactoryRegistry, VectorStoreFactoryRegistry},
-    traits::{Embedder, IndexingPipeline, Loader, Transformer, VectorStore},
+    traits::{Embedder, IndexingPipeline, Loader, Transform, VectorStore},
     Result,
 };
 
@@ -38,8 +38,8 @@ pub struct IndexingPipelineBuilder {
     /// Loader component (optional).
     loader: Option<Arc<dyn Loader>>,
 
-    /// Transformer component (optional).
-    transformer: Option<Arc<dyn Transformer>>,
+    /// Transform component (optional).
+    transformer: Option<Arc<dyn Transform>>,
 
     /// Embedder component or configuration.
     embedder: Option<EmbedderComponent>,
@@ -99,9 +99,9 @@ impl IndexingPipelineBuilder {
         self
     }
 
-    /// Set the transformer component.
+    /// Set the transform component.
     #[must_use]
-    pub fn with_transformer(mut self, transformer: Arc<dyn Transformer>) -> Self {
+    pub fn with_transformer(mut self, transformer: Arc<dyn Transform>) -> Self {
         self.transformer = Some(transformer);
         self
     }

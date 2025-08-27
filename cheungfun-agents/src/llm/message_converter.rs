@@ -261,13 +261,13 @@ mod tests {
             CheungfunMessage {
                 role: MessageRole::System,
                 content: "You are a helpful assistant.".to_string(),
-                metadata: std::collections::HashMap::new(),
+                metadata: Some(std::collections::HashMap::new()),
                 timestamp: Utc::now(),
             },
             CheungfunMessage {
                 role: MessageRole::User,
                 content: "Hello!".to_string(),
-                metadata: std::collections::HashMap::new(),
+                metadata: Some(std::collections::HashMap::new()),
                 timestamp: Utc::now(),
             },
         ];
@@ -275,10 +275,13 @@ mod tests {
         let siumai_messages = MessageConverter::to_siumai_messages(&cheungfun_messages);
 
         assert_eq!(siumai_messages.len(), 2);
-        assert_eq!(siumai_messages[0].role, "system");
-        assert_eq!(siumai_messages[0].content, "You are a helpful assistant.");
-        assert_eq!(siumai_messages[1].role, "user");
-        assert_eq!(siumai_messages[1].content, "Hello!");
+        assert_eq!(siumai_messages[0].role, siumai::types::MessageRole::System);
+        assert_eq!(
+            siumai_messages[0].content.all_text(),
+            "You are a helpful assistant."
+        );
+        assert_eq!(siumai_messages[1].role, siumai::types::MessageRole::User);
+        assert_eq!(siumai_messages[1].content.all_text(), "Hello!");
     }
 
     #[test]
@@ -310,7 +313,7 @@ mod tests {
         let memory_messages = vec![CheungfunMessage {
             role: MessageRole::User,
             content: "Previous question".to_string(),
-            metadata: std::collections::HashMap::new(),
+            metadata: Some(std::collections::HashMap::new()),
             timestamp: Utc::now(),
         }];
         let current_input = "Current question";
@@ -322,10 +325,10 @@ mod tests {
         );
 
         assert_eq!(context.len(), 3);
-        assert_eq!(context[0].role, "system");
-        assert_eq!(context[1].role, "user");
-        assert_eq!(context[1].content, "Previous question");
-        assert_eq!(context[2].role, "user");
-        assert_eq!(context[2].content, "Current question");
+        assert_eq!(context[0].role, siumai::types::MessageRole::System);
+        assert_eq!(context[1].role, siumai::types::MessageRole::User);
+        assert_eq!(context[1].content.all_text(), "Previous question");
+        assert_eq!(context[2].role, siumai::types::MessageRole::User);
+        assert_eq!(context[2].content.all_text(), "Current question");
     }
 }

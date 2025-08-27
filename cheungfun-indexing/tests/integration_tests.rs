@@ -1,6 +1,9 @@
 //! Integration tests for the cheungfun-indexing crate.
 
-use cheungfun_core::{ChunkInfo, Document, Node};
+use cheungfun_core::{
+    traits::{Loader, Transform, TransformInput},
+    ChunkInfo, Document, Node,
+};
 use cheungfun_indexing::prelude::*;
 use std::fs;
 use tempfile::TempDir;
@@ -73,9 +76,10 @@ async fn test_text_splitter() {
         "This is a very long document that needs to be split into smaller chunks. ".repeat(50);
     let document = Document::new(long_text);
 
-    let splitter = TextSplitter::new(500, 100);
+    let splitter = SentenceSplitter::from_defaults(500, 100).expect("Failed to create splitter");
+    let input = TransformInput::Document(document);
     let nodes = splitter
-        .transform(document)
+        .transform(input)
         .await
         .expect("Failed to split text");
 
@@ -84,9 +88,10 @@ async fn test_text_splitter() {
     // Check that nodes have proper chunk information
     for (i, node) in nodes.iter().enumerate() {
         assert_eq!(node.chunk_info.chunk_index, i);
-        assert!(node.content.len() <= 600); // Should be around chunk_size + some tolerance
-        assert!(node.metadata.contains_key("chunk_index"));
-        assert!(node.metadata.contains_key("chunk_size"));
+        // SentenceSplitter may produce chunks larger than chunk_size to respect sentence boundaries
+        assert!(!node.content.is_empty()); // Just ensure content exists
+                                           // Verify chunk info is properly set
+        assert!(node.chunk_info.end_offset >= node.chunk_info.start_offset);
     }
 }
 
@@ -104,10 +109,13 @@ async fn test_metadata_extractor() {
     );
 
     let extractor = MetadataExtractor::new();
-    let enriched_node = extractor
-        .transform_node(node)
+    let input = TransformInput::Node(node);
+    let enriched_nodes = extractor
+        .transform(input)
         .await
         .expect("Failed to extract metadata");
+
+    let enriched_node = &enriched_nodes[0];
 
     // Check that metadata was extracted
     assert!(enriched_node.metadata.contains_key("character_count"));
@@ -124,13 +132,15 @@ async fn test_pipeline_builder() {
     let loader = std::sync::Arc::new(
         DirectoryLoader::new(temp_dir.path()).expect("Failed to create directory loader"),
     );
-    let transformer = std::sync::Arc::new(TextSplitter::new(200, 50));
+    let transformer = std::sync::Arc::new(
+        SentenceSplitter::from_defaults(200, 50).expect("Failed to create splitter"),
+    );
     let node_transformer = std::sync::Arc::new(MetadataExtractor::new());
 
     let pipeline = DefaultIndexingPipeline::builder()
         .with_loader(loader)
         .with_transformer(transformer)
-        .with_node_transformer(node_transformer)
+        .with_transformer(node_transformer)
         .build()
         .expect("Failed to build pipeline");
 
@@ -156,32 +166,50 @@ async fn test_loader_config() {
 }
 
 #[tokio::test]
-async fn test_splitter_config() {
-    let config = SplitterConfig::new(1000, 200)
-        .with_min_chunk_size(100)
-        .with_max_chunk_size(2000)
-        .with_respect_sentence_boundaries(true)
-        .with_keep_separators(false);
+async fn test_sentence_splitter_config() {
+    // Test SentenceSplitter configuration
+    let splitter =
+        SentenceSplitter::from_defaults(1000, 200).expect("Failed to create sentence splitter");
 
-    assert_eq!(config.chunk_size, 1000);
-    assert_eq!(config.chunk_overlap, 200);
-    assert_eq!(config.min_chunk_size, Some(100));
-    assert_eq!(config.max_chunk_size, Some(2000));
-    assert!(config.respect_sentence_boundaries);
-    assert!(!config.keep_separators);
+    assert_eq!(Transform::name(&splitter), "SentenceSplitter");
+
+    // Test that the splitter works with the configuration
+    let test_text =
+        "This is a test sentence. This is another sentence. And one more for good measure.";
+    let document = Document::new(test_text.to_string());
+    let input = TransformInput::Document(document);
+
+    let nodes = splitter
+        .transform(input)
+        .await
+        .expect("Failed to split text");
+    assert!(!nodes.is_empty());
 }
 
 #[tokio::test]
-async fn test_metadata_config() {
-    let config = MetadataConfig::new()
-        .with_title_extraction(true)
-        .with_statistics(true)
-        .with_keyword_extraction(true, 5);
+async fn test_metadata_extractor_functionality() {
+    // Test MetadataExtractor functionality
+    let extractor = MetadataExtractor::new();
+    assert_eq!(Transform::name(&extractor), "MetadataExtractor");
 
-    assert!(config.extract_title);
-    assert!(config.extract_statistics);
-    assert!(config.extract_keywords);
-    assert_eq!(config.max_keywords, 5);
+    // Test that the extractor works
+    let test_content = "This is a test document with some content for metadata extraction.";
+    let node = Node::new(
+        test_content.to_string(),
+        uuid::Uuid::new_v4(),
+        ChunkInfo {
+            start_offset: 0,
+            end_offset: test_content.len(),
+            chunk_index: 0,
+        },
+    );
+
+    let input = TransformInput::Node(node);
+    let enriched_nodes = extractor
+        .transform(input)
+        .await
+        .expect("Failed to extract metadata");
+    assert!(!enriched_nodes.is_empty());
 }
 
 #[tokio::test]

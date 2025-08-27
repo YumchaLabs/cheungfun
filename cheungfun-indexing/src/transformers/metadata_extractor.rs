@@ -1,8 +1,8 @@
 //! Metadata extraction transformer for enriching nodes.
 
 use async_trait::async_trait;
-use cheungfun_core::traits::NodeTransformer;
-use cheungfun_core::{Node, Result as CoreResult};
+use cheungfun_core::traits::{Transform, TransformInput};
+use cheungfun_core::{CheungfunError, Node, Result as CoreResult};
 use regex::Regex;
 use std::collections::HashMap;
 use tracing::{debug, warn};
@@ -366,8 +366,38 @@ impl Default for MetadataExtractor {
 }
 
 #[async_trait]
-impl NodeTransformer for MetadataExtractor {
-    async fn transform_node(&self, mut node: Node) -> CoreResult<Node> {
+impl Transform for MetadataExtractor {
+    async fn transform(&self, input: TransformInput) -> CoreResult<Vec<Node>> {
+        match input {
+            TransformInput::Node(node) => {
+                let transformed_node = self.transform_node_internal(node).await?;
+                Ok(vec![transformed_node])
+            }
+            TransformInput::Nodes(nodes) => {
+                let mut transformed_nodes = Vec::with_capacity(nodes.len());
+                for node in nodes {
+                    let transformed_node = self.transform_node_internal(node).await?;
+                    transformed_nodes.push(transformed_node);
+                }
+                Ok(transformed_nodes)
+            }
+            TransformInput::Document(_) | TransformInput::Documents(_) => {
+                // MetadataExtractor only processes nodes, not documents
+                Err(CheungfunError::Validation {
+                    message: "MetadataExtractor only accepts nodes as input".into(),
+                })
+            }
+        }
+    }
+
+    fn name(&self) -> &'static str {
+        "MetadataExtractor"
+    }
+}
+
+impl MetadataExtractor {
+    /// Internal method to transform a single node (extracted from the old NodeTransformer implementation).
+    async fn transform_node_internal(&self, mut node: Node) -> CoreResult<Node> {
         debug!("Extracting metadata from node {}", node.id);
 
         if node.content.is_empty() {
@@ -400,7 +430,7 @@ impl NodeTransformer for MetadataExtractor {
 
         let mut results = Vec::new();
         for node in nodes {
-            let transformed_node = self.transform_node(node).await?;
+            let transformed_node = self.transform_node_internal(node).await?;
             results.push(transformed_node);
         }
 
