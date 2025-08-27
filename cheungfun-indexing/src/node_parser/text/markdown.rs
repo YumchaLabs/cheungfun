@@ -6,7 +6,10 @@
 
 use crate::node_parser::{config::MarkdownConfig, NodeParser, TextSplitter};
 use async_trait::async_trait;
-use cheungfun_core::{CheungfunError, Document, Node, Result as CoreResult};
+use cheungfun_core::{
+    traits::{Transform, TransformInput},
+    CheungfunError, Document, Node, Result as CoreResult,
+};
 use regex::Regex;
 use tracing::debug;
 
@@ -344,6 +347,32 @@ impl NodeParser for MarkdownNodeParser {
         }
 
         Ok(all_nodes)
+    }
+}
+
+#[async_trait]
+impl Transform for MarkdownNodeParser {
+    async fn transform(&self, input: TransformInput) -> CoreResult<Vec<Node>> {
+        match input {
+            TransformInput::Document(document) => {
+                // Use the existing NodeParser implementation
+                NodeParser::parse_nodes(self, &[document], false).await
+            }
+            TransformInput::Documents(documents) => {
+                // Use the existing NodeParser implementation for batch processing
+                NodeParser::parse_nodes(self, &documents, false).await
+            }
+            TransformInput::Node(_) | TransformInput::Nodes(_) => {
+                // MarkdownNodeParser only processes documents, not nodes
+                Err(CheungfunError::Validation {
+                    message: "MarkdownNodeParser only accepts documents as input".into(),
+                })
+            }
+        }
+    }
+
+    fn name(&self) -> &'static str {
+        "MarkdownNodeParser"
     }
 }
 

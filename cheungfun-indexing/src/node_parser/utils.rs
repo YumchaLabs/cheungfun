@@ -8,6 +8,7 @@ use crate::utils::metadata::add_chunk_metadata;
 use cheungfun_core::{ChunkInfo, Document, Node, Result as CoreResult};
 use std::collections::HashMap;
 use tracing::{debug, warn};
+use unicode_segmentation::UnicodeSegmentation;
 use uuid::Uuid;
 
 /// Trait for ID generation functions.
@@ -174,39 +175,87 @@ fn add_prev_next_relationships(nodes: &mut [Node]) -> CoreResult<()> {
 ///
 /// This function attempts to find the position of each chunk within the
 /// original document text, providing accurate start and end offsets.
+///
+/// This implementation is Unicode-safe and handles multi-byte characters correctly
+/// using the unicode-segmentation crate for proper grapheme cluster handling.
 fn calculate_chunk_offsets(original_text: &str, chunks: &[String]) -> Vec<(usize, usize)> {
     let mut offsets = Vec::new();
-    let mut current_pos = 0;
+    let mut current_byte_pos = 0;
+
+    // Pre-compute grapheme cluster boundaries for efficient lookup
+    let grapheme_indices: Vec<(usize, &str)> = original_text.grapheme_indices(true).collect();
 
     for chunk in chunks {
         let chunk_trimmed = chunk.trim();
 
         // Ensure current_pos doesn't exceed text length
-        if current_pos >= original_text.len() {
+        if current_byte_pos >= original_text.len() {
             // If we've reached the end, estimate remaining positions
-            let estimated_end = current_pos + chunk_trimmed.len();
-            offsets.push((current_pos, estimated_end));
-            current_pos = estimated_end;
+            let estimated_end = current_byte_pos + chunk_trimmed.len();
+            offsets.push((current_byte_pos, estimated_end));
+            current_byte_pos = estimated_end;
             continue;
         }
 
-        // Try to find the chunk in the original text starting from current position
-        if let Some(found_pos) = original_text[current_pos..].find(chunk_trimmed) {
-            let start_offset = current_pos + found_pos;
-            let end_offset = (start_offset + chunk_trimmed.len()).min(original_text.len());
-            offsets.push((start_offset, end_offset));
+        // Find a safe grapheme boundary at or after current_pos
+        let safe_start_pos =
+            find_safe_grapheme_boundary(original_text, current_byte_pos, &grapheme_indices);
 
-            // Update position for next search, accounting for potential overlap
-            current_pos = end_offset;
+        // Try to find the chunk in the original text starting from safe position
+        if let Some(found_pos) = original_text[safe_start_pos..].find(chunk_trimmed) {
+            let start_offset = safe_start_pos + found_pos;
+            let end_offset = (start_offset + chunk_trimmed.len()).min(original_text.len());
+
+            // Ensure end offset is also on a safe boundary
+            let safe_end_offset =
+                find_safe_grapheme_boundary(original_text, end_offset, &grapheme_indices);
+
+            offsets.push((start_offset, safe_end_offset));
+            current_byte_pos = safe_end_offset;
         } else {
             // Fallback: estimate position based on current progress
-            let end_offset = (current_pos + chunk_trimmed.len()).min(original_text.len());
-            offsets.push((current_pos, end_offset));
-            current_pos = end_offset;
+            let estimated_end = current_byte_pos + chunk_trimmed.len();
+            let safe_end =
+                find_safe_grapheme_boundary(original_text, estimated_end, &grapheme_indices);
+            offsets.push((current_byte_pos, safe_end));
+            current_byte_pos = safe_end;
         }
     }
 
     offsets
+}
+
+/// Find the nearest safe grapheme cluster boundary at or after the given byte position.
+///
+/// This function ensures that we never try to slice a string in the middle
+/// of a grapheme cluster (which could be a multi-byte Unicode character or
+/// a combining character sequence), preventing panics.
+///
+/// Since we have pre-computed grapheme boundaries, this is now a simple lookup operation.
+fn find_safe_grapheme_boundary(
+    text: &str,
+    target_pos: usize,
+    grapheme_indices: &[(usize, &str)],
+) -> usize {
+    if target_pos >= text.len() {
+        return text.len();
+    }
+
+    // Find the first grapheme cluster boundary at or after target_pos
+    // Since grapheme_indices is ordered by position, we can use binary search for efficiency
+    match grapheme_indices.binary_search_by_key(&target_pos, |&(pos, _)| pos) {
+        // Exact match - we're already at a grapheme boundary
+        Ok(index) => grapheme_indices[index].0,
+        // Not found - get the next boundary
+        Err(index) => {
+            if index < grapheme_indices.len() {
+                grapheme_indices[index].0
+            } else {
+                // No more boundaries, return end of string
+                text.len()
+            }
+        }
+    }
 }
 
 /// Extract metadata string from a document for metadata-aware splitting.

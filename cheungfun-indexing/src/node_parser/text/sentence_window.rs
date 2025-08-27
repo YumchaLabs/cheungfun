@@ -10,7 +10,10 @@ use crate::node_parser::{
     NodeParser, TextSplitter,
 };
 use async_trait::async_trait;
-use cheungfun_core::{Document, Node, Result as CoreResult};
+use cheungfun_core::{
+    traits::{Transform, TransformInput},
+    CheungfunError, Document, Node, Result as CoreResult,
+};
 use tracing::{debug, warn};
 
 /// Sentence window node parser that creates nodes for individual sentences.
@@ -263,6 +266,32 @@ impl NodeParser for SentenceWindowNodeParser {
         _show_progress: bool,
     ) -> CoreResult<Vec<Node>> {
         self.build_window_nodes_from_documents(documents)
+    }
+}
+
+#[async_trait]
+impl Transform for SentenceWindowNodeParser {
+    async fn transform(&self, input: TransformInput) -> CoreResult<Vec<Node>> {
+        match input {
+            TransformInput::Document(document) => {
+                // Use the existing NodeParser implementation
+                NodeParser::parse_nodes(self, &[document], false).await
+            }
+            TransformInput::Documents(documents) => {
+                // Use the existing NodeParser implementation for batch processing
+                NodeParser::parse_nodes(self, &documents, false).await
+            }
+            TransformInput::Node(_) | TransformInput::Nodes(_) => {
+                // SentenceWindowNodeParser only processes documents, not nodes
+                Err(CheungfunError::Validation {
+                    message: "SentenceWindowNodeParser only accepts documents as input".into(),
+                })
+            }
+        }
+    }
+
+    fn name(&self) -> &'static str {
+        "SentenceWindowNodeParser"
     }
 }
 
