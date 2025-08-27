@@ -2,8 +2,8 @@
 
 use async_trait::async_trait;
 use cheungfun_core::{
-    traits::{ChatStore, KVStore, ChatStoreStats},
-    ChatMessage, MessageRole, Result, CheungfunError,
+    traits::{ChatStore, ChatStoreStats, KVStore},
+    ChatMessage, CheungfunError, MessageRole, Result,
 };
 use serde_json::Value;
 
@@ -26,7 +26,7 @@ use tracing::{debug, error, info};
 /// # tokio_test::block_on(async {
 /// let kv_store = Arc::new(InMemoryKVStore::new());
 /// let chat_store = KVChatStore::new(kv_store, Some("conversations".to_string()));
-/// 
+///
 /// let message = ChatMessage::user("Hello, world!");
 /// chat_store.add_message("conv1", message).await.unwrap();
 /// # });
@@ -48,8 +48,11 @@ impl KVChatStore {
     /// * `base_collection` - Optional base collection name (defaults to "conversations")
     pub fn new(kv_store: Arc<dyn KVStore>, base_collection: Option<String>) -> Self {
         let base_collection = base_collection.unwrap_or_else(|| "conversations".to_string());
-        info!("Created KV chat store with base collection '{}'", base_collection);
-        
+        info!(
+            "Created KV chat store with base collection '{}'",
+            base_collection
+        );
+
         Self {
             kv_store,
             base_collection,
@@ -73,14 +76,12 @@ impl KVChatStore {
 
     /// Convert a ChatMessage to a JSON value for storage.
     fn message_to_value(&self, message: &ChatMessage) -> Result<Value> {
-        serde_json::to_value(message)
-            .map_err(|e| CheungfunError::Serialization(e))
+        serde_json::to_value(message).map_err(|e| CheungfunError::Serialization(e))
     }
 
     /// Convert a JSON value back to a ChatMessage.
     fn value_to_message(&self, value: Value) -> Result<ChatMessage> {
-        serde_json::from_value(value)
-            .map_err(|e| CheungfunError::Serialization(e))
+        serde_json::from_value(value).map_err(|e| CheungfunError::Serialization(e))
     }
 
     /// Generate a message key based on timestamp and index.
@@ -95,12 +96,12 @@ impl KVChatStore {
             .iter()
             .filter(|c| c.starts_with(&format!("{}_", self.base_collection)))
             .collect();
-        
+
         let mut total_messages = 0;
         for collection in &conversation_collections {
             total_messages += self.kv_store.count(collection).await?;
         }
-        
+
         Ok(ChatStoreStats {
             conversation_count: conversation_collections.len(),
             total_messages,
@@ -124,40 +125,51 @@ impl KVChatStore {
 impl ChatStore for KVChatStore {
     async fn add_message(&self, conversation_id: &str, message: ChatMessage) -> Result<()> {
         let collection = self.conversation_collection(conversation_id);
-        
+
         // Get current message count to generate unique key
         let current_count = self.kv_store.count(&collection).await?;
         let message_key = self.generate_message_key(&message, current_count);
         let message_value = self.message_to_value(&message)?;
-        
-        self.kv_store.put(&message_key, message_value, &collection).await?;
-        
-        debug!("Added message to conversation '{}' in collection '{}'", conversation_id, collection);
+
+        self.kv_store
+            .put(&message_key, message_value, &collection)
+            .await?;
+
+        debug!(
+            "Added message to conversation '{}' in collection '{}'",
+            conversation_id, collection
+        );
         Ok(())
     }
 
     async fn get_messages(&self, conversation_id: &str) -> Result<Vec<ChatMessage>> {
         let collection = self.conversation_collection(conversation_id);
         let all_data = self.kv_store.get_all(&collection).await?;
-        
+
         let mut messages = Vec::with_capacity(all_data.len());
         let mut message_pairs: Vec<(String, Value)> = all_data.into_iter().collect();
-        
+
         // Sort by key to maintain chronological order
         message_pairs.sort_by(|a, b| a.0.cmp(&b.0));
-        
+
         for (message_key, value) in message_pairs {
             match self.value_to_message(value) {
                 Ok(message) => messages.push(message),
                 Err(e) => {
-                    error!("Failed to deserialize message '{}' in conversation '{}': {}", 
-                           message_key, conversation_id, e);
+                    error!(
+                        "Failed to deserialize message '{}' in conversation '{}': {}",
+                        message_key, conversation_id, e
+                    );
                     // Continue processing other messages
                 }
             }
         }
-        
-        debug!("Retrieved {} messages from conversation '{}'", messages.len(), conversation_id);
+
+        debug!(
+            "Retrieved {} messages from conversation '{}'",
+            messages.len(),
+            conversation_id
+        );
         Ok(messages)
     }
 
@@ -187,8 +199,12 @@ impl ChatStore for KVChatStore {
             .filter(|message| message.role == role)
             .collect();
 
-        debug!("Retrieved {} messages with role '{:?}' from conversation '{}'",
-               filtered_messages.len(), role, key);
+        debug!(
+            "Retrieved {} messages with role '{:?}' from conversation '{}'",
+            filtered_messages.len(),
+            role,
+            key
+        );
         Ok(filtered_messages)
     }
 
@@ -223,16 +239,13 @@ impl ChatStore for KVChatStore {
     async fn delete_messages(&self, conversation_id: &str) -> Result<()> {
         let collection = self.conversation_collection(conversation_id);
         self.kv_store.delete_collection(&collection).await?;
-        debug!("Deleted all messages for conversation '{}'", conversation_id);
+        debug!(
+            "Deleted all messages for conversation '{}'",
+            conversation_id
+        );
         Ok(())
     }
-
-
-
-
 }
-
-
 
 #[cfg(test)]
 mod tests {
@@ -253,8 +266,14 @@ mod tests {
         let message2 = ChatMessage::assistant("Hi there!");
 
         // Add messages
-        store.add_message(conversation_id, message1.clone()).await.unwrap();
-        store.add_message(conversation_id, message2.clone()).await.unwrap();
+        store
+            .add_message(conversation_id, message1.clone())
+            .await
+            .unwrap();
+        store
+            .add_message(conversation_id, message2.clone())
+            .await
+            .unwrap();
 
         // Get messages
         let messages = store.get_messages(conversation_id).await.unwrap();
@@ -320,9 +339,18 @@ mod tests {
         let store = create_test_store().await;
 
         // Add messages to different conversations
-        store.add_message("conv1", ChatMessage::user("Hello from conv1")).await.unwrap();
-        store.add_message("conv2", ChatMessage::user("Hello from conv2")).await.unwrap();
-        store.add_message("conv1", ChatMessage::assistant("Response to conv1")).await.unwrap();
+        store
+            .add_message("conv1", ChatMessage::user("Hello from conv1"))
+            .await
+            .unwrap();
+        store
+            .add_message("conv2", ChatMessage::user("Hello from conv2"))
+            .await
+            .unwrap();
+        store
+            .add_message("conv1", ChatMessage::assistant("Response to conv1"))
+            .await
+            .unwrap();
 
         // List conversations
         let conversations = store.list_conversations().await.unwrap();
@@ -350,13 +378,19 @@ mod tests {
         store.add_messages(conversation_id, messages).await.unwrap();
 
         // Get user messages
-        let user_messages = store.get_messages_by_role(conversation_id, "user").await.unwrap();
+        let user_messages = store
+            .get_messages_by_role(conversation_id, "user")
+            .await
+            .unwrap();
         assert_eq!(user_messages.len(), 2);
         assert_eq!(user_messages[0].content, "User message 1");
         assert_eq!(user_messages[1].content, "User message 2");
 
         // Get assistant messages
-        let assistant_messages = store.get_messages_by_role(conversation_id, "assistant").await.unwrap();
+        let assistant_messages = store
+            .get_messages_by_role(conversation_id, "assistant")
+            .await
+            .unwrap();
         assert_eq!(assistant_messages.len(), 2);
         assert_eq!(assistant_messages[0].content, "Assistant response 1");
         assert_eq!(assistant_messages[1].content, "Assistant response 2");

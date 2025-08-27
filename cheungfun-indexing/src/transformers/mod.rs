@@ -1,7 +1,7 @@
 //! Document transformers for processing and chunking content.
 //!
-//! This module provides implementations of the `Transformer` and `NodeTransformer`
-//! traits for various document processing tasks.
+//! This module provides implementations of the unified `Transform` trait
+//! for various document processing tasks.
 
 pub mod metadata_extractor;
 

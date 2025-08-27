@@ -116,14 +116,15 @@ pub trait NodeParser: Send + Sync + Debug {
 ///
 /// ```rust,no_run
 /// use cheungfun_indexing::node_parser::{TextSplitter, text::SentenceSplitter};
+/// use cheungfun_core::traits::{Transform, TransformInput};
 ///
 /// #[tokio::main]
 /// async fn main() -> Result<(), Box<dyn std::error::Error>> {
 ///     let splitter = SentenceSplitter::from_defaults(1000, 200)?;
-///     
+///
 ///     let text = "This is a sample text. It has multiple sentences.";
 ///     let chunks = splitter.split_text(text)?;
-///     
+///
 ///     println!("Split into {} chunks", chunks.len());
 ///     Ok(())
 /// }
@@ -205,14 +206,15 @@ pub trait TextSplitter: NodeParser {
 ///
 /// ```rust,no_run
 /// use cheungfun_indexing::node_parser::{MetadataAwareTextSplitter, text::SentenceSplitter};
+/// use cheungfun_core::traits::{Transform, TransformInput};
 ///
 /// #[tokio::main]
 /// async fn main() -> Result<(), Box<dyn std::error::Error>> {
 ///     let splitter = SentenceSplitter::from_defaults(1000, 200)?;
-///     
+///
 ///     let text = "This is the main content.";
 ///     let metadata = "Title: Sample Document\nAuthor: John Doe";
-///     
+///
 ///     let chunks = splitter.split_text_metadata_aware(text, metadata)?;
 ///     println!("Split into {} chunks considering metadata", chunks.len());
 ///     Ok(())

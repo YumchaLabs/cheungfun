@@ -39,14 +39,15 @@
 //! - 🏢 企业级配置：专为大型 Unity 项目优化的分块策略
 //! - 🛠️ 命令行界面：完整的 CLI 工具，支持多种配置选项
 
+use async_trait::async_trait;
 use cheungfun_core::{
     traits::{Embedder, Loader, Transform, VectorStore},
     Result,
 };
 use cheungfun_indexing::{
-    loaders::{DirectoryLoader, LoaderConfig, ProgrammingLanguage, filter::FilterConfig},
+    loaders::{filter::FilterConfig, DirectoryLoader, LoaderConfig, ProgrammingLanguage},
     node_parser::{
-        config::{CodeSplitterConfig, ChunkingStrategy},
+        config::{ChunkingStrategy, CodeSplitterConfig},
         text::CodeSplitter,
     },
     transformers::MetadataExtractor,
@@ -66,8 +67,7 @@ use std::{
     sync::Arc,
 };
 use tokio::fs;
-use tracing::{info, warn, error, debug, Level};
-use async_trait::async_trait;
+use tracing::{debug, error, info, warn, Level};
 
 /// Unity C# RAG 系统配置
 #[derive(Debug, Clone)]
@@ -147,7 +147,11 @@ async fn main() -> Result<()> {
     }
 
     // 初始化日志
-    let log_level = if args.verbose { Level::DEBUG } else { Level::INFO };
+    let log_level = if args.verbose {
+        Level::DEBUG
+    } else {
+        Level::INFO
+    };
     tracing_subscriber::fmt()
         .with_max_level(log_level)
         .with_target(false)
@@ -175,7 +179,10 @@ async fn main() -> Result<()> {
         } else {
             error!("项目路径不存在: {}", config.unity_project_path.display());
             return Err(cheungfun_core::CheungfunError::Configuration {
-                message: format!("Unity 项目路径不存在: {}", config.unity_project_path.display()),
+                message: format!(
+                    "Unity 项目路径不存在: {}",
+                    config.unity_project_path.display()
+                ),
             });
         }
     }
@@ -294,7 +301,10 @@ impl UnityCSharpRagSystem {
             .with_continue_on_error(true);
 
         // 2. 加载所有 C# 文件
-        info!("  📂 扫描 Unity 项目: {}", self.config.unity_project_path.display());
+        info!(
+            "  📂 扫描 Unity 项目: {}",
+            self.config.unity_project_path.display()
+        );
         let loader = DirectoryLoader::with_config(&self.config.unity_project_path, loader_config)?;
         let documents = loader.load().await?;
 
@@ -310,7 +320,8 @@ impl UnityCSharpRagSystem {
             CodeSplitter::with_strategy(ProgrammingLanguage::CSharp, self.config.chunking_strategy)?
         } else {
             // 如果禁用 AST，使用基础配置
-            let (chunk_lines, chunk_lines_overlap, max_chars) = self.config.chunking_strategy.params();
+            let (chunk_lines, chunk_lines_overlap, max_chars) =
+                self.config.chunking_strategy.params();
             let basic_config = CodeSplitterConfig::new(
                 ProgrammingLanguage::CSharp,
                 chunk_lines,
@@ -321,7 +332,10 @@ impl UnityCSharpRagSystem {
             CodeSplitter::new(basic_config)?
         };
 
-        info!("  ✅ 使用 {} 分块策略", self.config.chunking_strategy.description());
+        info!(
+            "  ✅ 使用 {} 分块策略",
+            self.config.chunking_strategy.description()
+        );
         let metadata_extractor = MetadataExtractor::new();
 
         // 4. 处理每个 C# 文件
@@ -336,12 +350,7 @@ impl UnityCSharpRagSystem {
                 .or_else(|| document.get_metadata_string("filename"))
                 .unwrap_or_else(|| format!("Document {}", i + 1));
 
-            info!(
-                "  📄 处理文件 {}/{}: {}",
-                i + 1,
-                documents.len(),
-                file_path
-            );
+            info!("  📄 处理文件 {}/{}: {}", i + 1, documents.len(), file_path);
 
             // 使用 AST 增强的代码分割
             let input = cheungfun_core::traits::TransformInput::Document(document.clone());
@@ -476,10 +485,7 @@ impl UnityCSharpRagSystem {
         println!("{}", "─".repeat(50));
 
         // 显示检索到的代码片段
-        println!(
-            "\n📚 相关代码片段 ({} 个):",
-            response.retrieved_nodes.len()
-        );
+        println!("\n📚 相关代码片段 ({} 个):", response.retrieved_nodes.len());
 
         for (i, scored_node) in response.retrieved_nodes.iter().take(3).enumerate() {
             let source = scored_node
@@ -492,14 +498,28 @@ impl UnityCSharpRagSystem {
             let filename = source.split(['/', '\\']).last().unwrap_or(&source);
 
             // 尝试提取类名和方法名
-            let content_preview = scored_node.node.content.lines().take(5).collect::<Vec<_>>().join("\n");
+            let content_preview = scored_node
+                .node
+                .content
+                .lines()
+                .take(5)
+                .collect::<Vec<_>>()
+                .join("\n");
             let class_info = extract_csharp_info(&scored_node.node.content);
 
-            println!("  {}. [相似度: {:.3}] 📄 {}", i + 1, scored_node.score, filename);
+            println!(
+                "  {}. [相似度: {:.3}] 📄 {}",
+                i + 1,
+                scored_node.score,
+                filename
+            );
             if let Some(info) = class_info {
                 println!("     🏗️ {}", info);
             }
-            println!("     预览: {}...", content_preview.chars().take(100).collect::<String>());
+            println!(
+                "     预览: {}...",
+                content_preview.chars().take(100).collect::<String>()
+            );
             println!();
         }
 
@@ -548,15 +568,38 @@ impl UnityCSharpRagSystem {
 
         // 配置信息
         println!("⚙️ 配置:");
-        println!("  - Unity 项目路径: {}", self.config.unity_project_path.display());
-        println!("  - 分块策略: {}", self.config.chunking_strategy.description());
+        println!(
+            "  - Unity 项目路径: {}",
+            self.config.unity_project_path.display()
+        );
+        println!(
+            "  - 分块策略: {}",
+            self.config.chunking_strategy.description()
+        );
         let (chunk_lines, chunk_lines_overlap, max_chars) = self.config.chunking_strategy.params();
-        println!("  - 分块参数: {} 行, {} 重叠, {} 字符", chunk_lines, chunk_lines_overlap, max_chars);
+        println!(
+            "  - 分块参数: {} 行, {} 重叠, {} 字符",
+            chunk_lines, chunk_lines_overlap, max_chars
+        );
         println!("  - Top-K: {}", self.config.top_k);
         println!("  - LLM 提供商: {}", self.config.llm_provider);
         println!("  - LLM 模型: {}", self.config.llm_model);
-        println!("  - AST 分析: {}", if self.config.enable_ast_analysis { "启用" } else { "禁用" });
-        println!("  - 详细日志: {}", if self.config.verbose { "启用" } else { "禁用" });
+        println!(
+            "  - AST 分析: {}",
+            if self.config.enable_ast_analysis {
+                "启用"
+            } else {
+                "禁用"
+            }
+        );
+        println!(
+            "  - 详细日志: {}",
+            if self.config.verbose {
+                "启用"
+            } else {
+                "禁用"
+            }
+        );
 
         // 健康检查
         println!("🏥 健康检查:");
@@ -780,7 +823,14 @@ fn print_config_summary(config: &UnityCSharpRagConfig) {
     println!("  分块参数: {} 行, {} 重叠, {} 字符", lines, overlap, chars);
     println!("  LLM: {} ({})", config.llm_provider, config.llm_model);
     println!("  Top-K: {}", config.top_k);
-    println!("  AST 分析: {}", if config.enable_ast_analysis { "启用" } else { "禁用" });
+    println!(
+        "  AST 分析: {}",
+        if config.enable_ast_analysis {
+            "启用"
+        } else {
+            "禁用"
+        }
+    );
     println!();
 }
 
@@ -1461,11 +1511,11 @@ async fn create_embedder(config: &UnityCSharpRagConfig) -> Result<Arc<dyn Embedd
     match config.embedding_provider.as_str() {
         "fastembed" => {
             info!("  📊 初始化 FastEmbed 嵌入器...");
-            let embedder = FastEmbedder::with_model(&config.embedding_model).await.map_err(|e| {
-                cheungfun_core::CheungfunError::Configuration {
+            let embedder = FastEmbedder::with_model(&config.embedding_model)
+                .await
+                .map_err(|e| cheungfun_core::CheungfunError::Configuration {
                     message: format!("Failed to initialize FastEmbedder: {}", e),
-                }
-            })?;
+                })?;
             Ok(Arc::new(embedder))
         }
         "openai" => {
@@ -1474,7 +1524,8 @@ async fn create_embedder(config: &UnityCSharpRagConfig) -> Result<Arc<dyn Embedd
                 info!("  📊 初始化 OpenAI 嵌入器...");
                 let api_key = env::var("OPENAI_API_KEY").map_err(|_| {
                     cheungfun_core::CheungfunError::Configuration {
-                        message: "OPENAI_API_KEY environment variable not set for OpenAI embedding".to_string(),
+                        message: "OPENAI_API_KEY environment variable not set for OpenAI embedding"
+                            .to_string(),
                     }
                 })?;
 
@@ -1499,7 +1550,8 @@ async fn create_embedder(config: &UnityCSharpRagConfig) -> Result<Arc<dyn Embedd
             info!("  📊 初始化 Gemini 嵌入器...");
             let api_key = env::var("GEMINI_API_KEY").map_err(|_| {
                 cheungfun_core::CheungfunError::Configuration {
-                    message: "GEMINI_API_KEY environment variable not set for Gemini embedding".to_string(),
+                    message: "GEMINI_API_KEY environment variable not set for Gemini embedding"
+                        .to_string(),
                 }
             })?;
 
@@ -1519,7 +1571,10 @@ async fn create_embedder(config: &UnityCSharpRagConfig) -> Result<Arc<dyn Embedd
             Ok(Arc::new(embedder))
         }
         _ => Err(cheungfun_core::CheungfunError::Configuration {
-            message: format!("Unsupported embedding provider: {}", config.embedding_provider),
+            message: format!(
+                "Unsupported embedding provider: {}",
+                config.embedding_provider
+            ),
         }),
     }
 }

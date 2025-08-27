@@ -9,12 +9,11 @@
 mod memory;
 
 use cheungfun_core::{
-    traits::{Embedder, Loader, NodeTransformer, Transformer, VectorStore},
+    traits::{Embedder, Loader, Transform, VectorStore},
     Result as CheungfunResult,
 };
 use cheungfun_indexing::{
-    loaders::DirectoryLoader,
-    transformers::{MetadataExtractor, TextSplitter},
+    loaders::DirectoryLoader, node_parser::text::SentenceSplitter, transformers::MetadataExtractor,
 };
 use cheungfun_integrations::{FastEmbedder, InMemoryVectorStore};
 use cheungfun_query::{

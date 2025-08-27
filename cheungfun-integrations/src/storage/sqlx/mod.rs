@@ -5,7 +5,7 @@
 //! have been replaced with KVStore-based implementations.
 
 // Re-export the SQLx KVStore implementation and DatabasePool
-pub use crate::storage::kvstore::sqlx::{SqlxKVStore, DatabasePool};
+pub use crate::storage::kvstore::sqlx::{DatabasePool, SqlxKVStore};
 
 // Helper functions for creating database pools and configurations.
 
@@ -86,8 +86,10 @@ impl SqlxStorageConfig {
     /// Create a SqlxKVStore from this configuration.
     pub async fn create_kv_store(&self) -> Result<SqlxKVStore, sqlx::Error> {
         let pool = SqlxHelper::create_pool(&self.database_url).await?;
-        SqlxKVStore::new(pool, &self.table_prefix).await.map_err(|e| {
-            sqlx::Error::Configuration(format!("Failed to create KV store: {}", e).into())
-        })
+        SqlxKVStore::new(pool, &self.table_prefix)
+            .await
+            .map_err(|e| {
+                sqlx::Error::Configuration(format!("Failed to create KV store: {}", e).into())
+            })
     }
 }

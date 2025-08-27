@@ -12,9 +12,7 @@ use tracing_subscriber;
 #[tokio::main]
 async fn main() -> CoreResult<()> {
     // Initialize logging
-    tracing_subscriber::fmt()
-        .with_max_level(Level::INFO)
-        .init();
+    tracing_subscriber::fmt().with_max_level(Level::INFO).init();
 
     info!("🪟 Sentence Window Node Parser Demo");
     info!("===================================");
@@ -22,11 +20,9 @@ async fn main() -> CoreResult<()> {
     // Create sentence window parsers with different configurations
     info!("Creating sentence window parsers with different configurations...");
 
-    let parser_small_window = SentenceWindowNodeParser::new()
-        .with_window_size(1);
-    
-    let parser_large_window = SentenceWindowNodeParser::new()
-        .with_window_size(3);
+    let parser_small_window = SentenceWindowNodeParser::new().with_window_size(1);
+
+    let parser_large_window = SentenceWindowNodeParser::new().with_window_size(3);
 
     let parser_custom_keys = SentenceWindowNodeParser::new()
         .with_window_size(2)
@@ -51,8 +47,13 @@ async fn main() -> CoreResult<()> {
     // Test small window parser
     info!("\n🔍 Small Window Parser (window_size=1):");
     let document = Document::new(test_text);
-    let nodes_small = <SentenceWindowNodeParser as NodeParser>::parse_nodes(&parser_small_window, &[document.clone()], false).await?;
-    
+    let nodes_small = <SentenceWindowNodeParser as NodeParser>::parse_nodes(
+        &parser_small_window,
+        &[document.clone()],
+        false,
+    )
+    .await?;
+
     info!("Generated {} nodes:", nodes_small.len());
     for (i, node) in nodes_small.iter().take(3).enumerate() {
         info!("Node {}: '{}'", i + 1, node.content.trim());
@@ -70,8 +71,13 @@ async fn main() -> CoreResult<()> {
 
     // Test large window parser
     info!("\n🔍 Large Window Parser (window_size=3):");
-    let nodes_large = <SentenceWindowNodeParser as NodeParser>::parse_nodes(&parser_large_window, &[document.clone()], false).await?;
-    
+    let nodes_large = <SentenceWindowNodeParser as NodeParser>::parse_nodes(
+        &parser_large_window,
+        &[document.clone()],
+        false,
+    )
+    .await?;
+
     info!("Generated {} nodes:", nodes_large.len());
     for (i, node) in nodes_large.iter().take(2).enumerate() {
         info!("Node {}: '{}'", i + 1, node.content.trim());
@@ -92,8 +98,13 @@ async fn main() -> CoreResult<()> {
 
     // Test custom metadata keys
     info!("\n🔍 Custom Metadata Keys Parser (window_size=2, custom keys):");
-    let nodes_custom = <SentenceWindowNodeParser as NodeParser>::parse_nodes(&parser_custom_keys, &[document.clone()], false).await?;
-    
+    let nodes_custom = <SentenceWindowNodeParser as NodeParser>::parse_nodes(
+        &parser_custom_keys,
+        &[document.clone()],
+        false,
+    )
+    .await?;
+
     info!("Generated {} nodes:", nodes_custom.len());
     for (i, node) in nodes_custom.iter().take(2).enumerate() {
         info!("Node {}: '{}'", i + 1, node.content.trim());
@@ -107,7 +118,10 @@ async fn main() -> CoreResult<()> {
             info!("  Context: '{}'", truncated.trim());
         }
         if let Some(sentence) = node.metadata.get("sentence") {
-            info!("  Original Sentence: '{}'", sentence.as_str().unwrap().trim());
+            info!(
+                "  Original Sentence: '{}'",
+                sentence.as_str().unwrap().trim()
+            );
         }
         info!("");
     }
@@ -133,39 +147,68 @@ async fn main() -> CoreResult<()> {
     // Demonstrate metadata differences
     info!("\n🔍 Metadata Comparison for First Node:");
     if let Some(node_small) = nodes_small.first() {
-        info!("Small window metadata keys: {:?}", node_small.metadata.keys().collect::<Vec<_>>());
+        info!(
+            "Small window metadata keys: {:?}",
+            node_small.metadata.keys().collect::<Vec<_>>()
+        );
     }
     if let Some(node_custom) = nodes_custom.first() {
-        info!("Custom keys metadata keys: {:?}", node_custom.metadata.keys().collect::<Vec<_>>());
+        info!(
+            "Custom keys metadata keys: {:?}",
+            node_custom.metadata.keys().collect::<Vec<_>>()
+        );
     }
 
     // Performance comparison
     info!("\n⏱️  Performance Comparison:");
     let start = std::time::Instant::now();
-    let _ = <SentenceWindowNodeParser as NodeParser>::parse_nodes(&parser_small_window, &[document.clone()], false).await?;
+    let _ = <SentenceWindowNodeParser as NodeParser>::parse_nodes(
+        &parser_small_window,
+        &[document.clone()],
+        false,
+    )
+    .await?;
     let window_time = start.elapsed();
 
-    let sentence_splitter = cheungfun_indexing::node_parser::text::SentenceSplitter::from_defaults(1000, 200)?;
+    let sentence_splitter =
+        cheungfun_indexing::node_parser::text::SentenceSplitter::from_defaults(1000, 200)?;
     let start = std::time::Instant::now();
-    let _ = <cheungfun_indexing::node_parser::text::SentenceSplitter as NodeParser>::parse_nodes(&sentence_splitter, &[document], false).await?;
+    let _ = <cheungfun_indexing::node_parser::text::SentenceSplitter as NodeParser>::parse_nodes(
+        &sentence_splitter,
+        &[document],
+        false,
+    )
+    .await?;
     let sentence_time = start.elapsed();
 
     info!("Sentence Window Parser: {:?}", window_time);
     info!("Regular Sentence Parser: {:?}", sentence_time);
-    info!("Window parser is {:.2}x slower (due to metadata processing)", 
-          window_time.as_secs_f64() / sentence_time.as_secs_f64());
+    info!(
+        "Window parser is {:.2}x slower (due to metadata processing)",
+        window_time.as_secs_f64() / sentence_time.as_secs_f64()
+    );
 
     // Test edge cases
     info!("\n🧪 Testing Edge Cases:");
 
     // Empty text
     let empty_doc = Document::new("");
-    let empty_nodes = <SentenceWindowNodeParser as NodeParser>::parse_nodes(&parser_small_window, &[empty_doc], false).await?;
+    let empty_nodes = <SentenceWindowNodeParser as NodeParser>::parse_nodes(
+        &parser_small_window,
+        &[empty_doc],
+        false,
+    )
+    .await?;
     info!("Empty text: {} nodes", empty_nodes.len());
 
     // Single sentence
     let single_doc = Document::new("This is a single sentence.");
-    let single_nodes = <SentenceWindowNodeParser as NodeParser>::parse_nodes(&parser_small_window, &[single_doc], false).await?;
+    let single_nodes = <SentenceWindowNodeParser as NodeParser>::parse_nodes(
+        &parser_small_window,
+        &[single_doc],
+        false,
+    )
+    .await?;
     info!("Single sentence: {} nodes", single_nodes.len());
     if let Some(node) = single_nodes.first() {
         if let Some(window) = node.metadata.get("window") {
@@ -175,8 +218,16 @@ async fn main() -> CoreResult<()> {
 
     // Very short sentences
     let short_doc = Document::new("One. Two. Three. Four.");
-    let short_nodes = <SentenceWindowNodeParser as NodeParser>::parse_nodes(&parser_large_window, &[short_doc], false).await?;
-    info!("Short sentences with large window: {} nodes", short_nodes.len());
+    let short_nodes = <SentenceWindowNodeParser as NodeParser>::parse_nodes(
+        &parser_large_window,
+        &[short_doc],
+        false,
+    )
+    .await?;
+    info!(
+        "Short sentences with large window: {} nodes",
+        short_nodes.len()
+    );
 
     info!("\n✅ Sentence Window Node Parser Demo completed successfully!");
     info!("\n💡 Key Features Demonstrated:");

@@ -6,7 +6,7 @@
 
 use crate::node_parser::{config::MarkdownConfig, NodeParser, TextSplitter};
 use async_trait::async_trait;
-use cheungfun_core::{Document, Node, Result as CoreResult, CheungfunError};
+use cheungfun_core::{CheungfunError, Document, Node, Result as CoreResult};
 use regex::Regex;
 use tracing::debug;
 
@@ -38,10 +38,10 @@ use tracing::debug;
 ///     let markdown = r#"
 /// # Introduction
 /// This is the introduction section.
-/// 
+///
 /// ## Getting Started
 /// Here's how to get started.
-/// 
+///
 /// ### Installation
 /// Run the following command:
 /// ```bash
@@ -98,11 +98,15 @@ impl MarkdownNodeParser {
 
     /// Create a markdown parser from configuration.
     pub fn from_config(config: MarkdownConfig) -> CoreResult<Self> {
-        let header_regex = Regex::new(r"^(#{1,6})\s+(.+)$")
-            .map_err(|e| CheungfunError::Validation { message: format!("Invalid header regex: {}", e) })?;
+        let header_regex =
+            Regex::new(r"^(#{1,6})\s+(.+)$").map_err(|e| CheungfunError::Validation {
+                message: format!("Invalid header regex: {}", e),
+            })?;
 
-        let code_block_regex = Regex::new(r"```[\s\S]*?```")
-            .map_err(|e| CheungfunError::Validation { message: format!("Invalid code block regex: {}", e) })?;
+        let code_block_regex =
+            Regex::new(r"```[\s\S]*?```").map_err(|e| CheungfunError::Validation {
+                message: format!("Invalid code block regex: {}", e),
+            })?;
 
         Ok(Self {
             config,
@@ -219,7 +223,7 @@ impl MarkdownNodeParser {
             } else {
                 self.build_header_path(&header_stack)
             };
-            
+
             let section = MarkdownSection {
                 content: current_section.trim().to_string(),
                 level: current_level,
@@ -244,7 +248,7 @@ impl MarkdownNodeParser {
     fn update_header_stack(&self, stack: &mut Vec<(usize, String)>, level: usize, header: String) {
         // Remove headers at the same or deeper level
         stack.retain(|(l, _)| *l < level);
-        
+
         // Add the current header
         stack.push((level, header));
     }
@@ -256,7 +260,8 @@ impl MarkdownNodeParser {
         }
 
         let path_parts: Vec<&str> = stack.iter().map(|(_, header)| header.as_str()).collect();
-        format!("{}{}{}", 
+        format!(
+            "{}{}{}",
             self.config.header_path_separator,
             path_parts.join(&self.config.header_path_separator),
             self.config.header_path_separator
@@ -264,15 +269,16 @@ impl MarkdownNodeParser {
     }
 
     /// Build nodes from markdown sections.
-    fn build_nodes_from_sections(&self, sections: Vec<MarkdownSection>, document: &Document) -> CoreResult<Vec<Node>> {
+    fn build_nodes_from_sections(
+        &self,
+        sections: Vec<MarkdownSection>,
+        document: &Document,
+    ) -> CoreResult<Vec<Node>> {
         let mut nodes = Vec::new();
 
         for (i, section) in sections.into_iter().enumerate() {
-            let chunk_info = cheungfun_core::types::ChunkInfo::new(
-                section.start_pos,
-                section.end_pos,
-                i,
-            );
+            let chunk_info =
+                cheungfun_core::types::ChunkInfo::new(section.start_pos, section.end_pos, i);
 
             let mut node = Node::new(section.content, document.id, chunk_info);
 
@@ -281,16 +287,20 @@ impl MarkdownNodeParser {
 
             // Add markdown-specific metadata
             if self.config.preserve_header_hierarchy && !section.header_path.is_empty() {
-                node.metadata.insert("header_path".to_string(), section.header_path.into());
+                node.metadata
+                    .insert("header_path".to_string(), section.header_path.into());
             }
-            
+
             if !section.header.is_empty() {
-                node.metadata.insert("header".to_string(), section.header.into());
-                node.metadata.insert("header_level".to_string(), section.level.into());
+                node.metadata
+                    .insert("header".to_string(), section.header.into());
+                node.metadata
+                    .insert("header_level".to_string(), section.level.into());
             }
-            
+
             node.metadata.insert("section_index".to_string(), i.into());
-            node.metadata.insert("parser_type".to_string(), "markdown".into());
+            node.metadata
+                .insert("parser_type".to_string(), "markdown".into());
 
             nodes.push(node);
         }
@@ -360,33 +370,115 @@ This section covers configuration.
 "#;
 
         let document = Document::new(markdown);
-        let nodes = <MarkdownNodeParser as NodeParser>::parse_nodes(&parser, &[document], false).await.unwrap();
+        let nodes = <MarkdownNodeParser as NodeParser>::parse_nodes(&parser, &[document], false)
+            .await
+            .unwrap();
 
         assert_eq!(nodes.len(), 4);
 
         // Check first node (Introduction)
-        assert!(nodes[0].content.contains("This is the introduction section"));
-        assert_eq!(nodes[0].metadata.get("header").unwrap().as_str().unwrap(), "Introduction");
-        assert_eq!(nodes[0].metadata.get("header_level").unwrap().as_u64().unwrap(), 1);
-        assert_eq!(nodes[0].metadata.get("header_path").unwrap().as_str().unwrap(), "/Introduction/");
+        assert!(nodes[0]
+            .content
+            .contains("This is the introduction section"));
+        assert_eq!(
+            nodes[0].metadata.get("header").unwrap().as_str().unwrap(),
+            "Introduction"
+        );
+        assert_eq!(
+            nodes[0]
+                .metadata
+                .get("header_level")
+                .unwrap()
+                .as_u64()
+                .unwrap(),
+            1
+        );
+        assert_eq!(
+            nodes[0]
+                .metadata
+                .get("header_path")
+                .unwrap()
+                .as_str()
+                .unwrap(),
+            "/Introduction/"
+        );
 
         // Check second node (Getting Started)
         assert!(nodes[1].content.contains("Here's how to get started"));
-        assert_eq!(nodes[1].metadata.get("header").unwrap().as_str().unwrap(), "Getting Started");
-        assert_eq!(nodes[1].metadata.get("header_level").unwrap().as_u64().unwrap(), 2);
-        assert_eq!(nodes[1].metadata.get("header_path").unwrap().as_str().unwrap(), "/Introduction/Getting Started/");
+        assert_eq!(
+            nodes[1].metadata.get("header").unwrap().as_str().unwrap(),
+            "Getting Started"
+        );
+        assert_eq!(
+            nodes[1]
+                .metadata
+                .get("header_level")
+                .unwrap()
+                .as_u64()
+                .unwrap(),
+            2
+        );
+        assert_eq!(
+            nodes[1]
+                .metadata
+                .get("header_path")
+                .unwrap()
+                .as_str()
+                .unwrap(),
+            "/Introduction/Getting Started/"
+        );
 
         // Check third node (Installation)
         assert!(nodes[2].content.contains("Run the following command"));
-        assert_eq!(nodes[2].metadata.get("header").unwrap().as_str().unwrap(), "Installation");
-        assert_eq!(nodes[2].metadata.get("header_level").unwrap().as_u64().unwrap(), 3);
-        assert_eq!(nodes[2].metadata.get("header_path").unwrap().as_str().unwrap(), "/Introduction/Getting Started/Installation/");
+        assert_eq!(
+            nodes[2].metadata.get("header").unwrap().as_str().unwrap(),
+            "Installation"
+        );
+        assert_eq!(
+            nodes[2]
+                .metadata
+                .get("header_level")
+                .unwrap()
+                .as_u64()
+                .unwrap(),
+            3
+        );
+        assert_eq!(
+            nodes[2]
+                .metadata
+                .get("header_path")
+                .unwrap()
+                .as_str()
+                .unwrap(),
+            "/Introduction/Getting Started/Installation/"
+        );
 
         // Check fourth node (Configuration)
-        assert!(nodes[3].content.contains("This section covers configuration"));
-        assert_eq!(nodes[3].metadata.get("header").unwrap().as_str().unwrap(), "Configuration");
-        assert_eq!(nodes[3].metadata.get("header_level").unwrap().as_u64().unwrap(), 2);
-        assert_eq!(nodes[3].metadata.get("header_path").unwrap().as_str().unwrap(), "/Introduction/Configuration/");
+        assert!(nodes[3]
+            .content
+            .contains("This section covers configuration"));
+        assert_eq!(
+            nodes[3].metadata.get("header").unwrap().as_str().unwrap(),
+            "Configuration"
+        );
+        assert_eq!(
+            nodes[3]
+                .metadata
+                .get("header_level")
+                .unwrap()
+                .as_u64()
+                .unwrap(),
+            2
+        );
+        assert_eq!(
+            nodes[3]
+                .metadata
+                .get("header_path")
+                .unwrap()
+                .as_str()
+                .unwrap(),
+            "/Introduction/Configuration/"
+        );
     }
 
     #[tokio::test]
@@ -407,14 +499,22 @@ This should also be treated as regular text.
 "#;
 
         let document = Document::new(markdown);
-        let nodes = <MarkdownNodeParser as NodeParser>::parse_nodes(&parser, &[document], false).await.unwrap();
+        let nodes = <MarkdownNodeParser as NodeParser>::parse_nodes(&parser, &[document], false)
+            .await
+            .unwrap();
 
         // Should only have 2 nodes (Level 1 and Level 2)
         // Level 3 and 4 headers should be included in Level 2 content
         assert_eq!(nodes.len(), 2);
 
-        assert_eq!(nodes[0].metadata.get("header").unwrap().as_str().unwrap(), "Level 1");
-        assert_eq!(nodes[1].metadata.get("header").unwrap().as_str().unwrap(), "Level 2");
+        assert_eq!(
+            nodes[0].metadata.get("header").unwrap().as_str().unwrap(),
+            "Level 1"
+        );
+        assert_eq!(
+            nodes[1].metadata.get("header").unwrap().as_str().unwrap(),
+            "Level 2"
+        );
 
         // Level 2 content should include the Level 3 and 4 headers as regular text
         assert!(nodes[1].content.contains("### Level 3"));
@@ -433,7 +533,9 @@ Content under header 2.
 "#;
 
         let document = Document::new(markdown);
-        let nodes = <MarkdownNodeParser as NodeParser>::parse_nodes(&parser, &[document], false).await.unwrap();
+        let nodes = <MarkdownNodeParser as NodeParser>::parse_nodes(&parser, &[document], false)
+            .await
+            .unwrap();
 
         assert_eq!(nodes.len(), 2);
 
@@ -457,11 +559,29 @@ Child content.
 "#;
 
         let document = Document::new(markdown);
-        let nodes = <MarkdownNodeParser as NodeParser>::parse_nodes(&parser, &[document], false).await.unwrap();
+        let nodes = <MarkdownNodeParser as NodeParser>::parse_nodes(&parser, &[document], false)
+            .await
+            .unwrap();
 
         assert_eq!(nodes.len(), 2);
-        assert_eq!(nodes[0].metadata.get("header_path").unwrap().as_str().unwrap(), " > Parent > ");
-        assert_eq!(nodes[1].metadata.get("header_path").unwrap().as_str().unwrap(), " > Parent > Child > ");
+        assert_eq!(
+            nodes[0]
+                .metadata
+                .get("header_path")
+                .unwrap()
+                .as_str()
+                .unwrap(),
+            " > Parent > "
+        );
+        assert_eq!(
+            nodes[1]
+                .metadata
+                .get("header_path")
+                .unwrap()
+                .as_str()
+                .unwrap(),
+            " > Parent > Child > "
+        );
     }
 
     #[tokio::test]
@@ -479,12 +599,20 @@ This is another long section with sufficient content.
 "#;
 
         let document = Document::new(markdown);
-        let nodes = <MarkdownNodeParser as NodeParser>::parse_nodes(&parser, &[document], false).await.unwrap();
+        let nodes = <MarkdownNodeParser as NodeParser>::parse_nodes(&parser, &[document], false)
+            .await
+            .unwrap();
 
         // Should only have 2 nodes (the long sections)
         assert_eq!(nodes.len(), 2);
-        assert_eq!(nodes[0].metadata.get("header").unwrap().as_str().unwrap(), "Long Section");
-        assert_eq!(nodes[1].metadata.get("header").unwrap().as_str().unwrap(), "Another Long Section");
+        assert_eq!(
+            nodes[0].metadata.get("header").unwrap().as_str().unwrap(),
+            "Long Section"
+        );
+        assert_eq!(
+            nodes[1].metadata.get("header").unwrap().as_str().unwrap(),
+            "Another Long Section"
+        );
     }
 
     #[tokio::test]
@@ -492,7 +620,9 @@ This is another long section with sufficient content.
         let parser = MarkdownNodeParser::new();
 
         let document = Document::new("");
-        let nodes = <MarkdownNodeParser as NodeParser>::parse_nodes(&parser, &[document], false).await.unwrap();
+        let nodes = <MarkdownNodeParser as NodeParser>::parse_nodes(&parser, &[document], false)
+            .await
+            .unwrap();
 
         assert!(nodes.is_empty());
     }
@@ -509,11 +639,15 @@ So it should be treated as a single section.
 "#;
 
         let document = Document::new(markdown);
-        let nodes = <MarkdownNodeParser as NodeParser>::parse_nodes(&parser, &[document], false).await.unwrap();
+        let nodes = <MarkdownNodeParser as NodeParser>::parse_nodes(&parser, &[document], false)
+            .await
+            .unwrap();
 
         assert_eq!(nodes.len(), 1);
         assert!(nodes[0].content.contains("This is just regular text"));
-        assert!(nodes[0].content.contains("So it should be treated as a single section"));
+        assert!(nodes[0]
+            .content
+            .contains("So it should be treated as a single section"));
 
         // Should not have header metadata
         assert!(!nodes[0].metadata.contains_key("header"));
@@ -541,12 +675,14 @@ Content 2
     #[tokio::test]
     async fn test_markdown_preset_configs() {
         // Test documentation config
-        let doc_parser = MarkdownNodeParser::from_config(MarkdownConfig::for_documentation()).unwrap();
+        let doc_parser =
+            MarkdownNodeParser::from_config(MarkdownConfig::for_documentation()).unwrap();
         assert_eq!(doc_parser.config.max_header_depth, 4);
         assert_eq!(doc_parser.config.min_section_length, 50);
 
         // Test blog config
-        let blog_parser = MarkdownNodeParser::from_config(MarkdownConfig::for_blog_posts()).unwrap();
+        let blog_parser =
+            MarkdownNodeParser::from_config(MarkdownConfig::for_blog_posts()).unwrap();
         assert_eq!(blog_parser.config.header_path_separator, " > ");
         assert_eq!(blog_parser.config.max_header_depth, 3);
 

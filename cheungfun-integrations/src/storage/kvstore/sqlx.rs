@@ -1,9 +1,9 @@
 //! SQLx-based KVStore implementation.
 
 use async_trait::async_trait;
-use cheungfun_core::{traits::KVStore, Result, CheungfunError};
+use cheungfun_core::{traits::KVStore, CheungfunError, Result};
 use serde_json::Value;
-use sqlx::{Row, Pool, Postgres, Sqlite};
+use sqlx::{Pool, Postgres, Row, Sqlite};
 use std::collections::HashMap;
 use tracing::{debug, error, info};
 
@@ -42,10 +42,10 @@ pub enum DatabasePool {
 /// # tokio_test::block_on(async {
 /// let pool = SqlitePool::connect(":memory:").await.unwrap();
 /// let store = SqlxKVStore::new(pool.into(), "test_").await.unwrap();
-/// 
+///
 /// // Store a value
 /// store.put("key1", json!({"name": "test"}), DEFAULT_COLLECTION).await.unwrap();
-/// 
+///
 /// // Retrieve the value
 /// let value = store.get("key1", DEFAULT_COLLECTION).await.unwrap();
 /// assert!(value.is_some());
@@ -206,14 +206,17 @@ impl KVStore for SqlxKVStore {
                     .execute(pool)
                     .await
                     .map_err(|e| {
-                        error!("Failed to put key '{}' in collection '{}': {}", key, collection, e);
+                        error!(
+                            "Failed to put key '{}' in collection '{}': {}",
+                            key, collection, e
+                        );
                         CheungfunError::Storage(format!("Database error: {}", e))
                     })?;
             }
             DatabasePool::Sqlite(pool) => {
-                let value_str = serde_json::to_string(&value)
-                    .map_err(|e| CheungfunError::Serialization(e))?;
-                
+                let value_str =
+                    serde_json::to_string(&value).map_err(|e| CheungfunError::Serialization(e))?;
+
                 let query = format!(
                     r#"
                     INSERT OR REPLACE INTO {} (collection, key, value, created_at, updated_at)
@@ -232,12 +235,15 @@ impl KVStore for SqlxKVStore {
                     .execute(pool)
                     .await
                     .map_err(|e| {
-                        error!("Failed to put key '{}' in collection '{}': {}", key, collection, e);
+                        error!(
+                            "Failed to put key '{}' in collection '{}': {}",
+                            key, collection, e
+                        );
                         CheungfunError::Storage(format!("Database error: {}", e))
                     })?;
             }
         }
-        
+
         debug!("Put key '{}' in collection '{}'", key, collection);
         Ok(())
     }
@@ -255,16 +261,22 @@ impl KVStore for SqlxKVStore {
                     .fetch_optional(pool)
                     .await
                     .map_err(|e| {
-                        error!("Failed to get key '{}' from collection '{}': {}", key, collection, e);
+                        error!(
+                            "Failed to get key '{}' from collection '{}': {}",
+                            key, collection, e
+                        );
                         CheungfunError::Storage(format!("Database error: {}", e))
                     })?;
-                
+
                 if let Some(row) = row {
                     let value: Value = row.get("value");
                     debug!("Get key '{}' from collection '{}': found", key, collection);
                     Ok(Some(value))
                 } else {
-                    debug!("Get key '{}' from collection '{}': not found", key, collection);
+                    debug!(
+                        "Get key '{}' from collection '{}': not found",
+                        key, collection
+                    );
                     Ok(None)
                 }
             }
@@ -279,10 +291,13 @@ impl KVStore for SqlxKVStore {
                     .fetch_optional(pool)
                     .await
                     .map_err(|e| {
-                        error!("Failed to get key '{}' from collection '{}': {}", key, collection, e);
+                        error!(
+                            "Failed to get key '{}' from collection '{}': {}",
+                            key, collection, e
+                        );
                         CheungfunError::Storage(format!("Database error: {}", e))
                     })?;
-                
+
                 if let Some(row) = row {
                     let value_str: String = row.get("value");
                     let value: Value = serde_json::from_str(&value_str)
@@ -290,7 +305,10 @@ impl KVStore for SqlxKVStore {
                     debug!("Get key '{}' from collection '{}': found", key, collection);
                     Ok(Some(value))
                 } else {
-                    debug!("Get key '{}' from collection '{}': not found", key, collection);
+                    debug!(
+                        "Get key '{}' from collection '{}': not found",
+                        key, collection
+                    );
                     Ok(None)
                 }
             }
@@ -312,22 +330,18 @@ impl KVStore for SqlxKVStore {
         );
 
         let rows_affected = match &self.pool {
-            DatabasePool::Postgres(pool) => {
-                sqlx::query(&query)
-                    .bind(collection)
-                    .bind(key)
-                    .execute(pool)
-                    .await?
-                    .rows_affected()
-            }
-            DatabasePool::Sqlite(pool) => {
-                sqlx::query(&query)
-                    .bind(collection)
-                    .bind(key)
-                    .execute(pool)
-                    .await?
-                    .rows_affected()
-            }
+            DatabasePool::Postgres(pool) => sqlx::query(&query)
+                .bind(collection)
+                .bind(key)
+                .execute(pool)
+                .await?
+                .rows_affected(),
+            DatabasePool::Sqlite(pool) => sqlx::query(&query)
+                .bind(collection)
+                .bind(key)
+                .execute(pool)
+                .await?
+                .rows_affected(),
         };
 
         let deleted = rows_affected > 0;
@@ -349,13 +363,10 @@ impl KVStore for SqlxKVStore {
                 DatabasePool::Sqlite(_) => "?",
             }
         );
-        
+
         match &self.pool {
             DatabasePool::Postgres(pool) => {
-                let rows = sqlx::query(&query)
-                    .bind(collection)
-                    .fetch_all(pool)
-                    .await?;
+                let rows = sqlx::query(&query).bind(collection).fetch_all(pool).await?;
 
                 let mut result = HashMap::new();
                 for row in rows {
@@ -365,14 +376,15 @@ impl KVStore for SqlxKVStore {
                         .map_err(|e| CheungfunError::Serialization(e))?;
                     result.insert(key, value);
                 }
-                debug!("Get all from collection '{}': {} items", collection, result.len());
+                debug!(
+                    "Get all from collection '{}': {} items",
+                    collection,
+                    result.len()
+                );
                 Ok(result)
             }
             DatabasePool::Sqlite(pool) => {
-                let rows = sqlx::query(&query)
-                    .bind(collection)
-                    .fetch_all(pool)
-                    .await?;
+                let rows = sqlx::query(&query).bind(collection).fetch_all(pool).await?;
 
                 let mut result = HashMap::new();
                 for row in rows {
@@ -382,7 +394,11 @@ impl KVStore for SqlxKVStore {
                         .map_err(|e| CheungfunError::Serialization(e))?;
                     result.insert(key, value);
                 }
-                debug!("Get all from collection '{}': {} items", collection, result.len());
+                debug!(
+                    "Get all from collection '{}': {} items",
+                    collection,
+                    result.len()
+                );
                 Ok(result)
             }
         }
@@ -390,7 +406,7 @@ impl KVStore for SqlxKVStore {
 
     async fn list_collections(&self) -> Result<Vec<String>> {
         let query = format!("SELECT DISTINCT collection FROM {}", self.table_name);
-        
+
         match &self.pool {
             DatabasePool::Postgres(pool) => {
                 let rows = sqlx::query(&query).fetch_all(pool).await?;
@@ -424,17 +440,24 @@ impl KVStore for SqlxKVStore {
                 DatabasePool::Sqlite(_) => "?",
             }
         );
-        
+
         let rows_affected = match &self.pool {
-            DatabasePool::Postgres(pool) => {
-                sqlx::query(&query).bind(collection).execute(pool).await?.rows_affected()
-            }
-            DatabasePool::Sqlite(pool) => {
-                sqlx::query(&query).bind(collection).execute(pool).await?.rows_affected()
-            }
+            DatabasePool::Postgres(pool) => sqlx::query(&query)
+                .bind(collection)
+                .execute(pool)
+                .await?
+                .rows_affected(),
+            DatabasePool::Sqlite(pool) => sqlx::query(&query)
+                .bind(collection)
+                .execute(pool)
+                .await?
+                .rows_affected(),
         };
 
-        debug!("Deleted collection '{}': {} rows affected", collection, rows_affected);
+        debug!(
+            "Deleted collection '{}': {} rows affected",
+            collection, rows_affected
+        );
         Ok(())
     }
 
@@ -447,7 +470,7 @@ impl KVStore for SqlxKVStore {
                 DatabasePool::Sqlite(_) => "?",
             }
         );
-        
+
         let count = match &self.pool {
             DatabasePool::Postgres(pool) => {
                 let row = sqlx::query(&query).bind(collection).fetch_one(pool).await?;
@@ -496,20 +519,23 @@ mod tests {
     async fn test_basic_operations() {
         let store = create_test_store().await;
         let collection = "test";
-        
+
         // Test put and get
-        store.put("key1", json!({"value": 42}), collection).await.unwrap();
+        store
+            .put("key1", json!({"value": 42}), collection)
+            .await
+            .unwrap();
         let result = store.get("key1", collection).await.unwrap();
         assert_eq!(result, Some(json!({"value": 42})));
-        
+
         // Test non-existent key
         let result = store.get("nonexistent", collection).await.unwrap();
         assert_eq!(result, None);
-        
+
         // Test delete
         let deleted = store.delete("key1", collection).await.unwrap();
         assert!(deleted);
-        
+
         let result = store.get("key1", collection).await.unwrap();
         assert_eq!(result, None);
     }
@@ -517,18 +543,24 @@ mod tests {
     #[tokio::test]
     async fn test_collections() {
         let store = create_test_store().await;
-        
+
         // Add data to different collections
-        store.put("key1", json!("value1"), "collection1").await.unwrap();
-        store.put("key1", json!("value2"), "collection2").await.unwrap();
-        
+        store
+            .put("key1", json!("value1"), "collection1")
+            .await
+            .unwrap();
+        store
+            .put("key1", json!("value2"), "collection2")
+            .await
+            .unwrap();
+
         // Verify isolation
         let val1 = store.get("key1", "collection1").await.unwrap();
         let val2 = store.get("key1", "collection2").await.unwrap();
-        
+
         assert_eq!(val1, Some(json!("value1")));
         assert_eq!(val2, Some(json!("value2")));
-        
+
         // Test list collections
         let collections = store.list_collections().await.unwrap();
         assert_eq!(collections.len(), 2);
@@ -540,16 +572,25 @@ mod tests {
     async fn test_count_and_get_all() {
         let store = create_test_store().await;
         let collection = "test";
-        
+
         // Add some data
-        store.put("key1", json!("value1"), collection).await.unwrap();
-        store.put("key2", json!("value2"), collection).await.unwrap();
-        store.put("key3", json!("value3"), collection).await.unwrap();
-        
+        store
+            .put("key1", json!("value1"), collection)
+            .await
+            .unwrap();
+        store
+            .put("key2", json!("value2"), collection)
+            .await
+            .unwrap();
+        store
+            .put("key3", json!("value3"), collection)
+            .await
+            .unwrap();
+
         // Test count
         let count = store.count(collection).await.unwrap();
         assert_eq!(count, 3);
-        
+
         // Test get_all
         let all_data = store.get_all(collection).await.unwrap();
         assert_eq!(all_data.len(), 3);

@@ -1,27 +1,27 @@
 #!/usr/bin/env cargo
 //! 测试不同 embedding 配置的简单脚本
-//! 
+//!
 //! 使用方法：
 //! ```bash
 //! # 测试 FastEmbed (默认)
 //! cargo run --bin test_embedding_config --features fastembed
-//! 
+//!
 //! # 测试 OpenAI embedding (需要 API 密钥)
 //! export OPENAI_API_KEY="your-key"
 //! cargo run --bin test_embedding_config --features "fastembed,api" -- --provider openai
-//! 
+//!
 //! # 测试 Gemini embedding (需要 API 密钥)
 //! export GEMINI_API_KEY="your-key"
 //! cargo run --bin test_embedding_config --features "fastembed,api" -- --provider gemini
 //! ```
 
-use std::env;
-use std::sync::Arc;
+use async_trait::async_trait;
 use cheungfun_core::traits::Embedder;
 use cheungfun_integrations::FastEmbedder;
 use siumai::prelude::*;
-use async_trait::async_trait;
 use std::collections::HashMap;
+use std::env;
+use std::sync::Arc;
 
 #[tokio::main]
 async fn main() -> Result<(), Box<dyn std::error::Error>> {
@@ -43,7 +43,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
 
     // 创建 embedder
     let embedder = create_test_embedder(&provider).await?;
-    
+
     println!("✅ Embedder 创建成功!");
     println!("📏 维度: {}", embedder.dimension());
     println!("🏷️  模型: {}", embedder.model_name());
@@ -52,11 +52,11 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     // 测试单个文本嵌入
     let test_text = "Unity is a powerful game development engine.";
     println!("🔍 测试文本: \"{}\"", test_text);
-    
+
     let start = std::time::Instant::now();
     let embedding = embedder.embed(test_text).await?;
     let duration = start.elapsed();
-    
+
     println!("⚡ 嵌入完成! 耗时: {:?}", duration);
     println!("📊 嵌入向量长度: {}", embedding.len());
     println!("🔢 前5个值: {:?}", &embedding[..5.min(embedding.len())]);
@@ -68,17 +68,23 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         "Game development with Unity",
         "3D graphics programming",
     ];
-    
+
     println!("📦 测试批量嵌入 ({} 个文本):", test_texts.len());
     let start = std::time::Instant::now();
-    let embeddings = embedder.embed_batch(test_texts.iter().map(|s| s.as_ref()).collect()).await?;
+    let embeddings = embedder
+        .embed_batch(test_texts.iter().map(|s| s.as_ref()).collect())
+        .await?;
     let duration = start.elapsed();
-    
+
     println!("⚡ 批量嵌入完成! 耗时: {:?}", duration);
     println!("📊 结果数量: {}", embeddings.len());
     for (i, emb) in embeddings.iter().enumerate() {
-        println!("  文本 {}: 维度 {}, 前3个值: {:?}", 
-                 i + 1, emb.len(), &emb[..3.min(emb.len())]);
+        println!(
+            "  文本 {}: 维度 {}, 前3个值: {:?}",
+            i + 1,
+            emb.len(),
+            &emb[..3.min(emb.len())]
+        );
     }
     println!();
 
@@ -102,7 +108,9 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
 }
 
 /// 创建测试用的 embedder
-async fn create_test_embedder(provider: &str) -> Result<Arc<dyn Embedder>, Box<dyn std::error::Error>> {
+async fn create_test_embedder(
+    provider: &str,
+) -> Result<Arc<dyn Embedder>, Box<dyn std::error::Error>> {
     match provider {
         "fastembed" => {
             println!("🚀 初始化 FastEmbed embedder...");
@@ -143,7 +151,11 @@ async fn create_test_embedder(provider: &str) -> Result<Arc<dyn Embedder>, Box<d
             let embedder = GeminiEmbedderWrapper::new(client);
             Ok(Arc::new(embedder))
         }
-        _ => Err(format!("Unsupported provider: {}. Use: fastembed, openai, or gemini", provider).into()),
+        _ => Err(format!(
+            "Unsupported provider: {}. Use: fastembed, openai, or gemini",
+            provider
+        )
+        .into()),
     }
 }
 

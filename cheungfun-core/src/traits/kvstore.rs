@@ -4,10 +4,10 @@
 //! for different key-value storage backends. The design follows LlamaIndex's
 //! KVStore pattern, providing collection-based organization and async operations.
 
-use async_trait::async_trait;
-use std::collections::HashMap;
-use serde_json::Value;
 use crate::Result;
+use async_trait::async_trait;
+use serde_json::Value;
+use std::collections::HashMap;
 
 /// Default collection name for KV operations.
 pub const DEFAULT_COLLECTION: &str = "default";
@@ -198,10 +198,10 @@ pub trait KVStore: Send + Sync + std::fmt::Debug {
 pub struct BatchConfig {
     /// Maximum number of items per batch.
     pub batch_size: usize,
-    
+
     /// Whether to fail fast on first error or collect all errors.
     pub fail_fast: bool,
-    
+
     /// Maximum number of concurrent batches.
     pub max_concurrency: usize,
 }
@@ -221,22 +221,22 @@ impl Default for BatchConfig {
 pub struct KVStoreStats {
     /// Total number of put operations.
     pub put_operations: usize,
-    
+
     /// Total number of get operations.
     pub get_operations: usize,
-    
+
     /// Total number of delete operations.
     pub delete_operations: usize,
-    
+
     /// Total number of batch operations.
     pub batch_operations: usize,
-    
+
     /// Average operation latency in milliseconds.
     pub avg_latency_ms: Option<f64>,
-    
+
     /// Total storage size in bytes (if available).
     pub storage_size_bytes: Option<u64>,
-    
+
     /// Additional store-specific statistics.
     pub additional_stats: HashMap<String, Value>,
 }
@@ -247,13 +247,13 @@ impl KVStoreStats {
     pub fn new() -> Self {
         Self::default()
     }
-    
+
     /// Get the total number of operations.
     #[must_use]
     pub fn total_operations(&self) -> usize {
         self.put_operations + self.get_operations + self.delete_operations + self.batch_operations
     }
-    
+
     /// Calculate operations per second given a duration.
     #[must_use]
     pub fn operations_per_second(&self, duration: std::time::Duration) -> f64 {
@@ -284,9 +284,9 @@ mod tests {
         stats.get_operations = 200;
         stats.delete_operations = 50;
         stats.batch_operations = 10;
-        
+
         assert_eq!(stats.total_operations(), 360);
-        
+
         let duration = std::time::Duration::from_secs(10);
         assert_eq!(stats.operations_per_second(duration), 36.0);
     }

@@ -18,7 +18,7 @@ use super::{utils, MetadataConfig};
 ///
 /// ```rust,no_run
 /// use cheungfun_indexing::transformers::{MetadataExtractor, MetadataConfig};
-/// use cheungfun_core::{Node, ChunkInfo, traits::NodeTransformer};
+/// use cheungfun_core::{Node, traits::{Transform, TransformInput}};
 ///
 /// #[tokio::main]
 /// async fn main() -> Result<(), Box<dyn std::error::Error>> {
@@ -423,25 +423,5 @@ impl MetadataExtractor {
         );
 
         Ok(node)
-    }
-
-    async fn transform_batch(&self, nodes: Vec<Node>) -> CoreResult<Vec<Node>> {
-        debug!("Batch extracting metadata from {} nodes", nodes.len());
-
-        let mut results = Vec::new();
-        for node in nodes {
-            let transformed_node = self.transform_node_internal(node).await?;
-            results.push(transformed_node);
-        }
-
-        debug!(
-            "Batch metadata extraction completed for {} nodes",
-            results.len()
-        );
-        Ok(results)
-    }
-
-    fn name(&self) -> &'static str {
-        "MetadataExtractor"
     }
 }

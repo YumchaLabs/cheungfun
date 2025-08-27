@@ -737,5 +737,3 @@ impl MarkdownConfig {
             .with_min_section_length(20)
     }
 }
-
-

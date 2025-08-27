@@ -8,9 +8,9 @@
 pub mod kvstore;
 
 // Specialized store implementations based on KVStore
+pub mod chat_store;
 pub mod docstore;
 pub mod index_store;
-pub mod chat_store;
 
 // Legacy SQLx implementations (feature-gated)
 #[cfg(feature = "storage")]
@@ -20,9 +20,9 @@ pub mod sqlx;
 pub use kvstore::{InMemoryKVStore, SqlxKVStore};
 
 // Re-export specialized store implementations
+pub use chat_store::KVChatStore;
 pub use docstore::KVDocumentStore;
 pub use index_store::KVIndexStore;
-pub use chat_store::KVChatStore;
 
 // Re-export legacy implementations for backward compatibility
 #[cfg(feature = "storage")]
@@ -30,6 +30,6 @@ pub use sqlx::*;
 
 // Re-export storage traits from core for convenience
 pub use cheungfun_core::traits::{
-    ChatStore, DocumentStore, IndexStore, IndexStruct, KVStore, StorageContext, StorageContextStats,
-    VectorStore, DEFAULT_COLLECTION,
+    ChatStore, DocumentStore, IndexStore, IndexStruct, KVStore, StorageContext,
+    StorageContextStats, VectorStore, DEFAULT_COLLECTION,
 };

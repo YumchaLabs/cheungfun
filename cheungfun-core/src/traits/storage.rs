@@ -11,7 +11,7 @@ use std::path::Path;
 use std::sync::Arc;
 use uuid::Uuid;
 
-use crate::{ChatMessage, Document, Node, Query, Result, ScoredNode, MessageRole};
+use crate::{ChatMessage, Document, MessageRole, Node, Query, Result, ScoredNode};
 
 /// Statistics for document store operations.
 #[derive(Debug, Clone, serde::Serialize, serde::Deserialize)]
@@ -553,12 +553,9 @@ pub trait DocumentStore: Send + Sync + std::fmt::Debug {
             .into_iter()
             .filter(|doc| {
                 // Check if document metadata matches all filter criteria
-                metadata_filter.iter().all(|(key, value)| {
-                    doc.metadata
-                        .get(key)
-                        .map(|v| v == value)
-                        .unwrap_or(false)
-                })
+                metadata_filter
+                    .iter()
+                    .all(|(key, value)| doc.metadata.get(key).map(|v| v == value).unwrap_or(false))
             })
             .collect();
 
@@ -1073,7 +1070,8 @@ impl StorageContext {
         // This will be implemented once we have the integrations module properly set up
         // For now, require explicit stores
         let doc_store = doc_store.ok_or_else(|| crate::CheungfunError::Configuration {
-            message: "DocumentStore is required - use KVDocumentStore with InMemoryKVStore".to_string(),
+            message: "DocumentStore is required - use KVDocumentStore with InMemoryKVStore"
+                .to_string(),
         })?;
         let index_store = index_store.ok_or_else(|| crate::CheungfunError::Configuration {
             message: "IndexStore is required - use KVIndexStore with InMemoryKVStore".to_string(),
@@ -1097,8 +1095,9 @@ impl StorageContext {
         use std::fs;
 
         // Create persist directory
-        fs::create_dir_all(persist_dir)
-            .map_err(|e| crate::CheungfunError::Storage(format!("Failed to create persist directory: {}", e)))?;
+        fs::create_dir_all(persist_dir).map_err(|e| {
+            crate::CheungfunError::Storage(format!("Failed to create persist directory: {}", e))
+        })?;
 
         // Create storage context configuration
         let config = StorageContextConfig {
@@ -1114,8 +1113,9 @@ impl StorageContext {
         let config_path = persist_dir.join("storage_context.json");
         let config_json = serde_json::to_string_pretty(&config)
             .map_err(|e| crate::CheungfunError::Serialization(e))?;
-        fs::write(config_path, config_json)
-            .map_err(|e| crate::CheungfunError::Storage(format!("Failed to write config: {}", e)))?;
+        fs::write(config_path, config_json).map_err(|e| {
+            crate::CheungfunError::Storage(format!("Failed to write config: {}", e))
+        })?;
 
         // TODO: Delegate persistence to individual stores if they support it
         // This would require extending the store traits with persistence methods

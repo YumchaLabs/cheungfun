@@ -10,9 +10,7 @@ use crate::node_parser::{
     NodeParser, TextSplitter,
 };
 use async_trait::async_trait;
-use cheungfun_core::{
-    Document, Node, Result as CoreResult,
-};
+use cheungfun_core::{Document, Node, Result as CoreResult};
 use tracing::{debug, warn};
 
 /// Sentence window node parser that creates nodes for individual sentences.
@@ -64,11 +62,10 @@ impl SentenceWindowNodeParser {
     /// Create a new sentence window node parser with default configuration.
     pub fn new() -> Self {
         let config = SentenceWindowConfig::default();
-        let split_functions = create_sentence_split_functions()
-            .unwrap_or_else(|e| {
-                warn!("Failed to create split functions: {}, using empty list", e);
-                Vec::new()
-            });
+        let split_functions = create_sentence_split_functions().unwrap_or_else(|e| {
+            warn!("Failed to create split functions: {}, using empty list", e);
+            Vec::new()
+        });
 
         Self {
             config,
@@ -93,11 +90,11 @@ impl SentenceWindowNodeParser {
         original_text_metadata_key: Option<String>,
     ) -> CoreResult<Self> {
         let mut config = SentenceWindowConfig::new().with_window_size(window_size);
-        
+
         if let Some(key) = window_metadata_key {
             config = config.with_window_metadata_key(key);
         }
-        
+
         if let Some(key) = original_text_metadata_key {
             config = config.with_original_text_metadata_key(key);
         }
@@ -175,15 +172,19 @@ impl SentenceWindowNodeParser {
         for document in documents {
             let text = &document.content;
             let sentences = self.split_into_sentences(text)?;
-            
-            debug!("Split document {} into {} sentences", document.id, sentences.len());
+
+            debug!(
+                "Split document {} into {} sentences",
+                document.id,
+                sentences.len()
+            );
 
             // Create nodes for each sentence
             for (i, sentence) in sentences.iter().enumerate() {
                 // Calculate window boundaries
                 let window_start = i.saturating_sub(self.config.window_size);
                 let window_end = (i + self.config.window_size + 1).min(sentences.len());
-                
+
                 // Create window content from surrounding sentences
                 let window_sentences = &sentences[window_start..window_end];
                 let window_content = window_sentences.join(" ");
@@ -192,11 +193,7 @@ impl SentenceWindowNodeParser {
                 let start_offset = sentences[..i].iter().map(|s| s.len() + 1).sum::<usize>();
                 let end_offset = start_offset + sentence.len();
 
-                let chunk_info = cheungfun_core::types::ChunkInfo::new(
-                    start_offset,
-                    end_offset,
-                    i,
-                );
+                let chunk_info = cheungfun_core::types::ChunkInfo::new(start_offset, end_offset, i);
 
                 let mut node = Node::new(sentence.clone(), document.id, chunk_info);
 
@@ -213,9 +210,12 @@ impl SentenceWindowNodeParser {
                     sentence.clone().into(),
                 );
                 node.metadata.insert("sentence_index".to_string(), i.into());
-                node.metadata.insert("total_sentences".to_string(), sentences.len().into());
-                node.metadata.insert("window_size".to_string(), self.config.window_size.into());
-                node.metadata.insert("splitter_type".to_string(), "sentence_window".into());
+                node.metadata
+                    .insert("total_sentences".to_string(), sentences.len().into());
+                node.metadata
+                    .insert("window_size".to_string(), self.config.window_size.into());
+                node.metadata
+                    .insert("splitter_type".to_string(), "sentence_window".into());
 
                 // Set relationships if configured
                 if self.config.base.include_prev_next_rel {
@@ -233,7 +233,11 @@ impl SentenceWindowNodeParser {
             }
         }
 
-        debug!("Generated {} window nodes from {} documents", all_nodes.len(), documents.len());
+        debug!(
+            "Generated {} window nodes from {} documents",
+            all_nodes.len(),
+            documents.len()
+        );
         Ok(all_nodes)
     }
 }
@@ -272,23 +276,53 @@ mod tests {
         let parser = SentenceWindowNodeParser::new().with_window_size(1);
 
         let document = Document::new("First sentence. Second sentence. Third sentence.");
-        let nodes = <SentenceWindowNodeParser as crate::node_parser::NodeParser>::parse_nodes(&parser, &[document], false).await.unwrap();
+        let nodes = <SentenceWindowNodeParser as crate::node_parser::NodeParser>::parse_nodes(
+            &parser,
+            &[document],
+            false,
+        )
+        .await
+        .unwrap();
 
         assert_eq!(nodes.len(), 3);
-        
+
         // Check first node
         assert_eq!(nodes[0].content, "First sentence.");
         assert!(nodes[0].metadata.contains_key("window"));
         assert!(nodes[0].metadata.contains_key("original_text"));
-        assert_eq!(nodes[0].metadata.get("sentence_index").unwrap().as_u64().unwrap(), 0);
+        assert_eq!(
+            nodes[0]
+                .metadata
+                .get("sentence_index")
+                .unwrap()
+                .as_u64()
+                .unwrap(),
+            0
+        );
 
         // Check middle node
         assert_eq!(nodes[1].content, "Second sentence.");
-        assert_eq!(nodes[1].metadata.get("sentence_index").unwrap().as_u64().unwrap(), 1);
+        assert_eq!(
+            nodes[1]
+                .metadata
+                .get("sentence_index")
+                .unwrap()
+                .as_u64()
+                .unwrap(),
+            1
+        );
 
         // Check last node
         assert_eq!(nodes[2].content, "Third sentence.");
-        assert_eq!(nodes[2].metadata.get("sentence_index").unwrap().as_u64().unwrap(), 2);
+        assert_eq!(
+            nodes[2]
+                .metadata
+                .get("sentence_index")
+                .unwrap()
+                .as_u64()
+                .unwrap(),
+            2
+        );
     }
 
     #[tokio::test]
@@ -296,15 +330,26 @@ mod tests {
         let parser = SentenceWindowNodeParser::new().with_window_size(2);
 
         let document = Document::new("One. Two. Three. Four. Five.");
-        let nodes = <SentenceWindowNodeParser as crate::node_parser::NodeParser>::parse_nodes(&parser, &[document], false).await.unwrap();
+        let nodes = <SentenceWindowNodeParser as crate::node_parser::NodeParser>::parse_nodes(
+            &parser,
+            &[document],
+            false,
+        )
+        .await
+        .unwrap();
 
         assert_eq!(nodes.len(), 5);
 
         // Check middle node (index 2) - should have full window
         let middle_node = &nodes[2];
         assert_eq!(middle_node.content, "Three.");
-        
-        let window_content = middle_node.metadata.get("window").unwrap().as_str().unwrap();
+
+        let window_content = middle_node
+            .metadata
+            .get("window")
+            .unwrap()
+            .as_str()
+            .unwrap();
         // Window should include: One. Two. Three. Four. Five. (all sentences due to window_size=2)
         assert!(window_content.contains("One."));
         assert!(window_content.contains("Two."));
@@ -318,7 +363,13 @@ mod tests {
         let parser = SentenceWindowNodeParser::new();
 
         let document = Document::new("");
-        let nodes = <SentenceWindowNodeParser as crate::node_parser::NodeParser>::parse_nodes(&parser, &[document], false).await.unwrap();
+        let nodes = <SentenceWindowNodeParser as crate::node_parser::NodeParser>::parse_nodes(
+            &parser,
+            &[document],
+            false,
+        )
+        .await
+        .unwrap();
 
         assert!(nodes.is_empty());
     }
@@ -328,11 +379,17 @@ mod tests {
         let parser = SentenceWindowNodeParser::new().with_window_size(3);
 
         let document = Document::new("Only one sentence.");
-        let nodes = <SentenceWindowNodeParser as crate::node_parser::NodeParser>::parse_nodes(&parser, &[document], false).await.unwrap();
+        let nodes = <SentenceWindowNodeParser as crate::node_parser::NodeParser>::parse_nodes(
+            &parser,
+            &[document],
+            false,
+        )
+        .await
+        .unwrap();
 
         assert_eq!(nodes.len(), 1);
         assert_eq!(nodes[0].content, "Only one sentence.");
-        
+
         let window_content = nodes[0].metadata.get("window").unwrap().as_str().unwrap();
         assert_eq!(window_content, "Only one sentence.");
     }
@@ -358,7 +415,13 @@ mod tests {
             .with_original_text_metadata_key("original");
 
         let document = Document::new("First sentence. Second sentence.");
-        let nodes = <SentenceWindowNodeParser as crate::node_parser::NodeParser>::parse_nodes(&parser, &[document], false).await.unwrap();
+        let nodes = <SentenceWindowNodeParser as crate::node_parser::NodeParser>::parse_nodes(
+            &parser,
+            &[document],
+            false,
+        )
+        .await
+        .unwrap();
 
         assert_eq!(nodes.len(), 2);
         assert!(nodes[0].metadata.contains_key("context"));

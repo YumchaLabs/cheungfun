@@ -10,9 +10,7 @@ use crate::node_parser::{
     NodeParser, TextSplitter,
 };
 use async_trait::async_trait;
-use cheungfun_core::{
-    traits::Embedder, Document, Node, Result as CoreResult,
-};
+use cheungfun_core::{traits::Embedder, Document, Node, Result as CoreResult};
 use std::sync::Arc;
 use tracing::{debug, warn};
 
@@ -73,11 +71,10 @@ impl SemanticSplitter {
     /// Create a new semantic splitter with the given embedder.
     pub fn new(embedder: Arc<dyn Embedder>) -> Self {
         let config = SemanticSplitterConfig::default();
-        let split_functions = create_sentence_split_functions()
-            .unwrap_or_else(|e| {
-                warn!("Failed to create split functions: {}, using empty list", e);
-                Vec::new()
-            });
+        let split_functions = create_sentence_split_functions().unwrap_or_else(|e| {
+            warn!("Failed to create split functions: {}, using empty list", e);
+            Vec::new()
+        });
 
         Self {
             config,
@@ -190,11 +187,19 @@ impl SemanticSplitter {
     /// Calculate cosine similarity between two embeddings.
     fn calculate_cosine_similarity(&self, embedding1: &[f32], embedding2: &[f32]) -> f32 {
         if embedding1.len() != embedding2.len() {
-            warn!("Embedding dimensions don't match: {} vs {}", embedding1.len(), embedding2.len());
+            warn!(
+                "Embedding dimensions don't match: {} vs {}",
+                embedding1.len(),
+                embedding2.len()
+            );
             return 0.0;
         }
 
-        let dot_product: f32 = embedding1.iter().zip(embedding2.iter()).map(|(a, b)| a * b).sum();
+        let dot_product: f32 = embedding1
+            .iter()
+            .zip(embedding2.iter())
+            .map(|(a, b)| a * b)
+            .sum();
         let norm1: f32 = embedding1.iter().map(|x| x * x).sum::<f32>().sqrt();
         let norm2: f32 = embedding2.iter().map(|x| x * x).sum::<f32>().sqrt();
 
@@ -219,8 +224,8 @@ impl SemanticSplitter {
         // Calculate breakpoint threshold using percentile
         let mut sorted_distances = distances.to_vec();
         sorted_distances.sort_by(|a, b| a.partial_cmp(b).unwrap_or(std::cmp::Ordering::Equal));
-        
-        let percentile_index = ((self.config.breakpoint_percentile_threshold / 100.0) 
+
+        let percentile_index = ((self.config.breakpoint_percentile_threshold / 100.0)
             * sorted_distances.len() as f32) as usize;
         let breakpoint_threshold = sorted_distances
             .get(percentile_index.min(sorted_distances.len() - 1))
@@ -242,7 +247,11 @@ impl SemanticSplitter {
             })
             .collect();
 
-        debug!("Found {} breakpoints at indices: {:?}", breakpoint_indices.len(), breakpoint_indices);
+        debug!(
+            "Found {} breakpoints at indices: {:?}",
+            breakpoint_indices.len(),
+            breakpoint_indices
+        );
 
         // Build chunks based on breakpoints
         let mut chunks = Vec::new();
@@ -254,7 +263,7 @@ impl SemanticSplitter {
                 .iter()
                 .map(|c| c.sentence.clone())
                 .collect();
-            
+
             if !chunk_sentences.is_empty() {
                 chunks.push(chunk_sentences.join(" "));
             }
@@ -267,7 +276,7 @@ impl SemanticSplitter {
                 .iter()
                 .map(|c| c.sentence.clone())
                 .collect();
-            
+
             if !chunk_sentences.is_empty() {
                 chunks.push(chunk_sentences.join(" "));
             }
@@ -275,7 +284,13 @@ impl SemanticSplitter {
 
         // If no breakpoints found, return all sentences as one chunk
         if chunks.is_empty() {
-            chunks.push(combinations.iter().map(|c| c.sentence.clone()).collect::<Vec<_>>().join(" "));
+            chunks.push(
+                combinations
+                    .iter()
+                    .map(|c| c.sentence.clone())
+                    .collect::<Vec<_>>()
+                    .join(" "),
+            );
         }
 
         chunks
@@ -289,7 +304,10 @@ impl SemanticSplitter {
             return Ok(vec![]);
         }
 
-        debug!("Starting semantic splitting for text of length {}", text.len());
+        debug!(
+            "Starting semantic splitting for text of length {}",
+            text.len()
+        );
 
         // Step 1: Split text into sentences
         let sentences = self.split_into_sentences(text)?;
@@ -356,9 +374,9 @@ impl NodeParser for SemanticSplitter {
 
             for (i, chunk) in chunks.into_iter().enumerate() {
                 let chunk_info = cheungfun_core::types::ChunkInfo::new(
-                    0, // start_offset - would need to calculate actual positions
+                    0,           // start_offset - would need to calculate actual positions
                     chunk.len(), // end_offset
-                    i, // chunk_index
+                    i,           // chunk_index
                 );
 
                 let mut node = Node::new(chunk, document.id, chunk_info);
@@ -368,12 +386,17 @@ impl NodeParser for SemanticSplitter {
 
                 // Add chunk-specific metadata
                 node.metadata.insert("chunk_index".to_string(), i.into());
-                node.metadata.insert("source_document_id".to_string(), document.id.to_string().into());
-                node.metadata.insert("splitter_type".to_string(), "semantic".into());
-                node.metadata.insert("buffer_size".to_string(), self.config.buffer_size.into());
+                node.metadata.insert(
+                    "source_document_id".to_string(),
+                    document.id.to_string().into(),
+                );
+                node.metadata
+                    .insert("splitter_type".to_string(), "semantic".into());
+                node.metadata
+                    .insert("buffer_size".to_string(), self.config.buffer_size.into());
                 node.metadata.insert(
                     "breakpoint_threshold".to_string(),
-                    self.config.breakpoint_percentile_threshold.into()
+                    self.config.breakpoint_percentile_threshold.into(),
                 );
 
                 // Set relationships if configured
@@ -386,7 +409,11 @@ impl NodeParser for SemanticSplitter {
             }
         }
 
-        debug!("Parsed {} documents into {} nodes", documents.len(), all_nodes.len());
+        debug!(
+            "Parsed {} documents into {} nodes",
+            documents.len(),
+            all_nodes.len()
+        );
         Ok(all_nodes)
     }
 }
@@ -414,7 +441,9 @@ mod tests {
         async fn embed(&self, text: &str) -> CoreResult<Vec<f32>> {
             // Create a simple hash-based embedding for testing
             let mut embedding = vec![0.0; self.dimension];
-            let text_hash = text.bytes().fold(0u64, |acc, b| acc.wrapping_mul(31).wrapping_add(b as u64));
+            let text_hash = text
+                .bytes()
+                .fold(0u64, |acc, b| acc.wrapping_mul(31).wrapping_add(b as u64));
 
             for (i, value) in embedding.iter_mut().enumerate() {
                 let seed = (text_hash.wrapping_add(i as u64)) as f32;
@@ -454,7 +483,8 @@ mod tests {
         let embedder = Arc::new(MockEmbedder::new(384));
         let splitter = SemanticSplitter::new(embedder);
 
-        let text = "This is the first sentence. This is the second sentence. This is the third sentence.";
+        let text =
+            "This is the first sentence. This is the second sentence. This is the third sentence.";
         let chunks = splitter.split_text_async(text).await.unwrap();
 
         assert!(!chunks.is_empty());
@@ -500,13 +530,22 @@ mod tests {
         let splitter = SemanticSplitter::new(embedder);
 
         let document = Document::new("First sentence. Second sentence. Third sentence.");
-        let nodes = <SemanticSplitter as crate::node_parser::NodeParser>::parse_nodes(&splitter, &[document], false).await.unwrap();
+        let nodes = <SemanticSplitter as crate::node_parser::NodeParser>::parse_nodes(
+            &splitter,
+            &[document],
+            false,
+        )
+        .await
+        .unwrap();
 
         assert!(!nodes.is_empty());
         for (i, node) in nodes.iter().enumerate() {
             assert!(node.metadata.contains_key("chunk_index"));
             assert!(node.metadata.contains_key("splitter_type"));
-            assert_eq!(node.metadata.get("chunk_index").unwrap().as_u64().unwrap(), i as u64);
+            assert_eq!(
+                node.metadata.get("chunk_index").unwrap().as_u64().unwrap(),
+                i as u64
+            );
         }
     }
 }

@@ -4,11 +4,11 @@
 //! showing how to use the unified storage abstraction with different backends.
 
 use cheungfun_core::{
-    traits::{DocumentStore, IndexStore, ChatStore, KVStore, IndexStruct, DEFAULT_COLLECTION},
-    Document, ChatMessage, Result,
+    traits::{ChatStore, DocumentStore, IndexStore, IndexStruct, KVStore, DEFAULT_COLLECTION},
+    ChatMessage, Document, Result,
 };
 use cheungfun_integrations::storage::{
-    InMemoryKVStore, KVDocumentStore, KVIndexStore, KVChatStore,
+    InMemoryKVStore, KVChatStore, KVDocumentStore, KVIndexStore,
 };
 use std::sync::Arc;
 use tracing::{info, Level};
@@ -17,9 +17,7 @@ use tracing_subscriber;
 #[tokio::main]
 async fn main() -> Result<()> {
     // Initialize logging
-    tracing_subscriber::fmt()
-        .with_max_level(Level::INFO)
-        .init();
+    tracing_subscriber::fmt().with_max_level(Level::INFO).init();
 
     info!("🚀 Starting KVStore Architecture Demo");
 
@@ -55,23 +53,34 @@ async fn demo_basic_kvstore() -> Result<()> {
         "description": "High-performance RAG framework"
     });
 
-    kv_store.put("project_info", test_data.clone(), DEFAULT_COLLECTION).await?;
-    
+    kv_store
+        .put("project_info", test_data.clone(), DEFAULT_COLLECTION)
+        .await?;
+
     let retrieved = kv_store.get("project_info", DEFAULT_COLLECTION).await?;
     assert_eq!(retrieved, Some(test_data));
     info!("✓ Basic put/get operations work");
 
     // Collection operations
-    kv_store.put("key1", serde_json::json!("value1"), "collection1").await?;
-    kv_store.put("key2", serde_json::json!("value2"), "collection1").await?;
-    kv_store.put("key1", serde_json::json!("different_value"), "collection2").await?;
+    kv_store
+        .put("key1", serde_json::json!("value1"), "collection1")
+        .await?;
+    kv_store
+        .put("key2", serde_json::json!("value2"), "collection1")
+        .await?;
+    kv_store
+        .put("key1", serde_json::json!("different_value"), "collection2")
+        .await?;
 
     let collections = kv_store.list_collections().await?;
     info!("✓ Collections: {:?}", collections);
 
     let count1 = kv_store.count("collection1").await?;
     let count2 = kv_store.count("collection2").await?;
-    info!("✓ Collection counts: collection1={}, collection2={}", count1, count2);
+    info!(
+        "✓ Collection counts: collection1={}, collection2={}",
+        count1, count2
+    );
 
     // Batch operations
     let batch_data = vec![
@@ -80,7 +89,7 @@ async fn demo_basic_kvstore() -> Result<()> {
         ("batch_key3".to_string(), serde_json::json!("batch_value3")),
     ];
     kv_store.put_all(batch_data, "batch_collection").await?;
-    
+
     let batch_count = kv_store.count("batch_collection").await?;
     info!("✓ Batch operations: {} items inserted", batch_count);
 
@@ -97,19 +106,40 @@ async fn demo_document_store() -> Result<()> {
     // Create test documents
     let mut doc1 = Document::new("This is the first document about Rust programming.");
     doc1.id = uuid::Uuid::parse_str("00000000-0000-0000-0000-000000000001").unwrap();
-    doc1.metadata.insert("category".to_string(), serde_json::Value::String("programming".to_string()));
-    doc1.metadata.insert("language".to_string(), serde_json::Value::String("rust".to_string()));
+    doc1.metadata.insert(
+        "category".to_string(),
+        serde_json::Value::String("programming".to_string()),
+    );
+    doc1.metadata.insert(
+        "language".to_string(),
+        serde_json::Value::String("rust".to_string()),
+    );
 
     let mut doc2 = Document::new("This is the second document about machine learning.");
     doc2.id = uuid::Uuid::parse_str("00000000-0000-0000-0000-000000000002").unwrap();
-    doc2.metadata.insert("category".to_string(), serde_json::Value::String("ai".to_string()));
-    doc2.metadata.insert("topic".to_string(), serde_json::Value::String("ml".to_string()));
+    doc2.metadata.insert(
+        "category".to_string(),
+        serde_json::Value::String("ai".to_string()),
+    );
+    doc2.metadata.insert(
+        "topic".to_string(),
+        serde_json::Value::String("ml".to_string()),
+    );
 
     let mut doc3 = Document::new("This is the third document about Rust and AI.");
     doc3.id = uuid::Uuid::parse_str("00000000-0000-0000-0000-000000000003").unwrap();
-    doc3.metadata.insert("category".to_string(), serde_json::Value::String("programming".to_string()));
-    doc3.metadata.insert("language".to_string(), serde_json::Value::String("rust".to_string()));
-    doc3.metadata.insert("topic".to_string(), serde_json::Value::String("ai".to_string()));
+    doc3.metadata.insert(
+        "category".to_string(),
+        serde_json::Value::String("programming".to_string()),
+    );
+    doc3.metadata.insert(
+        "language".to_string(),
+        serde_json::Value::String("rust".to_string()),
+    );
+    doc3.metadata.insert(
+        "topic".to_string(),
+        serde_json::Value::String("ai".to_string()),
+    );
 
     // Add documents
     let doc_ids = doc_store.add_documents(vec![doc1, doc2, doc3]).await?;
@@ -197,9 +227,17 @@ async fn demo_chat_store() -> Result<()> {
     info!("✓ Last 2 messages retrieved: {}", last_messages.len());
 
     // Get messages by role
-    let user_messages = chat_store.get_messages_by_role(conversation_id, cheungfun_core::MessageRole::User).await?;
-    let assistant_messages = chat_store.get_messages_by_role(conversation_id, cheungfun_core::MessageRole::Assistant).await?;
-    info!("✓ User messages: {}, Assistant messages: {}", user_messages.len(), assistant_messages.len());
+    let user_messages = chat_store
+        .get_messages_by_role(conversation_id, cheungfun_core::MessageRole::User)
+        .await?;
+    let assistant_messages = chat_store
+        .get_messages_by_role(conversation_id, cheungfun_core::MessageRole::Assistant)
+        .await?;
+    info!(
+        "✓ User messages: {}, Assistant messages: {}",
+        user_messages.len(),
+        assistant_messages.len()
+    );
 
     // List conversations
     let conversations = chat_store.list_conversations().await?;
@@ -216,9 +254,18 @@ async fn demo_storage_context() -> Result<()> {
     let kv_store = Arc::new(InMemoryKVStore::new());
 
     // Create specialized stores
-    let doc_store = Arc::new(KVDocumentStore::new(kv_store.clone(), Some("documents".to_string())));
-    let index_store = Arc::new(KVIndexStore::new(kv_store.clone(), Some("indexes".to_string())));
-    let chat_store = Some(Arc::new(KVChatStore::new(kv_store.clone(), Some("conversations".to_string()))));
+    let doc_store = Arc::new(KVDocumentStore::new(
+        kv_store.clone(),
+        Some("documents".to_string()),
+    ));
+    let index_store = Arc::new(KVIndexStore::new(
+        kv_store.clone(),
+        Some("indexes".to_string()),
+    ));
+    let chat_store = Some(Arc::new(KVChatStore::new(
+        kv_store.clone(),
+        Some("conversations".to_string()),
+    )));
 
     // For this demo, we'll use a placeholder vector store
     // In a real application, you'd use InMemoryVectorStore or QdrantVectorStore
@@ -231,9 +278,18 @@ async fn demo_storage_context() -> Result<()> {
     let chat_stats = chat_store.as_ref().unwrap().get_stats().await?;
 
     info!("📊 Storage Statistics:");
-    info!("  Documents: {} in collection '{}'", doc_stats.document_count, doc_stats.collection_name);
-    info!("  Indexes: {} in collection '{}'", index_stats.index_count, index_stats.collection_name);
-    info!("  Conversations: {} with {} total messages", chat_stats.conversation_count, chat_stats.total_messages);
+    info!(
+        "  Documents: {} in collection '{}'",
+        doc_stats.document_count, doc_stats.collection_name
+    );
+    info!(
+        "  Indexes: {} in collection '{}'",
+        index_stats.index_count, index_stats.collection_name
+    );
+    info!(
+        "  Conversations: {} with {} total messages",
+        chat_stats.conversation_count, chat_stats.total_messages
+    );
 
     Ok(())
 }

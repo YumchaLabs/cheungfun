@@ -119,43 +119,26 @@ pub trait StreamingLoader: Send + Sync + std::fmt::Debug {
 ```
 
 ### Document Processing
+
+现在所有的文档和节点处理都使用统一的 `Transform` 接口：
+
 ```rust
-/// Transforms documents into nodes (chunking, preprocessing)
+/// Unified transformation trait for all processing components.
 #[async_trait]
-pub trait Transformer: Send + Sync + std::fmt::Debug {
-    /// Transform a single document into multiple nodes
-    async fn transform(&self, document: Document) -> Result<Vec<Node>>;
-    
-    /// Transform multiple documents (for batch optimization)
-    async fn transform_batch(&self, documents: Vec<Document>) -> Result<Vec<Node>> {
+pub trait Transform: Send + Sync + std::fmt::Debug {
+    /// Transform input into nodes.
+    async fn transform(&self, input: TransformInput) -> Result<Vec<Node>>;
+
+    /// Transform multiple inputs in batch for better performance.
+    async fn transform_batch(&self, inputs: Vec<TransformInput>) -> Result<Vec<Node>> {
         let mut all_nodes = Vec::new();
-        for doc in documents {
-            let nodes = self.transform(doc).await?;
+        for input in inputs {
+            let nodes = self.transform(input).await?;
             all_nodes.extend(nodes);
         }
         Ok(all_nodes)
     }
-    
-    fn name(&self) -> &'static str {
-        std::any::type_name::<Self>()
-    }
-}
 
-/// Transforms nodes (metadata extraction, enrichment)
-#[async_trait]
-pub trait NodeTransformer: Send + Sync + std::fmt::Debug {
-    /// Transform a single node
-    async fn transform_node(&self, node: Node) -> Result<Node>;
-    
-    /// Transform multiple nodes in batch
-    async fn transform_batch(&self, nodes: Vec<Node>) -> Result<Vec<Node>> {
-        let mut results = Vec::new();
-        for node in nodes {
-            results.push(self.transform_node(node).await?);
-        }
-        Ok(results)
-    }
-    
     fn name(&self) -> &'static str {
         std::any::type_name::<Self>()
     }
@@ -591,8 +574,7 @@ pub trait LlmFactory: Send + Sync {
 /// Builder for indexing pipelines
 pub struct IndexingPipelineBuilder {
     loader: Option<Arc<dyn Loader>>,
-    transformers: Vec<Arc<dyn Transformer>>,
-    node_transformers: Vec<Arc<dyn NodeTransformer>>,
+    transforms: Vec<Arc<dyn Transform>>,
     embedder: Option<Arc<dyn Embedder>>,
     vector_store: Option<Arc<dyn VectorStore>>,
     config: PipelineConfig,
@@ -602,8 +584,7 @@ impl IndexingPipelineBuilder {
     pub fn new() -> Self {
         Self {
             loader: None,
-            transformers: Vec::new(),
-            node_transformers: Vec::new(),
+            transforms: Vec::new(),
             embedder: None,
             vector_store: None,
             config: PipelineConfig::default(),
@@ -622,23 +603,13 @@ impl IndexingPipelineBuilder {
         self
     }
 
-    pub fn with_transformer(mut self, transformer: impl Transformer + 'static) -> Self {
-        self.transformers.push(Arc::new(transformer));
+    pub fn with_transform(mut self, transform: impl Transform + 'static) -> Self {
+        self.transforms.push(Arc::new(transform));
         self
     }
 
-    pub fn with_transformer_arc(mut self, transformer: Arc<dyn Transformer>) -> Self {
-        self.transformers.push(transformer);
-        self
-    }
-
-    pub fn with_node_transformer(mut self, transformer: impl NodeTransformer + 'static) -> Self {
-        self.node_transformers.push(Arc::new(transformer));
-        self
-    }
-
-    pub fn with_node_transformer_arc(mut self, transformer: Arc<dyn NodeTransformer>) -> Self {
-        self.node_transformers.push(transformer);
+    pub fn with_transform_arc(mut self, transform: Arc<dyn Transform>) -> Self {
+        self.transforms.push(transform);
         self
     }
 

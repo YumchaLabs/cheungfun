@@ -18,13 +18,14 @@ use serde::{Deserialize, Serialize};
 
 // Cheungfun核心组件
 use cheungfun_core::{
-    traits::{Embedder, Loader, NodeTransformer, Transformer, VectorStore},
+    traits::{Embedder, Loader, Transform, VectorStore},
     Result,
 };
 use cheungfun_indexing::{
     loaders::{DirectoryLoader, LoaderConfig},
     prelude::SplitterConfig,
-    transformers::{MetadataExtractor, TextSplitter},
+    transformers::MetadataExtractor,
+    node_parser::text::SentenceSplitter,
 };
 use cheungfun_integrations::{FastEmbedder, InMemoryVectorStore};
 use cheungfun_query::{

@@ -2,8 +2,8 @@
 
 use async_trait::async_trait;
 use cheungfun_core::{
-    traits::{DocumentStore, KVStore, DocumentStoreStats},
-    Document, Result, CheungfunError,
+    traits::{DocumentStore, DocumentStoreStats, KVStore},
+    CheungfunError, Document, Result,
 };
 use serde_json::Value;
 use std::collections::HashMap;
@@ -26,7 +26,7 @@ use tracing::{debug, error, info};
 /// # tokio_test::block_on(async {
 /// let kv_store = Arc::new(InMemoryKVStore::new());
 /// let doc_store = KVDocumentStore::new(kv_store, Some("documents".to_string()));
-/// 
+///
 /// let doc = Document::new("test content", None);
 /// let doc_ids = doc_store.add_documents(vec![doc]).await.unwrap();
 /// assert_eq!(doc_ids.len(), 1);
@@ -50,7 +50,7 @@ impl KVDocumentStore {
     pub fn new(kv_store: Arc<dyn KVStore>, collection: Option<String>) -> Self {
         let collection = collection.unwrap_or_else(|| "documents".to_string());
         info!("Created KV document store with collection '{}'", collection);
-        
+
         Self {
             kv_store,
             collection,
@@ -69,14 +69,12 @@ impl KVDocumentStore {
 
     /// Convert a Document to a JSON value for storage.
     fn document_to_value(&self, doc: &Document) -> Result<Value> {
-        serde_json::to_value(doc)
-            .map_err(|e| CheungfunError::Serialization(e))
+        serde_json::to_value(doc).map_err(|e| CheungfunError::Serialization(e))
     }
 
     /// Convert a JSON value back to a Document.
     fn value_to_document(&self, value: Value) -> Result<Document> {
-        serde_json::from_value(value)
-            .map_err(|e| CheungfunError::Serialization(e))
+        serde_json::from_value(value).map_err(|e| CheungfunError::Serialization(e))
     }
 
     /// Get storage statistics for this document store.
@@ -124,8 +122,12 @@ impl DocumentStore for KVDocumentStore {
 
         // Use batch operation for better performance
         self.kv_store.put_all(kv_pairs, &self.collection).await?;
-        
-        debug!("Added {} documents to collection '{}'", doc_ids.len(), self.collection);
+
+        debug!(
+            "Added {} documents to collection '{}'",
+            doc_ids.len(),
+            self.collection
+        );
         Ok(doc_ids)
     }
 
@@ -133,11 +135,17 @@ impl DocumentStore for KVDocumentStore {
         match self.kv_store.get(doc_id, &self.collection).await? {
             Some(value) => {
                 let doc = self.value_to_document(value)?;
-                debug!("Retrieved document '{}' from collection '{}'", doc_id, self.collection);
+                debug!(
+                    "Retrieved document '{}' from collection '{}'",
+                    doc_id, self.collection
+                );
                 Ok(Some(doc))
             }
             None => {
-                debug!("Document '{}' not found in collection '{}'", doc_id, self.collection);
+                debug!(
+                    "Document '{}' not found in collection '{}'",
+                    doc_id, self.collection
+                );
                 Ok(None)
             }
         }
@@ -145,14 +153,18 @@ impl DocumentStore for KVDocumentStore {
 
     async fn get_documents(&self, doc_ids: Vec<String>) -> Result<Vec<Document>> {
         let mut documents = Vec::with_capacity(doc_ids.len());
-        
+
         for doc_id in doc_ids {
             if let Some(doc) = self.get_document(&doc_id).await? {
                 documents.push(doc);
             }
         }
-        
-        debug!("Retrieved {} documents from collection '{}'", documents.len(), self.collection);
+
+        debug!(
+            "Retrieved {} documents from collection '{}'",
+            documents.len(),
+            self.collection
+        );
         Ok(documents)
     }
 
@@ -160,15 +172,19 @@ impl DocumentStore for KVDocumentStore {
         let deleted = self.kv_store.delete(doc_id, &self.collection).await?;
 
         if deleted {
-            debug!("Deleted document '{}' from collection '{}'", doc_id, self.collection);
+            debug!(
+                "Deleted document '{}' from collection '{}'",
+                doc_id, self.collection
+            );
         } else {
-            debug!("Document '{}' not found for deletion in collection '{}'", doc_id, self.collection);
+            debug!(
+                "Document '{}' not found for deletion in collection '{}'",
+                doc_id, self.collection
+            );
         }
 
         Ok(())
     }
-
-
 
     async fn get_all_document_hashes(&self) -> Result<HashMap<String, String>> {
         // For simplicity, we'll use document ID as both key and hash
@@ -182,29 +198,38 @@ impl DocumentStore for KVDocumentStore {
             hashes.insert(doc_id.clone(), format!("hash_{}", doc_id));
         }
 
-        debug!("Retrieved {} document hashes from collection '{}'", hashes.len(), self.collection);
+        debug!(
+            "Retrieved {} document hashes from collection '{}'",
+            hashes.len(),
+            self.collection
+        );
         Ok(hashes)
     }
 
-
-
-
-
     async fn document_exists(&self, doc_id: &str) -> Result<bool> {
         let exists = self.kv_store.exists(doc_id, &self.collection).await?;
-        debug!("Document '{}' exists in collection '{}': {}", doc_id, self.collection, exists);
+        debug!(
+            "Document '{}' exists in collection '{}': {}",
+            doc_id, self.collection, exists
+        );
         Ok(exists)
     }
 
     async fn count_documents(&self) -> Result<usize> {
         let count = self.kv_store.count(&self.collection).await?;
-        debug!("Document count in collection '{}': {}", self.collection, count);
+        debug!(
+            "Document count in collection '{}': {}",
+            self.collection, count
+        );
         Ok(count)
     }
 
     async fn clear(&self) -> Result<()> {
         self.kv_store.delete_collection(&self.collection).await?;
-        info!("Cleared all documents from collection '{}'", self.collection);
+        info!(
+            "Cleared all documents from collection '{}'",
+            self.collection
+        );
         Ok(())
     }
 
@@ -222,7 +247,11 @@ impl DocumentStore for KVDocumentStore {
             }
         }
 
-        debug!("Retrieved all {} documents from collection '{}'", documents.len(), self.collection);
+        debug!(
+            "Retrieved all {} documents from collection '{}'",
+            documents.len(),
+            self.collection
+        );
         Ok(documents)
     }
 
@@ -239,12 +268,9 @@ impl DocumentStore for KVDocumentStore {
             .into_iter()
             .filter(|doc| {
                 // Check if document metadata matches all filter criteria
-                metadata_filter.iter().all(|(key, value)| {
-                    doc.metadata
-                        .get(key)
-                        .map(|v| v == value)
-                        .unwrap_or(false)
-                })
+                metadata_filter
+                    .iter()
+                    .all(|(key, value)| doc.metadata.get(key).map(|v| v == value).unwrap_or(false))
             })
             .collect();
 
@@ -266,11 +292,7 @@ impl DocumentStore for KVDocumentStore {
             total_collections: collections.len(),
         })
     }
-
-
 }
-
-
 
 #[cfg(test)]
 mod tests {
@@ -292,11 +314,11 @@ mod tests {
     async fn test_add_and_get_document() {
         let store = create_test_store().await;
         let doc = create_test_document("doc1", "Test content");
-        
+
         // Add document
         let doc_ids = store.add_documents(vec![doc.clone()]).await.unwrap();
         assert_eq!(doc_ids, vec!["doc1"]);
-        
+
         // Get document
         let retrieved = store.get_document("doc1").await.unwrap();
         assert!(retrieved.is_some());
@@ -307,25 +329,25 @@ mod tests {
     async fn test_document_operations() {
         let store = create_test_store().await;
         let doc = create_test_document("doc1", "Original content");
-        
+
         // Add document
         store.add_documents(vec![doc]).await.unwrap();
-        
+
         // Check existence
         assert!(store.document_exists("doc1").await.unwrap());
         assert!(!store.document_exists("nonexistent").await.unwrap());
-        
+
         // Update document
         let updated_doc = create_test_document("doc1", "Updated content");
         store.update_document(updated_doc).await.unwrap();
-        
+
         let retrieved = store.get_document("doc1").await.unwrap().unwrap();
         assert_eq!(retrieved.content, "Updated content");
-        
+
         // Delete document
         let deleted = store.delete_document("doc1").await.unwrap();
         assert!(deleted);
-        
+
         let retrieved = store.get_document("doc1").await.unwrap();
         assert!(retrieved.is_none());
     }
@@ -333,29 +355,29 @@ mod tests {
     #[tokio::test]
     async fn test_batch_operations() {
         let store = create_test_store().await;
-        
+
         let docs = vec![
             create_test_document("doc1", "Content 1"),
             create_test_document("doc2", "Content 2"),
             create_test_document("doc3", "Content 3"),
         ];
-        
+
         // Add multiple documents
         let doc_ids = store.add_documents(docs).await.unwrap();
         assert_eq!(doc_ids.len(), 3);
-        
+
         // Count documents
         let count = store.count_documents().await.unwrap();
         assert_eq!(count, 3);
-        
+
         // List documents
         let listed_ids = store.list_documents().await.unwrap();
         assert_eq!(listed_ids.len(), 3);
-        
+
         // Get all documents
         let all_docs = store.get_all_documents().await.unwrap();
         assert_eq!(all_docs.len(), 3);
-        
+
         // Clear all
         store.clear().await.unwrap();
         let count = store.count_documents().await.unwrap();
@@ -365,33 +387,39 @@ mod tests {
     #[tokio::test]
     async fn test_metadata_filtering() {
         let store = create_test_store().await;
-        
+
         let mut doc1 = create_test_document("doc1", "Content 1");
-        doc1.metadata.insert("category".to_string(), "tech".to_string());
-        doc1.metadata.insert("author".to_string(), "alice".to_string());
-        
+        doc1.metadata
+            .insert("category".to_string(), "tech".to_string());
+        doc1.metadata
+            .insert("author".to_string(), "alice".to_string());
+
         let mut doc2 = create_test_document("doc2", "Content 2");
-        doc2.metadata.insert("category".to_string(), "tech".to_string());
-        doc2.metadata.insert("author".to_string(), "bob".to_string());
-        
+        doc2.metadata
+            .insert("category".to_string(), "tech".to_string());
+        doc2.metadata
+            .insert("author".to_string(), "bob".to_string());
+
         let mut doc3 = create_test_document("doc3", "Content 3");
-        doc3.metadata.insert("category".to_string(), "science".to_string());
-        doc3.metadata.insert("author".to_string(), "alice".to_string());
-        
+        doc3.metadata
+            .insert("category".to_string(), "science".to_string());
+        doc3.metadata
+            .insert("author".to_string(), "alice".to_string());
+
         store.add_documents(vec![doc1, doc2, doc3]).await.unwrap();
-        
+
         // Filter by category
         let mut filter = HashMap::new();
         filter.insert("category".to_string(), "tech".to_string());
         let filtered = store.get_documents_by_metadata(filter).await.unwrap();
         assert_eq!(filtered.len(), 2);
-        
+
         // Filter by author
         let mut filter = HashMap::new();
         filter.insert("author".to_string(), "alice".to_string());
         let filtered = store.get_documents_by_metadata(filter).await.unwrap();
         assert_eq!(filtered.len(), 2);
-        
+
         // Filter by both
         let mut filter = HashMap::new();
         filter.insert("category".to_string(), "tech".to_string());

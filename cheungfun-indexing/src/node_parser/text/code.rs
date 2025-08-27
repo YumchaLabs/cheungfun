@@ -194,7 +194,10 @@ impl CodeSplitter {
     /// )?;
     /// # Ok::<(), Box<dyn std::error::Error>>(())
     /// ```
-    pub fn with_strategy(language: ProgrammingLanguage, strategy: crate::node_parser::config::ChunkingStrategy) -> CoreResult<Self> {
+    pub fn with_strategy(
+        language: ProgrammingLanguage,
+        strategy: crate::node_parser::config::ChunkingStrategy,
+    ) -> CoreResult<Self> {
         let config = CodeSplitterConfig::with_strategy(language, strategy);
         Self::new(config)
     }
@@ -298,28 +301,40 @@ impl CodeSplitter {
         // Try SweepAI-enhanced AST chunking first (most advanced)
         match self.split_with_sweepai_style(text) {
             Ok(chunks) if !chunks.is_empty() => {
-                debug!("Using SweepAI-enhanced AST chunking: {} chunks", chunks.len());
+                debug!(
+                    "Using SweepAI-enhanced AST chunking: {} chunks",
+                    chunks.len()
+                );
                 return Ok(chunks);
             }
             Ok(_) => {
                 debug!("SweepAI-style chunking returned empty, trying LlamaIndex fallback");
             }
             Err(e) => {
-                debug!("SweepAI-style AST parsing failed: {}, trying LlamaIndex fallback", e);
+                debug!(
+                    "SweepAI-style AST parsing failed: {}, trying LlamaIndex fallback",
+                    e
+                );
             }
         }
 
         // Fallback to LlamaIndex-style AST chunking
         match self.split_with_llamaindex_style(text) {
             Ok(chunks) if !chunks.is_empty() => {
-                debug!("Using LlamaIndex-style AST chunking: {} chunks", chunks.len());
+                debug!(
+                    "Using LlamaIndex-style AST chunking: {} chunks",
+                    chunks.len()
+                );
                 return Ok(chunks);
             }
             Ok(_) => {
                 debug!("LlamaIndex-style chunking returned empty, trying structure-aware approach");
             }
             Err(e) => {
-                debug!("LlamaIndex-style AST parsing failed: {}, trying structure-aware approach", e);
+                debug!(
+                    "LlamaIndex-style AST parsing failed: {}, trying structure-aware approach",
+                    e
+                );
             }
         }
 
@@ -888,7 +903,12 @@ impl CodeSplitter {
 
     /// Coalesce small chunks with larger ones (SweepAI improvement)
     /// This prevents over-fragmentation of code
-    fn coalesce_chunks(&self, chunks: Vec<Span>, source_code: &str, coalesce_threshold: usize) -> Vec<Span> {
+    fn coalesce_chunks(
+        &self,
+        chunks: Vec<Span>,
+        source_code: &str,
+        coalesce_threshold: usize,
+    ) -> Vec<Span> {
         if chunks.is_empty() {
             return Vec::new();
         }
@@ -904,7 +924,9 @@ impl CodeSplitter {
             if merged_chunk.end <= source_code.len() {
                 let chunk_text = merged_chunk.extract(source_code);
 
-                if self.non_whitespace_len(chunk_text) <= coalesce_threshold || !chunk_text.contains('\n') {
+                if self.non_whitespace_len(chunk_text) <= coalesce_threshold
+                    || !chunk_text.contains('\n')
+                {
                     // Merge the chunks
                     current_chunk = merged_chunk;
                 } else {
@@ -935,18 +957,22 @@ impl CodeSplitter {
         let text_bytes = text.as_bytes();
 
         // Parse the code into AST
-        let tree = parser.parse(text_bytes, None).ok_or_else(|| {
-            CheungfunError::Internal {
+        let tree = parser
+            .parse(text_bytes, None)
+            .ok_or_else(|| CheungfunError::Internal {
                 message: "Failed to parse code with tree-sitter".to_string(),
-            }
-        })?;
+            })?;
 
         // Check for parsing errors
         let root_node = tree.root_node();
-        if root_node.has_error() ||
-           (root_node.child_count() > 0 && root_node.child(0).unwrap().kind() == "ERROR") {
+        if root_node.has_error()
+            || (root_node.child_count() > 0 && root_node.child(0).unwrap().kind() == "ERROR")
+        {
             return Err(CheungfunError::Internal {
-                message: format!("Could not parse code with language {:?}", self.config.language),
+                message: format!(
+                    "Could not parse code with language {:?}",
+                    self.config.language
+                ),
             });
         }
 
@@ -979,12 +1005,19 @@ impl CodeSplitter {
             .filter(|text| !text.trim().is_empty())
             .collect();
 
-        debug!("SweepAI-style AST splitting produced {} chunks", final_chunks.len());
+        debug!(
+            "SweepAI-style AST splitting produced {} chunks",
+            final_chunks.len()
+        );
         Ok(final_chunks)
     }
 
     /// Recursive AST node chunking following SweepAI's exact algorithm
-    fn chunk_node_sweepai_style(&self, node: &tree_sitter::Node, text: &str) -> CoreResult<Vec<Span>> {
+    fn chunk_node_sweepai_style(
+        &self,
+        node: &tree_sitter::Node,
+        text: &str,
+    ) -> CoreResult<Vec<Span>> {
         let mut chunks = Vec::new();
 
         // If node is small enough, return it as a single chunk
@@ -1038,18 +1071,22 @@ impl CodeSplitter {
         let text_bytes = text.as_bytes();
 
         // Parse the code into AST
-        let tree = parser.parse(text_bytes, None).ok_or_else(|| {
-            CheungfunError::Internal {
+        let tree = parser
+            .parse(text_bytes, None)
+            .ok_or_else(|| CheungfunError::Internal {
                 message: "Failed to parse code with tree-sitter".to_string(),
-            }
-        })?;
+            })?;
 
         // Check for parsing errors (following LlamaIndex's error handling)
         let root_node = tree.root_node();
-        if root_node.has_error() ||
-           (root_node.child_count() > 0 && root_node.child(0).unwrap().kind() == "ERROR") {
+        if root_node.has_error()
+            || (root_node.child_count() > 0 && root_node.child(0).unwrap().kind() == "ERROR")
+        {
             return Err(CheungfunError::Internal {
-                message: format!("Could not parse code with language {:?}", self.config.language),
+                message: format!(
+                    "Could not parse code with language {:?}",
+                    self.config.language
+                ),
             });
         }
 
@@ -1063,7 +1100,10 @@ impl CodeSplitter {
             .filter(|chunk| !chunk.is_empty())
             .collect();
 
-        debug!("LlamaIndex-style AST splitting produced {} chunks", filtered_chunks.len());
+        debug!(
+            "LlamaIndex-style AST splitting produced {} chunks",
+            filtered_chunks.len()
+        );
         Ok(filtered_chunks)
     }
 

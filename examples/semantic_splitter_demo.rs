@@ -3,12 +3,12 @@
 //! This example demonstrates the SemanticSplitter functionality,
 //! showing how it groups semantically related sentences together.
 
-use cheungfun_core::{Document, Result as CoreResult, traits::Embedder};
+use async_trait::async_trait;
+use cheungfun_core::{traits::Embedder, Document, Result as CoreResult};
 use cheungfun_indexing::node_parser::{text::SemanticSplitter, NodeParser, TextSplitter};
 use std::sync::Arc;
 use tracing::{info, Level};
 use tracing_subscriber;
-use async_trait::async_trait;
 
 // Mock embedder for demonstration purposes
 #[derive(Debug)]
@@ -27,7 +27,9 @@ impl Embedder for MockEmbedder {
     async fn embed(&self, text: &str) -> CoreResult<Vec<f32>> {
         // Create a simple hash-based embedding for testing
         let mut embedding = vec![0.0; self.dimension];
-        let text_hash = text.bytes().fold(0u64, |acc, b| acc.wrapping_mul(31).wrapping_add(b as u64));
+        let text_hash = text
+            .bytes()
+            .fold(0u64, |acc, b| acc.wrapping_mul(31).wrapping_add(b as u64));
 
         for (i, value) in embedding.iter_mut().enumerate() {
             let seed = (text_hash.wrapping_add(i as u64)) as f32;
@@ -65,9 +67,7 @@ impl Embedder for MockEmbedder {
 #[tokio::main]
 async fn main() -> CoreResult<()> {
     // Initialize logging
-    tracing_subscriber::fmt()
-        .with_max_level(Level::INFO)
-        .init();
+    tracing_subscriber::fmt().with_max_level(Level::INFO).init();
 
     info!("🧠 Semantic Splitter Demo");
     info!("========================");
@@ -80,7 +80,7 @@ async fn main() -> CoreResult<()> {
     info!("Creating semantic splitters with different configurations...");
 
     let splitter_basic = SemanticSplitter::new(embedder.clone());
-    
+
     let splitter_with_buffer = SemanticSplitter::new(embedder.clone())
         .with_buffer_size(2)
         .with_breakpoint_percentile_threshold(90.0);
@@ -132,21 +132,31 @@ async fn main() -> CoreResult<()> {
     // Test with NodeParser interface
     info!("\n📄 Testing NodeParser Interface:");
     let document = Document::new(test_text);
-    let nodes = <SemanticSplitter as NodeParser>::parse_nodes(&splitter_basic, &[document], false).await?;
-    
+    let nodes =
+        <SemanticSplitter as NodeParser>::parse_nodes(&splitter_basic, &[document], false).await?;
+
     info!("Generated {} nodes:", nodes.len());
     for (i, node) in nodes.iter().enumerate() {
         info!("Node {}: {}", i + 1, node.content.trim());
-        info!("  Metadata: chunk_index={}, splitter_type={}", 
-              node.metadata.get("chunk_index").map(|v| v.to_string()).unwrap_or_default(),
-              node.metadata.get("splitter_type").map(|v| v.to_string()).unwrap_or_default());
+        info!(
+            "  Metadata: chunk_index={}, splitter_type={}",
+            node.metadata
+                .get("chunk_index")
+                .map(|v| v.to_string())
+                .unwrap_or_default(),
+            node.metadata
+                .get("splitter_type")
+                .map(|v| v.to_string())
+                .unwrap_or_default()
+        );
     }
 
     // Compare with sentence splitter
     info!("\n📊 Comparison with SentenceSplitter:");
-    let sentence_splitter = cheungfun_indexing::node_parser::text::SentenceSplitter::from_defaults(1000, 200)?;
+    let sentence_splitter =
+        cheungfun_indexing::node_parser::text::SentenceSplitter::from_defaults(1000, 200)?;
     let sentence_chunks = sentence_splitter.split_text(test_text)?;
-    
+
     info!("Semantic Splitter: {} chunks", chunks_basic.len());
     info!("Sentence Splitter: {} chunks", sentence_chunks.len());
 
@@ -162,8 +172,10 @@ async fn main() -> CoreResult<()> {
 
     info!("Semantic Splitter: {:?}", semantic_time);
     info!("Sentence Splitter: {:?}", sentence_time);
-    info!("Semantic splitting is {:.2}x slower (due to embedding computation)", 
-          semantic_time.as_secs_f64() / sentence_time.as_secs_f64());
+    info!(
+        "Semantic splitting is {:.2}x slower (due to embedding computation)",
+        semantic_time.as_secs_f64() / sentence_time.as_secs_f64()
+    );
 
     // Test edge cases
     info!("\n🧪 Testing Edge Cases:");
@@ -173,7 +185,9 @@ async fn main() -> CoreResult<()> {
     info!("Empty text: {} chunks", empty_chunks.len());
 
     // Single sentence
-    let single_chunks = splitter_basic.split_text_async("This is a single sentence.").await?;
+    let single_chunks = splitter_basic
+        .split_text_async("This is a single sentence.")
+        .await?;
     info!("Single sentence: {} chunks", single_chunks.len());
 
     // Very short text
@@ -211,7 +225,7 @@ async fn compare_splitter_strategies(text: &str) -> CoreResult<()> {
 
     // This would compare:
     // - Token-based splitting
-    // - Sentence-based splitting  
+    // - Sentence-based splitting
     // - Semantic splitting
     // - Code-aware splitting (for code content)
 

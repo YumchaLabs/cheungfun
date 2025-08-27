@@ -2,8 +2,8 @@
 
 use async_trait::async_trait;
 use cheungfun_core::{
-    traits::{IndexStore, IndexStruct, KVStore, IndexStoreStats},
-    Result, CheungfunError,
+    traits::{IndexStore, IndexStoreStats, IndexStruct, KVStore},
+    CheungfunError, Result,
 };
 use serde_json::Value;
 
@@ -27,14 +27,14 @@ use tracing::{debug, error, info};
 /// # tokio_test::block_on(async {
 /// let kv_store = Arc::new(InMemoryKVStore::new());
 /// let index_store = KVIndexStore::new(kv_store, Some("indexes".to_string()));
-/// 
+///
 /// let index = IndexStruct {
 ///     index_id: "test_index".to_string(),
 ///     summary: Some("Test index".to_string()),
 ///     nodes_dict: HashMap::new(),
 ///     doc_id_to_node_ids: HashMap::new(),
 /// };
-/// 
+///
 /// index_store.add_index_struct(&index).await.unwrap();
 /// # });
 /// ```
@@ -56,7 +56,7 @@ impl KVIndexStore {
     pub fn new(kv_store: Arc<dyn KVStore>, collection: Option<String>) -> Self {
         let collection = collection.unwrap_or_else(|| "indexes".to_string());
         info!("Created KV index store with collection '{}'", collection);
-        
+
         Self {
             kv_store,
             collection,
@@ -75,21 +75,19 @@ impl KVIndexStore {
 
     /// Convert an IndexStruct to a JSON value for storage.
     fn index_to_value(&self, index: &IndexStruct) -> Result<Value> {
-        serde_json::to_value(index)
-            .map_err(|e| CheungfunError::Serialization(e))
+        serde_json::to_value(index).map_err(|e| CheungfunError::Serialization(e))
     }
 
     /// Convert a JSON value back to an IndexStruct.
     fn value_to_index(&self, value: Value) -> Result<IndexStruct> {
-        serde_json::from_value(value)
-            .map_err(|e| CheungfunError::Serialization(e))
+        serde_json::from_value(value).map_err(|e| CheungfunError::Serialization(e))
     }
 
     /// Get storage statistics for this index store.
     pub async fn get_stats(&self) -> Result<IndexStoreStats> {
         let count = self.kv_store.count(&self.collection).await?;
         let collections = self.kv_store.list_collections().await?;
-        
+
         Ok(IndexStoreStats {
             index_count: count,
             collection_name: self.collection.clone(),
@@ -114,10 +112,15 @@ impl IndexStore for KVIndexStore {
     async fn add_index_struct(&self, index: IndexStruct) -> Result<()> {
         let index_id = &index.index_id;
         let index_value = self.index_to_value(&index)?;
-        
-        self.kv_store.put(index_id, index_value, &self.collection).await?;
-        
-        debug!("Added index '{}' to collection '{}'", index_id, self.collection);
+
+        self.kv_store
+            .put(index_id, index_value, &self.collection)
+            .await?;
+
+        debug!(
+            "Added index '{}' to collection '{}'",
+            index_id, self.collection
+        );
         Ok(())
     }
 
@@ -125,9 +128,15 @@ impl IndexStore for KVIndexStore {
         let deleted = self.kv_store.delete(index_id, &self.collection).await?;
 
         if deleted {
-            debug!("Deleted index '{}' from collection '{}'", index_id, self.collection);
+            debug!(
+                "Deleted index '{}' from collection '{}'",
+                index_id, self.collection
+            );
         } else {
-            debug!("Index '{}' not found for deletion in collection '{}'", index_id, self.collection);
+            debug!(
+                "Index '{}' not found for deletion in collection '{}'",
+                index_id, self.collection
+            );
         }
 
         Ok(())
@@ -137,21 +146,21 @@ impl IndexStore for KVIndexStore {
         match self.kv_store.get(index_id, &self.collection).await? {
             Some(value) => {
                 let index = self.value_to_index(value)?;
-                debug!("Retrieved index '{}' from collection '{}'", index_id, self.collection);
+                debug!(
+                    "Retrieved index '{}' from collection '{}'",
+                    index_id, self.collection
+                );
                 Ok(Some(index))
             }
             None => {
-                debug!("Index '{}' not found in collection '{}'", index_id, self.collection);
+                debug!(
+                    "Index '{}' not found in collection '{}'",
+                    index_id, self.collection
+                );
                 Ok(None)
             }
         }
     }
-
-
-
-
-
-
 
     async fn clear(&self) -> Result<()> {
         self.kv_store.delete_collection(&self.collection).await?;
@@ -162,17 +171,26 @@ impl IndexStore for KVIndexStore {
     async fn update_index_struct(&self, index: IndexStruct) -> Result<()> {
         let index_id = &index.index_id;
         let index_value = self.index_to_value(&index)?;
-        
-        self.kv_store.put(index_id, index_value, &self.collection).await?;
-        
-        debug!("Updated index '{}' in collection '{}'", index_id, self.collection);
+
+        self.kv_store
+            .put(index_id, index_value, &self.collection)
+            .await?;
+
+        debug!(
+            "Updated index '{}' in collection '{}'",
+            index_id, self.collection
+        );
         Ok(())
     }
 
     async fn list_index_structs(&self) -> Result<Vec<String>> {
         let all_data = self.kv_store.get_all(&self.collection).await?;
         let index_ids: Vec<String> = all_data.keys().cloned().collect();
-        debug!("Listed {} index structs from collection '{}'", index_ids.len(), self.collection);
+        debug!(
+            "Listed {} index structs from collection '{}'",
+            index_ids.len(),
+            self.collection
+        );
         Ok(index_ids)
     }
 
@@ -187,17 +205,12 @@ impl IndexStore for KVIndexStore {
             total_collections: collections.len(),
         })
     }
-
-
 }
-
-
 
 #[cfg(test)]
 mod tests {
     use super::*;
     use crate::storage::kvstore::InMemoryKVStore;
-
 
     fn create_test_index(id: &str, index_type: &str) -> IndexStruct {
         IndexStruct::new(id, index_type)
@@ -212,7 +225,7 @@ mod tests {
     async fn test_add_and_get_index() {
         let store = create_test_store().await;
         let index = create_test_index("index1", "Test index");
-        
+
         // Add index
         store.add_index_struct(index).await.unwrap();
 
@@ -228,7 +241,7 @@ mod tests {
     async fn test_index_operations() {
         let store = create_test_store().await;
         let index = create_test_index("index1", "Original summary");
-        
+
         // Add index
         store.add_index_struct(index).await.unwrap();
 
@@ -253,13 +266,13 @@ mod tests {
     #[tokio::test]
     async fn test_batch_operations() {
         let store = create_test_store().await;
-        
+
         let indexes = vec![
             create_test_index("index1", "Summary 1"),
             create_test_index("index2", "Summary 2"),
             create_test_index("index3", "Summary 3"),
         ];
-        
+
         // Add multiple indexes
         for index in indexes {
             store.add_index_struct(index).await.unwrap();
@@ -292,11 +305,18 @@ mod tests {
         index.node_ids.push(uuid::Uuid::new_v4());
 
         // Add some metadata
-        index.metadata.insert("description".to_string(), serde_json::Value::String("Test index".to_string()));
+        index.metadata.insert(
+            "description".to_string(),
+            serde_json::Value::String("Test index".to_string()),
+        );
 
         // Store and retrieve
         store.add_index_struct(index).await.unwrap();
-        let retrieved = store.get_index_struct("complex_index").await.unwrap().unwrap();
+        let retrieved = store
+            .get_index_struct("complex_index")
+            .await
+            .unwrap()
+            .unwrap();
 
         assert_eq!(retrieved.node_ids.len(), 2);
         assert_eq!(retrieved.metadata.len(), 1);

@@ -14,7 +14,7 @@ use std::collections::HashMap;
 #[tokio::main]
 async fn main() -> Result<(), Box<dyn std::error::Error>> {
     // Initialize tracing
-    tracing_subscriber::init();
+    tracing_subscriber::fmt::init();
 
     println!("🚀 Cheungfun Node Parser Example");
     println!("=================================\n");
@@ -72,7 +72,6 @@ The future of AI holds immense potential for transforming various industries, in
         content: content.to_string(),
         metadata,
         embedding: None,
-        sparse_embedding: None,
     }
 }
 
@@ -166,7 +165,6 @@ impl UserManager {
         content: content.to_string(),
         metadata,
         embedding: None,
-        sparse_embedding: None,
     }
 }
 
@@ -187,7 +185,7 @@ async fn test_sentence_splitter(document: &Document) -> Result<(), Box<dyn std::
     }
 
     // Test node parsing
-    let nodes = splitter.parse_nodes(&[document.clone()], false).await?;
+    let nodes = NodeParser::parse_nodes(&splitter, &[document.clone()], false).await?;
     println!("Created {} nodes from document", nodes.len());
 
     // Check relationships
@@ -214,7 +212,7 @@ async fn test_token_splitter(document: &Document) -> Result<(), Box<dyn std::err
     }
 
     // Test node parsing
-    let nodes = splitter.parse_nodes(&[document.clone()], false).await?;
+    let nodes = NodeParser::parse_nodes(&splitter, &[document.clone()], false).await?;
     println!("Created {} nodes from document", nodes.len());
 
     Ok(())
@@ -256,7 +254,7 @@ async fn test_code_splitter(document: &Document) -> Result<(), Box<dyn std::erro
     }
 
     // Test node parsing
-    let nodes = splitter.parse_nodes(&[document.clone()], false).await?;
+    let nodes = NodeParser::parse_nodes(&splitter, &[document.clone()], false).await?;
     println!("Created {} nodes from code document", nodes.len());
 
     Ok(())

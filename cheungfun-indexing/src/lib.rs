@@ -20,12 +20,9 @@
 //!     let documents = loader.load().await?;
 //!
 //!     // Split documents into chunks
-//!     let splitter = TextSplitter::new(1000, 200);
-//!     let mut nodes = Vec::new();
-//!     for doc in documents {
-//!         let doc_nodes = splitter.transform(doc).await?;
-//!         nodes.extend(doc_nodes);
-//!     }
+//!     let splitter = SentenceSplitter::from_defaults(1000, 200)?;
+//!     let input = TransformInput::Documents(documents);
+//!     let nodes = splitter.transform(input).await?;
 //!
 //!     println!("Created {} nodes from documents", nodes.len());
 //!     Ok(())
