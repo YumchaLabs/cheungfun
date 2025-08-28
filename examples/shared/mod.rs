@@ -73,6 +73,12 @@ pub enum ExampleError {
 
     #[error("Data processing error: {0}")]
     DataProcessing(String),
+
+    #[error("Embedder error: {0}")]
+    Embedder(String),
+
+    #[error("Siumai error: {0}")]
+    Siumai(String),
 }
 
 pub type ExampleResult<T> = std::result::Result<T, ExampleError>;
@@ -91,10 +97,11 @@ impl Timer {
         }
     }
 
-    pub fn finish(self) -> Duration {
+    pub fn finish(self) -> f64 {
         let duration = self.start.elapsed();
-        println!("⏱️  {}: {:.2?}", self.name, duration);
-        duration
+        let seconds = duration.as_secs_f64();
+        println!("⏱️  {}: {:.2}s", self.name, seconds);
+        seconds
     }
 }
 

@@ -15,7 +15,7 @@
 - **降级策略**: 智能的本地/云端 API 切换
 - **质量保证**: 包含可靠性检查和错误处理
 
-## ✅ 已完成示例 (10/34)
+## ✅ 已完成示例 (15/34)
 
 ### 🌱 基础技术 (Foundational)
 
@@ -40,6 +40,17 @@
 |---|---------|------|----------|------|
 | 8 | **Fusion Retrieval** | 🔄 重构完成 | `03_retrieval_optimization/fusion_retrieval.rs` | **使用新的预设配置 API + 混合搜索策略** |
 | 9 | **Intelligent Reranking** | ✅ 新完成 | `03_retrieval_optimization/intelligent_reranking.rs` | **多种重排序策略：LLM、分数、多样性、组合重排序** |
+
+### 📚 上下文增强 (Context Enrichment)
+
+| # | 技术名称 | 状态 | 文件路径 | 特性 |
+|---|---------|------|----------|------|
+| 10 | **Contextual Chunk Headers** | ✅ 完成 | `03_context_enrichment/contextual_chunk_headers.rs` | 为文档块添加上下文头部信息 |
+| 11 | **Semantic Chunking** | ✅ 新完成 | `03_context_enrichment/semantic_chunking.rs` | **基于语义连贯性的智能分块技术** |
+| 12 | **Relevant Segment Extraction** | ✅ 新完成 | `03_context_enrichment/relevant_segment_extraction.rs` | **动态构建多块相关段落** |
+| 13 | **Context Window Enhancement** | ✅ 新完成 | `03_context_enrichment/context_window_enhancement.rs` | **句子级检索 + 上下文窗口扩展** |
+| 14 | **Contextual Compression** | ✅ 新完成 | `03_context_enrichment/contextual_compression.rs` | **LLM驱动的内容压缩技术** |
+| 15 | **Document Augmentation** | ✅ 新完成 | `03_context_enrichment/document_augmentation.rs` | **通过问题生成增强文档检索** |
 
 ### 📈 技术亮点
 
@@ -103,7 +114,42 @@
 - **教育价值**: 展示重排序对检索质量的实际影响
 - **扩展性设计**: 易于添加新的重排序算法和策略
 
-## 🚧 开发中示例 (0/24)
+#### Semantic Chunking (✅ 新完成)
+- **语义边界检测**: 使用嵌入识别主题边界，而非固定大小分块
+- **自适应块大小**: 基于内容连贯性创建不同大小的块
+- **多种阈值策略**: 支持百分位数、标准差、梯度阈值检测
+- **性能对比**: 与传统固定大小分块的详细性能比较
+- **智能分析**: 显示块长度分布和语义连贯性统计
+
+#### Relevant Segment Extraction (✅ 新完成)
+- **多块段落构建**: 将相邻相关块合并为更长的语义段落
+- **动态构建**: 基于查询相关性而非固定边界构建段落
+- **上下文扩展**: 通过包含邻近块提供更完整的上下文
+- **相关性评分**: 使用相似度分数确定段落边界
+- **灵活配置**: 可调整段落阈值和最大段落大小
+
+#### Context Window Enhancement (✅ 新完成)
+- **句子级检索**: 对单个句子进行精确嵌入和匹配
+- **上下文窗口扩展**: 包含匹配句子前后的N个句子
+- **可配置窗口**: 可调整窗口大小以平衡精确性和上下文
+- **性能对比**: 与标准块级检索的详细比较分析
+- **智能匹配**: 使用词汇重叠算法进行句子定位
+
+#### Contextual Compression (✅ 新完成)
+- **LLM驱动压缩**: 使用语言模型智能压缩内容
+- **查询感知过滤**: 保留与特定查询最相关的信息
+- **噪声减少**: 移除无关信息同时保持上下文
+- **可配置压缩**: 支持自定义压缩比率和相关性阈值
+- **性能分析**: 显示压缩效果和空间节省统计
+
+#### Document Augmentation (✅ 新完成)
+- **问题生成**: 为每个文档块生成多个相关问题
+- **增强检索**: 同时搜索原始内容和生成的问题
+- **改进匹配**: 更好地对齐用户查询和文档内容
+- **可扩展设计**: 支持自定义问题数量和生成策略
+- **性能提升**: 通过问题-查询匹配提高检索精度
+
+## 🚧 开发中示例 (0/19)
 
 ### 🌱 基础技术 (Foundational) - 剩余 0 个
 
@@ -113,26 +159,17 @@
 
 所有查询增强示例已完成！🎉
 
-### 📚 上下文增强 (Context Enrichment) - 7 个
+### 📚 上下文增强 (Context Enrichment) - 剩余 0 个
+
+所有上下文增强示例已完成！🎉
+
+### 🚀 高级检索 (Advanced Retrieval) - 剩余 3 个
 
 | # | 技术名称 | 优先级 | 预计完成 | 描述 |
 |---|---------|--------|----------|------|
-| 9 | **Contextual Chunk Headers** | 🔥 高 | 待定 | 为块添加上下文头部信息 |
-| 10 | **Relevant Segment Extraction** | 🔥 高 | 待定 | 动态构建多块相关段落 |
-| 11 | **Context Window Enhancement** | 🔥 高 | 待定 | 扩展检索块的上下文窗口 |
-| 12 | **Semantic Chunking** | 🔥 高 | 待定 | 基于语义连贯性的分块 |
-| 13 | **Contextual Compression** | 🔥 高 | 待定 | 压缩检索信息保留关键内容 |
-| 14 | **Document Augmentation** | 🔥 高 | 待定 | 通过问题生成增强文档 |
-
-### 🚀 高级检索 (Advanced Retrieval) - 剩余 5 个
-
-| # | 技术名称 | 优先级 | 预计完成 | 描述 |
-|---|---------|--------|----------|------|
-| 10 | **Multi-faceted Filtering** | 🔥 高 | 下一个 | 多维度过滤技术 |
-| 11 | **Hierarchical Indices** | 🔥 高 | 待定 | 分层索引系统 |
-| 12 | **Ensemble Retrieval** | 🔥 高 | 待定 | 集成检索方法 |
-| 13 | **Dartboard Retrieval** | 🔥 高 | 待定 | 优化相关信息增益的检索 |
-| 14 | **Multi-modal RAG** | 🔥 高 | 待定 | 多模态 RAG 系统 |
+| 16 | **Multi-faceted Filtering** | 🔥 高 | 下一个 | 多维度过滤技术 |
+| 17 | **Hierarchical Indices** | 🔥 高 | 待定 | 分层索引系统 |
+| 18 | **Ensemble Retrieval** | 🔥 高 | 待定 | 集成检索方法 |
 
 ### 🔁 迭代和自适应技术 (Iterative & Adaptive) - 3 个
 

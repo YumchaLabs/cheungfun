@@ -402,6 +402,11 @@ impl HybridSearchStrategy {
                 // TODO: Implement proper linear combination fusion with score normalization.
                 self.linear_combination_fusion(vector_results, keyword_results)
             }
+            FusionMethod::DistributionBasedScore => {
+                use crate::advanced::fusion::DistributionBasedFusion;
+                let fusion = DistributionBasedFusion::new(2);
+                fusion.fuse_results(vec![vector_results, keyword_results])
+            }
             FusionMethod::Custom(_) => {
                 // TODO: Implement custom fusion.
                 warn!("Custom fusion method not implemented, falling back to RRF");

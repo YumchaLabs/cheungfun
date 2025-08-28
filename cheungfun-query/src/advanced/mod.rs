@@ -160,6 +160,8 @@ pub enum FusionMethod {
     WeightedAverage,
     /// Linear Combination.
     LinearCombination,
+    /// Distribution-Based Score Fusion (scales scores based on mean and std dev).
+    DistributionBasedScore,
     /// Custom fusion function.
     Custom(String),
 }

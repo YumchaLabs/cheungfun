@@ -349,6 +349,126 @@ impl LinearCombinationFusion {
     }
 }
 
+/// Distribution-Based Score Fusion implementation.
+///
+/// This fusion method scales scores based on the mean and standard deviation
+/// of each result set, providing better normalization than simple relative scoring.
+/// Based on: https://medium.com/plain-simple-software/distribution-based-score-fusion-dbsf-a-new-approach-to-vector-search-ranking-f87c37488b18
+#[derive(Debug, Clone)]
+pub struct DistributionBasedFusion {
+    /// Weights for each result set
+    pub weights: Vec<f32>,
+}
+
+impl DistributionBasedFusion {
+    /// Create a new distribution-based fusion with equal weights.
+    #[must_use]
+    pub fn new(num_sources: usize) -> Self {
+        let weight = 1.0 / num_sources as f32;
+        Self {
+            weights: vec![weight; num_sources],
+        }
+    }
+
+    /// Create with custom weights.
+    #[must_use]
+    pub fn with_weights(weights: Vec<f32>) -> Self {
+        Self { weights }
+    }
+
+    /// Calculate mean and standard deviation of scores.
+    fn calculate_stats(scores: &[f32]) -> (f32, f32) {
+        if scores.is_empty() {
+            return (0.0, 1.0);
+        }
+
+        let mean = scores.iter().sum::<f32>() / scores.len() as f32;
+        let variance = scores
+            .iter()
+            .map(|score| (score - mean).powi(2))
+            .sum::<f32>()
+            / scores.len() as f32;
+        let std_dev = variance.sqrt().max(1e-6); // Avoid division by zero
+
+        (mean, std_dev)
+    }
+
+    /// Normalize scores using z-score normalization.
+    fn normalize_scores(scores: &[f32], mean: f32, std_dev: f32) -> Vec<f32> {
+        scores
+            .iter()
+            .map(|score| (score - mean) / std_dev)
+            .collect()
+    }
+
+    /// Fuse multiple result sets using distribution-based scoring.
+    pub fn fuse_results(&self, results: Vec<Vec<ScoredNode>>) -> Vec<ScoredNode> {
+        debug!(
+            "Fusing {} result lists using Distribution-Based Score Fusion",
+            results.len()
+        );
+
+        if results.is_empty() {
+            return Vec::new();
+        }
+
+        let mut fused_scores: HashMap<String, f32> = HashMap::new();
+        let mut node_map: HashMap<String, ScoredNode> = HashMap::new();
+
+        // Process each result set
+        for (i, result_set) in results.iter().enumerate() {
+            if result_set.is_empty() {
+                continue;
+            }
+
+            let weight = self
+                .weights
+                .get(i)
+                .copied()
+                .unwrap_or(1.0 / results.len() as f32);
+            let scores: Vec<f32> = result_set.iter().map(|node| node.score).collect();
+            let (mean, std_dev) = Self::calculate_stats(&scores);
+            let normalized_scores = Self::normalize_scores(&scores, mean, std_dev);
+
+            for (node, &normalized_score) in result_set.iter().zip(normalized_scores.iter()) {
+                let node_id = node.node.id.to_string();
+                node_map.insert(node_id.clone(), node.clone());
+
+                // Apply sigmoid to convert z-scores to 0-1 range
+                let sigmoid_score = 1.0 / (1.0 + (-normalized_score).exp());
+                let weighted_score = sigmoid_score * weight;
+
+                *fused_scores.entry(node_id).or_insert(0.0) += weighted_score;
+            }
+        }
+
+        // Create final result list
+        let mut final_results: Vec<ScoredNode> = fused_scores
+            .into_iter()
+            .filter_map(|(node_id, score)| {
+                node_map.get(&node_id).map(|node| ScoredNode {
+                    node: node.node.clone(),
+                    score,
+                })
+            })
+            .collect();
+
+        // Sort by fused score in descending order
+        final_results.sort_by(|a, b| {
+            b.score
+                .partial_cmp(&a.score)
+                .unwrap_or(std::cmp::Ordering::Equal)
+        });
+
+        info!(
+            "Distribution-based fusion completed: {} unique nodes",
+            final_results.len()
+        );
+
+        final_results
+    }
+}
+
 /// Fusion Algorithm Factory.
 pub struct FusionAlgorithmFactory;
 
@@ -365,6 +485,10 @@ impl FusionAlgorithmFactory {
             FusionMethod::LinearCombination => {
                 // Default to equal coefficients
                 Box::new(LinearCombinationFusion::new(vec![0.5, 0.5]))
+            }
+            FusionMethod::DistributionBasedScore => {
+                // Default to equal weights for 2 sources
+                Box::new(DistributionBasedFusion::new(2))
             }
             FusionMethod::Custom(name) => {
                 // TODO: Implement registration and creation mechanism for custom fusion algorithms
@@ -410,6 +534,16 @@ impl FusionAlgorithm for LinearCombinationFusion {
 
     fn name(&self) -> &'static str {
         "LinearCombinationFusion"
+    }
+}
+
+impl FusionAlgorithm for DistributionBasedFusion {
+    fn fuse_results(&self, results: Vec<Vec<ScoredNode>>) -> Vec<ScoredNode> {
+        self.fuse_results(results)
+    }
+
+    fn name(&self) -> &'static str {
+        "DistributionBasedFusion"
     }
 }
 
