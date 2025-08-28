@@ -1113,9 +1113,8 @@ impl StorageContext {
         let config_path = persist_dir.join("storage_context.json");
         let config_json = serde_json::to_string_pretty(&config)
             .map_err(|e| crate::CheungfunError::Serialization(e))?;
-        fs::write(config_path, config_json).map_err(|e| {
-            crate::CheungfunError::Storage(format!("Failed to write config: {e}"))
-        })?;
+        fs::write(config_path, config_json)
+            .map_err(|e| crate::CheungfunError::Storage(format!("Failed to write config: {e}")))?;
 
         // TODO: Delegate persistence to individual stores if they support it
         // This would require extending the store traits with persistence methods

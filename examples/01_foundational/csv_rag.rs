@@ -21,14 +21,13 @@ use clap::Parser;
 mod shared;
 
 use shared::{
-    Timer, PerformanceMetrics,
-    get_customer_test_queries, print_query_results,
-    ExampleResult, ExampleError,
+    get_customer_test_queries, print_query_results, ExampleError, ExampleResult,
+    PerformanceMetrics, Timer,
 };
 use std::{path::PathBuf, sync::Arc};
 
 use cheungfun_core::{
-    traits::{Embedder, VectorStore, IndexingPipeline},
+    traits::{Embedder, IndexingPipeline, VectorStore},
     DistanceMetric,
 };
 use cheungfun_indexing::{
@@ -42,9 +41,7 @@ use cheungfun_indexing::{
 };
 use cheungfun_integrations::{FastEmbedder, InMemoryVectorStore};
 use cheungfun_query::{
-    engine::QueryEngine,
-    generator::SiumaiGenerator,
-    retriever::VectorRetriever,
+    engine::QueryEngine, generator::SiumaiGenerator, retriever::VectorRetriever,
 };
 use siumai::prelude::*;
 
@@ -83,14 +80,14 @@ struct Args {
 async fn main() -> ExampleResult<()> {
     // Setup logging
     setup_logging();
-    
+
     let args = Args::parse();
-    
+
     println!("🚀 Starting CSV RAG Example...");
-    
+
     // Print configuration
     print_config(&args);
-    
+
     let mut metrics = PerformanceMetrics::new();
 
     // Step 1: Create embedder
@@ -98,22 +95,25 @@ async fn main() -> ExampleResult<()> {
     println!("✅ Embedder initialized: {}", args.embedding_provider);
 
     // Step 2: Create vector store
-    let vector_store = Arc::new(InMemoryVectorStore::new(DEFAULT_EMBEDDING_DIM, DistanceMetric::Cosine));
+    let vector_store = Arc::new(InMemoryVectorStore::new(
+        DEFAULT_EMBEDDING_DIM,
+        DistanceMetric::Cosine,
+    ));
     println!("✅ Vector store initialized");
 
     // Step 3: Build indexing pipeline for CSV data
     let timer = Timer::new("CSV data indexing");
-    
+
     // Get the directory containing the CSV file
     let default_path = PathBuf::from(".");
     let data_dir = args.csv_file.parent().unwrap_or(&default_path);
     println!("📂 Loading from directory: {}", data_dir.display());
-    
+
     let loader = Arc::new(DirectoryLoader::new(data_dir)?);
-    
+
     // Create specialized splitter for CSV data
     let csv_splitter_config = SentenceSplitterConfig::default();
-    
+
     let csv_splitter = Arc::new(SentenceSplitter::new(csv_splitter_config)?);
     let metadata_extractor = Arc::new(MetadataExtractor::new());
 
@@ -126,33 +126,39 @@ async fn main() -> ExampleResult<()> {
         .build()?;
 
     // Run indexing pipeline with progress reporting
-    let indexing_stats = pipeline.run_with_progress(Box::new(|progress| {
-        if let Some(percentage) = progress.percentage() {
-            println!("📊 {}: {:.1}% ({}/{})", 
-                progress.stage, 
-                percentage,
-                progress.processed,
-                progress.total.unwrap_or(0)
-            );
-        } else {
-            println!("📊 {}: {} items processed", 
-                progress.stage, 
-                progress.processed
-            );
-        }
-        
-        if let Some(current_item) = &progress.current_item {
-            println!("   └─ {}", current_item);
-        }
-    })).await?;
-    
+    let indexing_stats = pipeline
+        .run_with_progress(Box::new(|progress| {
+            if let Some(percentage) = progress.percentage() {
+                println!(
+                    "📊 {}: {:.1}% ({}/{})",
+                    progress.stage,
+                    percentage,
+                    progress.processed,
+                    progress.total.unwrap_or(0)
+                );
+            } else {
+                println!(
+                    "📊 {}: {} items processed",
+                    progress.stage, progress.processed
+                );
+            }
+
+            if let Some(current_item) = &progress.current_item {
+                println!("   └─ {}", current_item);
+            }
+        }))
+        .await?;
+
     let indexing_time = timer.finish();
-    
+
     metrics.record_indexing_time(indexing_time);
     metrics.total_documents = indexing_stats.documents_processed;
     metrics.total_nodes = indexing_stats.nodes_created;
 
-    println!("✅ Completed: CSV data indexing in {:.2}s", indexing_time.as_secs_f64());
+    println!(
+        "✅ Completed: CSV data indexing in {:.2}s",
+        indexing_time.as_secs_f64()
+    );
     println!("📊 Indexing completed:");
     println!("  📚 Documents: {}", indexing_stats.documents_processed);
     println!("  🔗 Nodes: {}", indexing_stats.nodes_created);
@@ -160,13 +166,13 @@ async fn main() -> ExampleResult<()> {
 
     // Step 4: Create query engine
     let retriever = Arc::new(VectorRetriever::new(vector_store, embedder));
-    
+
     // Create LLM client - try OpenAI first, fallback to Ollama
     let llm_client = create_llm_client().await?;
     let generator = Arc::new(SiumaiGenerator::new(llm_client));
-    
+
     let query_engine = QueryEngine::new(retriever, generator);
-    
+
     println!("✅ Query engine initialized");
     println!();
 
@@ -194,7 +200,10 @@ fn print_config(args: &Args) {
     println!("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━");
     println!("📄 CSV File: {}", args.csv_file.display());
     println!("🔤 Embedding Provider: {}", args.embedding_provider);
-    println!("📏 Chunk Size: {} (overlap: {})", args.chunk_size, args.chunk_overlap);
+    println!(
+        "📏 Chunk Size: {} (overlap: {})",
+        args.chunk_size, args.chunk_overlap
+    );
     println!("🔍 Top-K: {}", args.top_k);
     println!();
 }
@@ -249,12 +258,12 @@ async fn create_llm_client() -> ExampleResult<Siumai> {
                 .map_err(|e| ExampleError::Config(format!("Failed to initialize OpenAI: {}", e)));
         }
     }
-    
+
     // Fallback to Ollama
     println!("🤖 No valid OpenAI API key found, using Ollama for LLM generation (local)");
     println!("💡 Make sure Ollama is running with: ollama serve");
     println!("💡 And pull a model with: ollama pull llama3.2");
-    
+
     Siumai::builder()
         .ollama()
         .base_url("http://localhost:11434")
@@ -265,7 +274,10 @@ async fn create_llm_client() -> ExampleResult<Siumai> {
         .map_err(|e| ExampleError::Config(format!("Failed to initialize Ollama: {}. Make sure Ollama is running with 'ollama serve' and you have pulled a model with 'ollama pull llama3.2'", e)))
 }
 
-async fn run_demo_queries(query_engine: &QueryEngine, metrics: &mut PerformanceMetrics) -> ExampleResult<()> {
+async fn run_demo_queries(
+    query_engine: &QueryEngine,
+    metrics: &mut PerformanceMetrics,
+) -> ExampleResult<()> {
     println!("🔍 Running demo queries...");
     println!();
 
@@ -273,12 +285,12 @@ async fn run_demo_queries(query_engine: &QueryEngine, metrics: &mut PerformanceM
 
     for query in queries {
         let timer = Timer::new(&format!("Query: {}", query));
-        
+
         let response = query_engine
             .query(query)
             .await
             .map_err(|e| ExampleError::Cheungfun(e))?;
-        
+
         let query_time = timer.finish();
         metrics.record_query(query_time);
 
@@ -288,7 +300,10 @@ async fn run_demo_queries(query_engine: &QueryEngine, metrics: &mut PerformanceM
     Ok(())
 }
 
-async fn run_interactive_mode(query_engine: &QueryEngine, metrics: &mut PerformanceMetrics) -> ExampleResult<()> {
+async fn run_interactive_mode(
+    query_engine: &QueryEngine,
+    metrics: &mut PerformanceMetrics,
+) -> ExampleResult<()> {
     println!("🎯 Interactive CSV Query Mode");
     println!("Type your questions about the customer data, or 'quit' to exit.");
     println!("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━");
@@ -307,7 +322,7 @@ async fn run_interactive_mode(query_engine: &QueryEngine, metrics: &mut Performa
         }
 
         let timer = Timer::new("Query processing");
-        
+
         match query_engine.query(query).await {
             Ok(response) => {
                 let query_time = timer.finish();
@@ -318,7 +333,7 @@ async fn run_interactive_mode(query_engine: &QueryEngine, metrics: &mut Performa
                 println!("❌ Error processing query: {}", e);
             }
         }
-        
+
         println!();
     }
 

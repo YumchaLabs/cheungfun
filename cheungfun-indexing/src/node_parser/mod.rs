@@ -93,8 +93,6 @@ pub trait NodeParser: Send + Sync + Debug {
         let _ = kwargs; // Suppress unused variable warning
         self.parse_nodes(documents, show_progress).await
     }
-
-
 }
 
 /// Text splitter trait for splitting text into chunks.

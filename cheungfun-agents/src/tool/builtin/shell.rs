@@ -363,8 +363,10 @@ mod tests {
         if !result.success {
             // Command failed, but that's okay for testing purposes
             // The important thing is that it was allowed to run
-            println!("Command failed (expected in some environments): {}",
-                     result.error_message().unwrap_or("Unknown error"));
+            println!(
+                "Command failed (expected in some environments): {}",
+                result.error_message().unwrap_or("Unknown error")
+            );
             return;
         }
 

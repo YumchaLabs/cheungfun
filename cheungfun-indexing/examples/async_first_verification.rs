@@ -15,10 +15,10 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
 
     // Test 1: Basic async usage
     test_basic_async_usage().await?;
-    
+
     // Test 2: Nested async calls (this would previously fail)
     test_nested_async_calls().await?;
-    
+
     // Test 3: Concurrent processing
     test_concurrent_processing().await?;
 
@@ -31,10 +31,7 @@ async fn test_basic_async_usage() -> Result<(), Box<dyn std::error::Error>> {
     println!("Test 1: Basic Async Usage");
     println!("=========================");
 
-    let splitter = CodeSplitter::from_defaults(
-        ProgrammingLanguage::Rust,
-        20, 5, 800,
-    )?;
+    let splitter = CodeSplitter::from_defaults(ProgrammingLanguage::Rust, 20, 5, 800)?;
 
     let rust_code = r#"
         fn fibonacci(n: u32) -> u32 {
@@ -54,7 +51,7 @@ async fn test_basic_async_usage() -> Result<(), Box<dyn std::error::Error>> {
 
     let document = Document::new(rust_code);
     let nodes = splitter.parse_nodes(&[document], false).await?;
-    
+
     println!("✅ Successfully parsed {} nodes", nodes.len());
     println!();
     Ok(())
@@ -68,10 +65,7 @@ async fn test_nested_async_calls() -> Result<(), Box<dyn std::error::Error>> {
     // This simulates the scenario where user code calls our parser
     // from within an async context, which previously caused issues
     async fn user_async_function() -> Result<usize, Box<dyn std::error::Error>> {
-        let splitter = CodeSplitter::from_defaults(
-            ProgrammingLanguage::Python,
-            15, 3, 600,
-        )?;
+        let splitter = CodeSplitter::from_defaults(ProgrammingLanguage::Python, 15, 3, 600)?;
 
         let python_code = r#"
 def quicksort(arr):
@@ -92,14 +86,17 @@ print(sorted_numbers)
         "#;
 
         let document = Document::new(python_code);
-        
+
         // This call would previously fail with "Cannot start a runtime from within a runtime"
         let nodes = splitter.parse_nodes(&[document], false).await?;
         Ok(nodes.len())
     }
 
     let node_count = user_async_function().await?;
-    println!("✅ Successfully handled nested async call: {} nodes", node_count);
+    println!(
+        "✅ Successfully handled nested async call: {} nodes",
+        node_count
+    );
     println!();
     Ok(())
 }
@@ -109,10 +106,7 @@ async fn test_concurrent_processing() -> Result<(), Box<dyn std::error::Error>> 
     println!("Test 3: Concurrent Processing");
     println!("==============================");
 
-    let splitter = CodeSplitter::from_defaults(
-        ProgrammingLanguage::JavaScript,
-        25, 5, 1000,
-    )?;
+    let splitter = CodeSplitter::from_defaults(ProgrammingLanguage::JavaScript, 25, 5, 1000)?;
 
     let js_codes = vec![
         r#"
@@ -180,7 +174,7 @@ async fn test_concurrent_processing() -> Result<(), Box<dyn std::error::Error>> 
         .collect();
 
     let results = futures::future::try_join_all(tasks).await?;
-    
+
     let total_nodes: usize = results.iter().map(|(_, count)| count).sum();
     println!("✅ Concurrent processing completed:");
     for (i, count) in results {
@@ -188,7 +182,7 @@ async fn test_concurrent_processing() -> Result<(), Box<dyn std::error::Error>> 
     }
     println!("  Total: {} nodes", total_nodes);
     println!();
-    
+
     Ok(())
 }
 
@@ -205,6 +199,7 @@ impl CloneableSplitter for CodeSplitter {
             self.config.chunk_lines,
             self.config.chunk_lines_overlap,
             self.config.max_chars,
-        ).expect("Failed to clone CodeSplitter")
+        )
+        .expect("Failed to clone CodeSplitter")
     }
 }

@@ -30,25 +30,25 @@ pub fn get_data_file(filename: &str) -> PathBuf {
 pub mod constants {
     /// Default chunk size for text splitting
     pub const DEFAULT_CHUNK_SIZE: usize = 1000;
-    
+
     /// Default chunk overlap
     pub const DEFAULT_CHUNK_OVERLAP: usize = 200;
-    
+
     /// Default number of documents to retrieve
     pub const DEFAULT_TOP_K: usize = 5;
-    
+
     /// Default embedding dimension for FastEmbed
     pub const DEFAULT_EMBEDDING_DIM: usize = 384;
-    
+
     /// Climate change PDF file name
     pub const CLIMATE_CHANGE_PDF: &str = "Understanding_Climate_Change.pdf";
-    
+
     /// Customer CSV file name
     pub const CUSTOMERS_CSV: &str = "customers-100.csv";
-    
+
     /// Nike annual report text file name
     pub const NIKE_REPORT_TXT: &str = "nike_2023_annual_report.txt";
-    
+
     /// Q&A JSON file name
     pub const QA_JSON: &str = "q_a.json";
 }
@@ -61,16 +61,16 @@ pub enum ExampleError {
 
     #[error("Indexing error: {0}")]
     Indexing(#[from] cheungfun_indexing::error::IndexingError),
-    
+
     #[error("IO error: {0}")]
     Io(#[from] std::io::Error),
-    
+
     #[error("Serde error: {0}")]
     Serde(#[from] serde_json::Error),
-    
+
     #[error("Example configuration error: {0}")]
     Config(String),
-    
+
     #[error("Data processing error: {0}")]
     DataProcessing(String),
 }
@@ -125,15 +125,21 @@ impl PerformanceMetrics {
         println!("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━");
 
         if let Some(indexing_time) = self.indexing_time {
-            println!("📚 Indexing: {:.2?} ({} docs, {} nodes)",
-                indexing_time, self.total_documents, self.total_nodes);
+            println!(
+                "📚 Indexing: {:.2?} ({} docs, {} nodes)",
+                indexing_time, self.total_documents, self.total_nodes
+            );
         }
 
         if !self.query_times.is_empty() {
             let total_query_time: Duration = self.query_times.iter().sum();
             let avg_query_time = total_query_time / self.query_times.len() as u32;
-            println!("🔍 Queries: {} total, avg {:.2?}, total {:.2?}",
-                self.query_times.len(), avg_query_time, total_query_time);
+            println!(
+                "🔍 Queries: {} total, avg {:.2?}, total {:.2?}",
+                self.query_times.len(),
+                avg_query_time,
+                total_query_time
+            );
         }
 
         println!("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━");

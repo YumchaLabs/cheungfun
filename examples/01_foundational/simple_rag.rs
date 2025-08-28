@@ -33,28 +33,24 @@ use clap::Parser;
 mod shared;
 
 use shared::{
-    Timer, PerformanceMetrics,
-    get_climate_test_queries, print_query_results, setup_logging,
-    ExampleResult, ExampleError,
-    constants::*,
+    constants::*, get_climate_test_queries, print_query_results, setup_logging, ExampleError,
+    ExampleResult, PerformanceMetrics, Timer,
 };
 use std::{path::PathBuf, sync::Arc};
 
 use cheungfun_core::{
-    traits::{Embedder, VectorStore, IndexingPipeline},
+    traits::{Embedder, IndexingPipeline, VectorStore},
     DistanceMetric,
 };
 use cheungfun_indexing::{
     loaders::DirectoryLoader,
-    node_parser::{text::SentenceSplitter, config::SentenceSplitterConfig},
+    node_parser::{config::SentenceSplitterConfig, text::SentenceSplitter},
     pipeline::DefaultIndexingPipeline,
     transformers::MetadataExtractor,
 };
 use cheungfun_integrations::{FastEmbedder, InMemoryVectorStore};
 use cheungfun_query::{
-    engine::QueryEngine,
-    generator::SiumaiGenerator,
-    retriever::VectorRetriever,
+    engine::QueryEngine, generator::SiumaiGenerator, retriever::VectorRetriever,
 };
 use siumai::prelude::*;
 
@@ -95,12 +91,15 @@ async fn main() -> ExampleResult<()> {
     let args = Args::parse();
 
     println!("🚀 Starting Simple RAG Example...");
-    
+
     println!("🚀 Simple RAG Example");
     println!("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━");
     println!("📄 Document: {}", args.document_path.display());
     println!("🔤 Embedding Provider: {}", args.embedding_provider);
-    println!("📏 Chunk Size: {} (overlap: {})", args.chunk_size, args.chunk_overlap);
+    println!(
+        "📏 Chunk Size: {} (overlap: {})",
+        args.chunk_size, args.chunk_overlap
+    );
     println!("🔍 Top-K: {}", args.top_k);
     println!();
 
@@ -112,15 +111,21 @@ async fn main() -> ExampleResult<()> {
     println!("✅ Embedder initialized: {}", args.embedding_provider);
 
     // Step 2: Create vector store
-    let vector_store = Arc::new(InMemoryVectorStore::new(DEFAULT_EMBEDDING_DIM, DistanceMetric::Cosine));
+    let vector_store = Arc::new(InMemoryVectorStore::new(
+        DEFAULT_EMBEDDING_DIM,
+        DistanceMetric::Cosine,
+    ));
     println!("✅ Vector store initialized");
 
     // Step 3: Build indexing pipeline
     let timer = Timer::new("Document indexing");
-    
+
     // Ensure we have the correct path to the data directory
     let data_dir = if args.document_path.is_absolute() {
-        args.document_path.parent().unwrap_or(&PathBuf::from(".")).to_path_buf()
+        args.document_path
+            .parent()
+            .unwrap_or(&PathBuf::from("."))
+            .to_path_buf()
     } else {
         // For relative paths, resolve from current working directory
         std::env::current_dir()?.join(args.document_path.parent().unwrap_or(&PathBuf::from(".")))
@@ -129,7 +134,10 @@ async fn main() -> ExampleResult<()> {
     println!("📂 Loading from directory: {}", data_dir.display());
     let loader = Arc::new(DirectoryLoader::new(&data_dir)?);
 
-    let splitter = Arc::new(SentenceSplitter::from_defaults(args.chunk_size, args.chunk_overlap)?);
+    let splitter = Arc::new(SentenceSplitter::from_defaults(
+        args.chunk_size,
+        args.chunk_overlap,
+    )?);
 
     let metadata_extractor = Arc::new(MetadataExtractor::new());
 
@@ -142,27 +150,30 @@ async fn main() -> ExampleResult<()> {
         .build()?;
 
     // Run indexing pipeline with progress reporting
-    let indexing_stats = pipeline.run_with_progress(Box::new(|progress| {
-        if let Some(percentage) = progress.percentage() {
-            println!("📊 {}: {:.1}% ({}/{})",
-                progress.stage,
-                percentage,
-                progress.processed,
-                progress.total.unwrap_or(0)
-            );
-        } else {
-            println!("📊 {}: {} items processed",
-                progress.stage,
-                progress.processed
-            );
-        }
+    let indexing_stats = pipeline
+        .run_with_progress(Box::new(|progress| {
+            if let Some(percentage) = progress.percentage() {
+                println!(
+                    "📊 {}: {:.1}% ({}/{})",
+                    progress.stage,
+                    percentage,
+                    progress.processed,
+                    progress.total.unwrap_or(0)
+                );
+            } else {
+                println!(
+                    "📊 {}: {} items processed",
+                    progress.stage, progress.processed
+                );
+            }
 
-        if let Some(current_item) = &progress.current_item {
-            println!("   └─ {}", current_item);
-        }
-    })).await?;
+            if let Some(current_item) = &progress.current_item {
+                println!("   └─ {}", current_item);
+            }
+        }))
+        .await?;
     let indexing_time = timer.finish();
-    
+
     metrics.record_indexing_time(indexing_time);
     metrics.total_documents = indexing_stats.documents_processed;
     metrics.total_nodes = indexing_stats.nodes_created;
@@ -274,12 +285,12 @@ async fn run_demo_queries(
 
     for query in queries {
         let timer = Timer::new(&format!("Query: {}", query));
-        
+
         let response = query_engine
             .query(query)
             .await
             .map_err(|e| ExampleError::Cheungfun(e))?;
-        
+
         let query_time = timer.finish();
         metrics.record_query(query_time);
 
@@ -313,7 +324,7 @@ async fn run_interactive_mode(
         }
 
         let timer = Timer::new("Query processing");
-        
+
         match query_engine.query(query).await {
             Ok(response) => {
                 let query_time = timer.finish();

@@ -12,10 +12,10 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
 
     // Demo 1: HierarchicalNodeParser
     demo_hierarchical_parser().await?;
-    
+
     // Demo 2: HTMLNodeParser
     demo_html_parser().await?;
-    
+
     // Demo 3: JSONNodeParser
     demo_json_parser().await?;
 
@@ -27,23 +27,31 @@ async fn demo_hierarchical_parser() -> Result<(), Box<dyn std::error::Error>> {
     println!("================================");
 
     let parser = HierarchicalNodeParser::from_defaults(vec![1024, 256, 64])?;
-    
-    let long_text = "This is a very long document that will be split into multiple hierarchical levels. ".repeat(50);
+
+    let long_text =
+        "This is a very long document that will be split into multiple hierarchical levels. "
+            .repeat(50);
     let document = Document::new(long_text);
-    
+
     let nodes = parser.parse_nodes(&[document], true).await?;
-    
+
     println!("Generated {} hierarchical nodes", nodes.len());
-    
+
     // Show hierarchy structure
     for (i, node) in nodes.iter().enumerate() {
-        let parent_id = node.metadata.get("parent_id")
+        let parent_id = node
+            .metadata
+            .get("parent_id")
             .and_then(|v| v.as_str())
             .unwrap_or("root");
-        println!("  Node {}: {} chars (parent: {})", 
-                 i + 1, node.content.len(), parent_id);
+        println!(
+            "  Node {}: {} chars (parent: {})",
+            i + 1,
+            node.content.len(),
+            parent_id
+        );
     }
-    
+
     println!();
     Ok(())
 }
@@ -53,7 +61,7 @@ async fn demo_html_parser() -> Result<(), Box<dyn std::error::Error>> {
     println!("======================");
 
     let parser = HTMLNodeParser::new();
-    
+
     let html_content = r#"
         <html>
             <body>
@@ -74,22 +82,25 @@ async fn demo_html_parser() -> Result<(), Box<dyn std::error::Error>> {
             </body>
         </html>
     "#;
-    
+
     let document = Document::new(html_content);
     let nodes = parser.parse_nodes(&[document], false).await?;
-    
+
     println!("Generated {} nodes from HTML", nodes.len());
-    
+
     for (i, node) in nodes.iter().enumerate() {
-        let tag = node.metadata.get("tag")
+        let tag = node
+            .metadata
+            .get("tag")
             .and_then(|v| v.as_str())
             .unwrap_or("unknown");
-        println!("  Node {}: <{}> - {} chars", 
-                 i + 1, tag, node.content.len());
-        println!("    Content: {}", 
-                 &node.content[..node.content.len().min(50)]);
+        println!("  Node {}: <{}> - {} chars", i + 1, tag, node.content.len());
+        println!(
+            "    Content: {}",
+            &node.content[..node.content.len().min(50)]
+        );
     }
-    
+
     println!();
     Ok(())
 }
@@ -99,7 +110,7 @@ async fn demo_json_parser() -> Result<(), Box<dyn std::error::Error>> {
     println!("======================");
 
     let parser = JSONNodeParser::new();
-    
+
     let json_content = r#"
         {
             "company": "Cheungfun AI",
@@ -132,21 +143,23 @@ async fn demo_json_parser() -> Result<(), Box<dyn std::error::Error>> {
             }
         }
     "#;
-    
+
     let document = Document::new(json_content);
     let nodes = parser.parse_nodes(&[document], false).await?;
-    
+
     println!("Generated {} nodes from JSON", nodes.len());
-    
+
     for (i, node) in nodes.iter().enumerate() {
         println!("  Node {}: {} chars", i + 1, node.content.len());
-        println!("    Content preview: {}", 
-                 &node.content[..node.content.len().min(100)]);
+        println!(
+            "    Content preview: {}",
+            &node.content[..node.content.len().min(100)]
+        );
         if node.content.len() > 100 {
             println!("    ...");
         }
     }
-    
+
     println!();
     Ok(())
 }

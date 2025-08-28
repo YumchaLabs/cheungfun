@@ -14,9 +14,9 @@ use std::sync::{Arc, RwLock};
 use serde::{Deserialize, Serialize};
 #[cfg(feature = "hot-reload")]
 use tokio::sync::mpsc;
-use tracing::{debug, info};
 #[cfg(feature = "hot-reload")]
 use tracing::error;
+use tracing::{debug, info};
 
 use crate::{CheungfunError, Result};
 

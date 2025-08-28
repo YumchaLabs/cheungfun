@@ -26,17 +26,17 @@ impl PerformanceMetrics {
             average_query_time: Duration::from_secs(0),
         }
     }
-    
+
     pub fn record_indexing_time(&mut self, duration: Duration) {
         self.indexing_time = duration;
     }
-    
+
     pub fn record_query(&mut self, duration: Duration) {
         self.query_time += duration;
         self.queries_processed += 1;
         self.average_query_time = self.query_time / self.queries_processed as u32;
     }
-    
+
     pub fn print_summary(&self) {
         println!("\n📊 Performance Summary");
         println!("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━");
@@ -70,11 +70,11 @@ impl Timer {
             name: name.to_string(),
         }
     }
-    
+
     pub fn elapsed(&self) -> Duration {
         self.start.elapsed().into()
     }
-    
+
     pub fn finish(self) -> Duration {
         let duration = self.elapsed();
         println!("✅ Completed: {} in {:.2?}", self.name, duration);
@@ -89,9 +89,13 @@ pub fn print_query_results(query: &str, response: &cheungfun_core::QueryResponse
     println!("📝 Response: {}", response.response.content);
 
     if !response.retrieved_nodes.is_empty() {
-        println!("\n📚 Retrieved Context ({} nodes):", response.retrieved_nodes.len());
+        println!(
+            "\n📚 Retrieved Context ({} nodes):",
+            response.retrieved_nodes.len()
+        );
         for (i, node) in response.retrieved_nodes.iter().enumerate() {
-            println!("  {}. Score: {:.4} | Content: {}...",
+            println!(
+                "  {}. Score: {:.4} | Content: {}...",
                 i + 1,
                 node.score,
                 node.node.content.chars().take(100).collect::<String>()
@@ -101,8 +105,10 @@ pub fn print_query_results(query: &str, response: &cheungfun_core::QueryResponse
 
     if let Some(usage) = &response.response.usage {
         println!("\n💰 Token Usage:");
-        println!("  Input: {} | Output: {} | Total: {}",
-            usage.prompt_tokens, usage.completion_tokens, usage.total_tokens);
+        println!(
+            "  Input: {} | Output: {} | Total: {}",
+            usage.prompt_tokens, usage.completion_tokens, usage.total_tokens
+        );
     }
 
     println!("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n");
@@ -167,9 +173,10 @@ pub fn get_customer_test_queries() -> Vec<&'static str> {
 pub fn check_env_vars(vars: &[&str]) -> crate::ExampleResult<()> {
     for var in vars {
         if std::env::var(var).is_err() {
-            return Err(super::ExampleError::Config(
-                format!("Environment variable {} is not set", var)
-            ));
+            return Err(super::ExampleError::Config(format!(
+                "Environment variable {} is not set",
+                var
+            )));
         }
     }
     Ok(())

@@ -12,10 +12,10 @@
 //! ```bash
 //! # Run with default optimization
 //! cargo run --bin chunk_size_optimization --features fastembed
-//! 
+//!
 //! # Run with custom chunk size range
 //! cargo run --bin chunk_size_optimization --features fastembed -- --min-chunk-size 200 --max-chunk-size 2000
-//! 
+//!
 //! # Run with specific chunk size for testing
 //! cargo run --bin chunk_size_optimization --features fastembed -- --chunk-size 800 --no-optimization
 //! ```
@@ -27,29 +27,25 @@ use clap::Parser;
 mod shared;
 
 use shared::{
-    Timer, PerformanceMetrics,
-    get_climate_test_queries, setup_logging,
-    ExampleResult, ExampleError,
-    constants::*,
+    constants::*, get_climate_test_queries, setup_logging, ExampleError, ExampleResult,
+    PerformanceMetrics, Timer,
 };
 use std::{path::PathBuf, sync::Arc};
 
 use cheungfun_core::{
-    traits::{Embedder, VectorStore, IndexingPipeline},
+    traits::{Embedder, IndexingPipeline, VectorStore},
     DistanceMetric,
 };
 use cheungfun_indexing::{
     loaders::DirectoryLoader,
-    node_parser::{text::SentenceSplitter, config::SentenceSplitterConfig},
+    node_parser::{config::SentenceSplitterConfig, text::SentenceSplitter},
     pipeline::DefaultIndexingPipeline,
     transformers::MetadataExtractor,
 };
 use cheungfun_integrations::{FastEmbedder, InMemoryVectorStore};
 use cheungfun_query::{
-    engine::QueryEngine,
-    generator::SiumaiGenerator,
+    engine::QueryEngine, generator::SiumaiGenerator, prelude::QueryResponse,
     retriever::VectorRetriever,
-    prelude::QueryResponse,
 };
 use siumai::prelude::*;
 
@@ -141,14 +137,14 @@ impl ChunkSizeMetrics {
         // Normalize metrics (assuming reasonable ranges)
         let similarity_score = (self.avg_similarity_score * 100.0).min(100.0);
         let consistency_score = (self.retrieval_consistency * 100.0).min(100.0);
-        
+
         // Efficiency score (inverse of query time, normalized)
         let efficiency_score = if self.avg_query_time.as_millis() > 0 {
             (5000.0 / self.avg_query_time.as_millis() as f32 * 100.0).min(100.0)
         } else {
             100.0
         };
-        
+
         // Response quality score (based on reasonable response length)
         let response_quality_score = if self.avg_response_length > 0 {
             let ideal_length = 500.0; // Ideal response length
@@ -169,14 +165,29 @@ impl ChunkSizeMetrics {
     }
 
     pub fn print_summary(&self) {
-        println!("📊 Chunk Size: {} (overlap: {})", self.chunk_size, self.overlap_size);
+        println!(
+            "📊 Chunk Size: {} (overlap: {})",
+            self.chunk_size, self.overlap_size
+        );
         println!("   📦 Total Chunks: {}", self.total_chunks);
         println!("   📏 Avg Chunk Length: {:.1} chars", self.avg_chunk_length);
-        println!("   ⏱️  Indexing Time: {:.2}s", self.indexing_time.as_secs_f64());
-        println!("   🔍 Avg Query Time: {:.0}ms", self.avg_query_time.as_millis());
+        println!(
+            "   ⏱️  Indexing Time: {:.2}s",
+            self.indexing_time.as_secs_f64()
+        );
+        println!(
+            "   🔍 Avg Query Time: {:.0}ms",
+            self.avg_query_time.as_millis()
+        );
         println!("   🎯 Avg Similarity: {:.3}", self.avg_similarity_score);
-        println!("   📝 Avg Response Length: {} chars", self.avg_response_length);
-        println!("   🔄 Retrieval Consistency: {:.3}", self.retrieval_consistency);
+        println!(
+            "   📝 Avg Response Length: {} chars",
+            self.avg_response_length
+        );
+        println!(
+            "   🔄 Retrieval Consistency: {:.3}",
+            self.retrieval_consistency
+        );
         println!("   🏆 Overall Score: {:.1}/100", self.overall_score);
         println!();
     }
@@ -194,28 +205,33 @@ impl OptimizationResults {
     pub fn print_summary(&self) {
         println!("🏆 OPTIMIZATION RESULTS");
         println!("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━");
-        
+
         println!("\n🥇 Best Configuration:");
         self.best_config.print_summary();
-        
+
         println!("📈 All Results (sorted by overall score):");
         for (i, result) in self.all_results.iter().enumerate() {
             let medal = match i {
                 0 => "🥇",
-                1 => "🥈", 
+                1 => "🥈",
                 2 => "🥉",
                 _ => "  ",
             };
-            println!("{} Chunk Size: {} | Score: {:.1} | Similarity: {:.3} | Time: {:.0}ms", 
-                medal, result.chunk_size, result.overall_score, 
-                result.avg_similarity_score, result.avg_query_time.as_millis());
+            println!(
+                "{} Chunk Size: {} | Score: {:.1} | Similarity: {:.3} | Time: {:.0}ms",
+                medal,
+                result.chunk_size,
+                result.overall_score,
+                result.avg_similarity_score,
+                result.avg_query_time.as_millis()
+            );
         }
-        
+
         println!("\n💡 Recommendations:");
         for (i, rec) in self.recommendations.iter().enumerate() {
             println!("  {}. {}", i + 1, rec);
         }
-        
+
         println!("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━");
     }
 }
@@ -224,14 +240,14 @@ impl OptimizationResults {
 async fn main() -> ExampleResult<()> {
     // Setup logging
     setup_logging();
-    
+
     let args = Args::parse();
-    
+
     println!("🚀 Starting Chunk Size Optimization Example...");
-    
+
     // Print configuration
     print_config(&args);
-    
+
     let mut metrics = PerformanceMetrics::new();
 
     // Create embedder (reused across all experiments)
@@ -247,9 +263,12 @@ async fn main() -> ExampleResult<()> {
         // Run with specific chunk size
         let chunk_size = args.chunk_size.unwrap_or(DEFAULT_CHUNK_SIZE);
         let overlap_size = (chunk_size as f32 * args.overlap_ratio) as usize;
-        
-        println!("\n🎯 Testing specific chunk size: {} (overlap: {})", chunk_size, overlap_size);
-        
+
+        println!(
+            "\n🎯 Testing specific chunk size: {} (overlap: {})",
+            chunk_size, overlap_size
+        );
+
         let result = run_chunk_size_experiment(
             chunk_size,
             overlap_size,
@@ -257,10 +276,11 @@ async fn main() -> ExampleResult<()> {
             embedder.clone(),
             generator.clone(),
             &mut metrics,
-        ).await?;
-        
+        )
+        .await?;
+
         result.print_summary();
-        
+
         if args.interactive {
             let query_engine = create_query_engine_for_chunk_size(
                 chunk_size,
@@ -268,21 +288,19 @@ async fn main() -> ExampleResult<()> {
                 &args,
                 embedder,
                 generator,
-            ).await?;
-            
+            )
+            .await?;
+
             run_interactive_mode(&query_engine, &mut metrics).await?;
         }
     } else {
         // Run optimization
-        let optimization_results = run_chunk_size_optimization(
-            &args,
-            embedder.clone(),
-            generator.clone(),
-            &mut metrics,
-        ).await?;
-        
+        let optimization_results =
+            run_chunk_size_optimization(&args, embedder.clone(), generator.clone(), &mut metrics)
+                .await?;
+
         optimization_results.print_summary();
-        
+
         if args.interactive {
             println!("\n🎮 Starting interactive mode with best configuration...");
             let best_config = &optimization_results.best_config;
@@ -292,8 +310,9 @@ async fn main() -> ExampleResult<()> {
                 &args,
                 embedder,
                 generator,
-            ).await?;
-            
+            )
+            .await?;
+
             run_interactive_mode(&query_engine, &mut metrics).await?;
         }
     }
@@ -309,15 +328,17 @@ fn print_config(args: &Args) {
     println!("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━");
     println!("📄 Document: {}", args.document_path.display());
     println!("🔤 Embedding Provider: {}", args.embedding_provider);
-    
+
     if args.no_optimization || args.chunk_size.is_some() {
         let chunk_size = args.chunk_size.unwrap_or(DEFAULT_CHUNK_SIZE);
         println!("📏 Chunk Size: {} (fixed)", chunk_size);
     } else {
-        println!("📏 Chunk Size Range: {} - {} (step: {})", 
-            args.min_chunk_size, args.max_chunk_size, args.chunk_size_step);
+        println!(
+            "📏 Chunk Size Range: {} - {} (step: {})",
+            args.min_chunk_size, args.max_chunk_size, args.chunk_size_step
+        );
     }
-    
+
     println!("🔄 Overlap Ratio: {:.1}%", args.overlap_ratio * 100.0);
     println!("🔍 Top-K: {}", args.top_k);
     println!();
@@ -397,8 +418,10 @@ async fn run_chunk_size_optimization(
     metrics: &mut PerformanceMetrics,
 ) -> ExampleResult<OptimizationResults> {
     println!("🔬 Starting chunk size optimization...");
-    println!("📊 Testing chunk sizes from {} to {} (step: {})",
-        args.min_chunk_size, args.max_chunk_size, args.chunk_size_step);
+    println!(
+        "📊 Testing chunk sizes from {} to {} (step: {})",
+        args.min_chunk_size, args.max_chunk_size, args.chunk_size_step
+    );
     println!();
 
     let mut all_results = Vec::new();
@@ -409,8 +432,13 @@ async fn run_chunk_size_optimization(
     for (i, chunk_size) in chunk_sizes.iter().enumerate() {
         let overlap_size = (*chunk_size as f32 * args.overlap_ratio) as usize;
 
-        println!("🧪 Experiment {}/{}: Chunk Size {} (overlap: {})",
-            i + 1, chunk_sizes.len(), chunk_size, overlap_size);
+        println!(
+            "🧪 Experiment {}/{}: Chunk Size {} (overlap: {})",
+            i + 1,
+            chunk_sizes.len(),
+            chunk_size,
+            overlap_size
+        );
 
         let result = run_chunk_size_experiment(
             *chunk_size,
@@ -419,7 +447,8 @@ async fn run_chunk_size_optimization(
             embedder.clone(),
             generator.clone(),
             metrics,
-        ).await?;
+        )
+        .await?;
 
         result.print_summary();
         all_results.push(result);
@@ -451,13 +480,9 @@ async fn run_chunk_size_experiment(
 
     // Create query engine with specific chunk size
     let timer = Timer::new("Indexing");
-    let query_engine = create_query_engine_for_chunk_size(
-        chunk_size,
-        overlap_size,
-        args,
-        embedder,
-        generator,
-    ).await?;
+    let query_engine =
+        create_query_engine_for_chunk_size(chunk_size, overlap_size, args, embedder, generator)
+            .await?;
     chunk_metrics.indexing_time = timer.finish();
 
     // Run test queries
@@ -479,7 +504,8 @@ async fn run_chunk_size_experiment(
         query_times.push(query_time);
 
         // Collect metrics
-        let max_similarity = response.retrieved_nodes
+        let max_similarity = response
+            .retrieved_nodes
             .iter()
             .map(|node| node.score)
             .fold(0.0f32, |a, b| a.max(b));
@@ -488,7 +514,8 @@ async fn run_chunk_size_experiment(
         response_lengths.push(response.response.content.len());
 
         // Collect retrieved chunk IDs for consistency analysis
-        let chunk_ids: Vec<String> = response.retrieved_nodes
+        let chunk_ids: Vec<String> = response
+            .retrieved_nodes
             .iter()
             .map(|node| node.node.id.clone())
             .collect();
@@ -496,9 +523,12 @@ async fn run_chunk_size_experiment(
     }
 
     // Calculate averages
-    chunk_metrics.avg_query_time = query_times.iter().sum::<std::time::Duration>() / query_times.len() as u32;
-    chunk_metrics.avg_similarity_score = similarity_scores.iter().sum::<f32>() / similarity_scores.len() as f32;
-    chunk_metrics.avg_response_length = response_lengths.iter().sum::<usize>() / response_lengths.len();
+    chunk_metrics.avg_query_time =
+        query_times.iter().sum::<std::time::Duration>() / query_times.len() as u32;
+    chunk_metrics.avg_similarity_score =
+        similarity_scores.iter().sum::<f32>() / similarity_scores.len() as f32;
+    chunk_metrics.avg_response_length =
+        response_lengths.iter().sum::<usize>() / response_lengths.len();
 
     // Calculate retrieval consistency (how often the same chunks are retrieved for similar queries)
     chunk_metrics.retrieval_consistency = calculate_retrieval_consistency(&all_retrieved_chunks);
@@ -524,7 +554,10 @@ async fn create_query_engine_for_chunk_size(
     generator: Arc<SiumaiGenerator>,
 ) -> ExampleResult<QueryEngine> {
     // Create vector store
-    let vector_store = Arc::new(InMemoryVectorStore::new(DEFAULT_EMBEDDING_DIM, DistanceMetric::Cosine));
+    let vector_store = Arc::new(InMemoryVectorStore::new(
+        DEFAULT_EMBEDDING_DIM,
+        DistanceMetric::Cosine,
+    ));
 
     // Get the directory containing the document
     let default_path = PathBuf::from(".");
@@ -624,12 +657,20 @@ fn generate_recommendations(results: &[ChunkSizeMetrics], args: &Args) -> Vec<St
 
     // Speed vs Quality trade-off
     let fastest = results.iter().min_by_key(|r| r.avg_query_time).unwrap();
-    let most_accurate = results.iter().max_by(|a, b| a.avg_similarity_score.partial_cmp(&b.avg_similarity_score).unwrap()).unwrap();
+    let most_accurate = results
+        .iter()
+        .max_by(|a, b| {
+            a.avg_similarity_score
+                .partial_cmp(&b.avg_similarity_score)
+                .unwrap()
+        })
+        .unwrap();
 
     if fastest.chunk_size != best.chunk_size {
         recommendations.push(format!(
             "⚡ For fastest queries, use chunk size {} ({:.0}ms avg)",
-            fastest.chunk_size, fastest.avg_query_time.as_millis()
+            fastest.chunk_size,
+            fastest.avg_query_time.as_millis()
         ));
     }
 
@@ -642,16 +683,23 @@ fn generate_recommendations(results: &[ChunkSizeMetrics], args: &Args) -> Vec<St
 
     // Chunk size insights
     if best.chunk_size <= args.min_chunk_size + args.chunk_size_step {
-        recommendations.push("📏 Consider testing smaller chunk sizes for potentially better granularity.".to_string());
+        recommendations.push(
+            "📏 Consider testing smaller chunk sizes for potentially better granularity."
+                .to_string(),
+        );
     } else if best.chunk_size >= args.max_chunk_size - args.chunk_size_step {
-        recommendations.push("📏 Consider testing larger chunk sizes for potentially better context.".to_string());
+        recommendations.push(
+            "📏 Consider testing larger chunk sizes for potentially better context.".to_string(),
+        );
     }
 
     // Consistency insights
     if best.retrieval_consistency < 0.3 {
         recommendations.push("🔄 Low retrieval consistency detected. Consider increasing chunk overlap or using semantic chunking.".to_string());
     } else if best.retrieval_consistency > 0.8 {
-        recommendations.push("🔄 High retrieval consistency - good chunk size for stable results.".to_string());
+        recommendations.push(
+            "🔄 High retrieval consistency - good chunk size for stable results.".to_string(),
+        );
     }
 
     // Performance difference insights
@@ -659,7 +707,10 @@ fn generate_recommendations(results: &[ChunkSizeMetrics], args: &Args) -> Vec<St
     if score_diff > 30.0 {
         recommendations.push("📊 Significant performance variation detected. Chunk size optimization is crucial for your data.".to_string());
     } else if score_diff < 10.0 {
-        recommendations.push("📊 Minimal performance variation. Your data is relatively insensitive to chunk size.".to_string());
+        recommendations.push(
+            "📊 Minimal performance variation. Your data is relatively insensitive to chunk size."
+                .to_string(),
+        );
     }
 
     recommendations
@@ -694,7 +745,8 @@ async fn run_interactive_mode(
                 metrics.record_query(query_time);
 
                 // Calculate similarity score
-                let max_similarity = response.retrieved_nodes
+                let max_similarity = response
+                    .retrieved_nodes
                     .iter()
                     .map(|node| node.score)
                     .fold(0.0f32, |a, b| a.max(b));
@@ -703,7 +755,10 @@ async fn run_interactive_mode(
                 println!("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━");
                 println!("📊 Similarity Score: {:.3}", max_similarity);
                 println!("⏱️  Query Time: {:.0}ms", query_time.as_millis());
-                println!("📝 Response Length: {} chars", response.response.content.len());
+                println!(
+                    "📝 Response Length: {} chars",
+                    response.response.content.len()
+                );
                 println!();
                 println!("📝 Response: {}", response.response.content);
                 println!("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━");

@@ -26,15 +26,15 @@
 //! ```bash
 //! # Run with default HyDE strategy
 //! cargo run --bin hyde --features fastembed
-//! 
+//!
 //! # Run with specific HyDE strategy
 //! cargo run --bin hyde --features fastembed -- --strategy single
 //! cargo run --bin hyde --features fastembed -- --strategy multiple
 //! cargo run --bin hyde --features fastembed -- --strategy iterative
-//! 
+//!
 //! # Compare with baseline (no HyDE)
 //! cargo run --bin hyde --features fastembed -- --compare-baseline
-//! 
+//!
 //! # Interactive mode
 //! cargo run --bin hyde --features fastembed -- --interactive
 //! ```
@@ -47,10 +47,8 @@ use serde::{Deserialize, Serialize};
 mod shared;
 
 use shared::{
-    Timer, PerformanceMetrics,
-    get_climate_test_queries, setup_logging,
-    ExampleResult, ExampleError,
-    constants::*,
+    constants::*, get_climate_test_queries, setup_logging, ExampleError, ExampleResult,
+    PerformanceMetrics, Timer,
 };
 use std::{path::PathBuf, sync::Arc};
 
@@ -60,16 +58,14 @@ use cheungfun_core::{
 };
 use cheungfun_indexing::{
     loaders::DirectoryLoader,
-    node_parser::{text::SentenceSplitter, config::SentenceSplitterConfig},
+    node_parser::{config::SentenceSplitterConfig, text::SentenceSplitter},
     pipeline::DefaultIndexingPipeline,
     transformers::MetadataExtractor,
 };
 use cheungfun_integrations::{FastEmbedder, InMemoryVectorStore};
 use cheungfun_query::{
-    engine::QueryEngine,
-    generator::SiumaiGenerator,
+    engine::QueryEngine, generator::SiumaiGenerator, prelude::QueryResponse,
     retriever::VectorRetriever,
-    prelude::QueryResponse,
 };
 use siumai::prelude::*;
 
@@ -77,7 +73,9 @@ const DEFAULT_EMBEDDING_DIM: usize = 384;
 
 #[derive(Parser, Debug)]
 #[command(name = "hyde")]
-#[command(about = "HyDE (Hypothetical Document Embedding) Example - Improve retrieval with hypothetical documents")]
+#[command(
+    about = "HyDE (Hypothetical Document Embedding) Example - Improve retrieval with hypothetical documents"
+)]
 struct Args {
     /// Path to the document to process
     #[arg(long, default_value = "data/Understanding_Climate_Change.pdf")]
@@ -163,18 +161,29 @@ impl HydeResults {
     pub fn print_summary(&self, verbose: bool) {
         println!("\n🔮 HYDE RESULTS");
         println!("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━");
-        
+
         println!("📝 Original Query: {}", self.original_query);
-        println!("🎯 Generated {} hypothetical documents", self.hypothetical_documents.len());
+        println!(
+            "🎯 Generated {} hypothetical documents",
+            self.hypothetical_documents.len()
+        );
         println!();
-        
+
         if verbose {
             println!("📄 Hypothetical Documents:");
             for (i, hyp_doc) in self.hypothetical_documents.iter().enumerate() {
-                println!("  {}. Strategy: {} (Confidence: {:.2})", 
-                    i + 1, hyp_doc.strategy, hyp_doc.confidence);
-                println!("     Generation Time: {:.0}ms", hyp_doc.generation_time.as_millis());
-                println!("     Content: {}", 
+                println!(
+                    "  {}. Strategy: {} (Confidence: {:.2})",
+                    i + 1,
+                    hyp_doc.strategy,
+                    hyp_doc.confidence
+                );
+                println!(
+                    "     Generation Time: {:.0}ms",
+                    hyp_doc.generation_time.as_millis()
+                );
+                println!(
+                    "     Content: {}",
                     if hyp_doc.hypothetical_content.len() > 200 {
                         format!("{}...", &hyp_doc.hypothetical_content[..200])
                     } else {
@@ -184,16 +193,31 @@ impl HydeResults {
                 println!();
             }
         }
-        
+
         println!("📊 Performance Metrics:");
-        println!("   ⏱️  Total Generation Time: {:.0}ms", self.performance_metrics.total_generation_time.as_millis());
-        println!("   🔍 Total Retrieval Time: {:.0}ms", self.performance_metrics.total_retrieval_time.as_millis());
-        println!("   🎯 HyDE Similarity Score: {:.3}", self.performance_metrics.hyde_similarity_score);
-        
+        println!(
+            "   ⏱️  Total Generation Time: {:.0}ms",
+            self.performance_metrics.total_generation_time.as_millis()
+        );
+        println!(
+            "   🔍 Total Retrieval Time: {:.0}ms",
+            self.performance_metrics.total_retrieval_time.as_millis()
+        );
+        println!(
+            "   🎯 HyDE Similarity Score: {:.3}",
+            self.performance_metrics.hyde_similarity_score
+        );
+
         if let Some(ref _baseline) = self.baseline_response {
-            println!("   📊 Baseline Similarity Score: {:.3}", self.performance_metrics.baseline_similarity_score);
-            println!("   📈 Improvement: {:.1}%", self.performance_metrics.improvement_percentage);
-            
+            println!(
+                "   📊 Baseline Similarity Score: {:.3}",
+                self.performance_metrics.baseline_similarity_score
+            );
+            println!(
+                "   📈 Improvement: {:.1}%",
+                self.performance_metrics.improvement_percentage
+            );
+
             if self.performance_metrics.improvement_percentage > 0.0 {
                 println!("   ✅ HyDE improved retrieval quality!");
             } else if self.performance_metrics.improvement_percentage < -5.0 {
@@ -202,15 +226,15 @@ impl HydeResults {
                 println!("   ➖ HyDE performance similar to baseline");
             }
         }
-        
+
         println!("\n📝 HyDE Response:");
         println!("{}", self.hyde_response.response.content);
-        
+
         if let Some(ref baseline) = self.baseline_response {
             println!("\n📝 Baseline Response:");
             println!("{}", baseline.response.content);
         }
-        
+
         println!("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━");
     }
 }
@@ -219,14 +243,14 @@ impl HydeResults {
 async fn main() -> ExampleResult<()> {
     // Setup logging
     setup_logging();
-    
+
     let args = Args::parse();
-    
+
     println!("🚀 Starting HyDE (Hypothetical Document Embedding) Example...");
-    
+
     // Print configuration
     print_config(&args);
-    
+
     let mut metrics = PerformanceMetrics::new();
 
     // Step 1: Create embedder
@@ -258,7 +282,10 @@ fn print_config(args: &Args) {
     println!("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━");
     println!("📄 Document: {}", args.document_path.display());
     println!("🔤 Embedding Provider: {}", args.embedding_provider);
-    println!("📏 Chunk Size: {} (overlap: {})", args.chunk_size, args.chunk_overlap);
+    println!(
+        "📏 Chunk Size: {} (overlap: {})",
+        args.chunk_size, args.chunk_overlap
+    );
     println!("🔍 Top-K: {}", args.top_k);
     println!("🎯 HyDE Strategy: {:?}", args.strategy);
     println!("📊 Compare Baseline: {}", args.compare_baseline);
@@ -332,9 +359,15 @@ async fn create_llm_client() -> ExampleResult<Siumai> {
         .map_err(|e| ExampleError::Config(format!("Failed to initialize Ollama: {}. Make sure Ollama is running with 'ollama serve' and you have pulled a model with 'ollama pull llama3.2'", e)))
 }
 
-async fn create_query_engine(args: &Args, embedder: Arc<dyn Embedder>) -> ExampleResult<QueryEngine> {
+async fn create_query_engine(
+    args: &Args,
+    embedder: Arc<dyn Embedder>,
+) -> ExampleResult<QueryEngine> {
     // Create vector store
-    let vector_store = Arc::new(InMemoryVectorStore::new(DEFAULT_EMBEDDING_DIM, DistanceMetric::Cosine));
+    let vector_store = Arc::new(InMemoryVectorStore::new(
+        DEFAULT_EMBEDDING_DIM,
+        DistanceMetric::Cosine,
+    ));
 
     // Build indexing pipeline
     let timer = Timer::new("Document indexing");
@@ -360,29 +393,35 @@ async fn create_query_engine(args: &Args, embedder: Arc<dyn Embedder>) -> Exampl
         .build()?;
 
     // Run indexing pipeline with progress reporting
-    let indexing_stats = pipeline.run_with_progress(Box::new(|progress| {
-        if let Some(percentage) = progress.percentage() {
-            println!("📊 {}: {:.1}% ({}/{})",
-                progress.stage,
-                percentage,
-                progress.processed,
-                progress.total.unwrap_or(0)
-            );
-        } else {
-            println!("📊 {}: {} items processed",
-                progress.stage,
-                progress.processed
-            );
-        }
+    let indexing_stats = pipeline
+        .run_with_progress(Box::new(|progress| {
+            if let Some(percentage) = progress.percentage() {
+                println!(
+                    "📊 {}: {:.1}% ({}/{})",
+                    progress.stage,
+                    percentage,
+                    progress.processed,
+                    progress.total.unwrap_or(0)
+                );
+            } else {
+                println!(
+                    "📊 {}: {} items processed",
+                    progress.stage, progress.processed
+                );
+            }
 
-        if let Some(current_item) = &progress.current_item {
-            println!("   └─ {}", current_item);
-        }
-    })).await?;
+            if let Some(current_item) = &progress.current_item {
+                println!("   └─ {}", current_item);
+            }
+        }))
+        .await?;
 
     let indexing_time = timer.finish();
 
-    println!("✅ Completed: Document indexing in {:.2}s", indexing_time.as_secs_f64());
+    println!(
+        "✅ Completed: Document indexing in {:.2}s",
+        indexing_time.as_secs_f64()
+    );
     println!("📊 Indexing completed:");
     println!("  📚 Documents: {}", indexing_stats.documents_processed);
     println!("  🔗 Nodes: {}", indexing_stats.nodes_created);
@@ -436,7 +475,9 @@ async fn generate_hypothetical_documents(
     match strategy {
         HydeStrategy::Single => generate_single_hypothetical_document(query, llm_client).await,
         HydeStrategy::Multiple => generate_multiple_hypothetical_documents(query, llm_client).await,
-        HydeStrategy::Iterative => generate_iterative_hypothetical_documents(query, llm_client).await,
+        HydeStrategy::Iterative => {
+            generate_iterative_hypothetical_documents(query, llm_client).await
+        }
         HydeStrategy::Adaptive => generate_adaptive_hypothetical_documents(query, llm_client).await,
     }
 }
@@ -625,8 +666,12 @@ async fn generate_adaptive_hypothetical_documents(
 
     match query_complexity {
         QueryComplexity::Simple => generate_single_hypothetical_document(query, llm_client).await,
-        QueryComplexity::Moderate => generate_multiple_hypothetical_documents(query, llm_client).await,
-        QueryComplexity::Complex => generate_iterative_hypothetical_documents(query, llm_client).await,
+        QueryComplexity::Moderate => {
+            generate_multiple_hypothetical_documents(query, llm_client).await
+        }
+        QueryComplexity::Complex => {
+            generate_iterative_hypothetical_documents(query, llm_client).await
+        }
     }
 }
 
@@ -642,7 +687,8 @@ fn analyze_query_complexity(query: &str) -> QueryComplexity {
     let word_count = query.split_whitespace().count();
     let has_multiple_questions = query.matches('?').count() > 1;
     let has_complex_terms = query.contains("how") && query.contains("why");
-    let has_comparisons = query.contains("compare") || query.contains("difference") || query.contains("versus");
+    let has_comparisons =
+        query.contains("compare") || query.contains("difference") || query.contains("versus");
 
     if word_count > 15 || has_multiple_questions || has_complex_terms || has_comparisons {
         QueryComplexity::Complex
@@ -662,7 +708,11 @@ async fn combine_multiple_hypothetical_retrievals(
     // Strategy 1: Use the highest confidence hypothetical document
     let best_doc = hypothetical_docs
         .iter()
-        .max_by(|a, b| a.confidence.partial_cmp(&b.confidence).unwrap_or(std::cmp::Ordering::Equal))
+        .max_by(|a, b| {
+            a.confidence
+                .partial_cmp(&b.confidence)
+                .unwrap_or(std::cmp::Ordering::Equal)
+        })
         .unwrap();
 
     // Strategy 2: For multiple documents, we could also try:
@@ -687,15 +737,19 @@ async fn combine_multiple_hypothetical_retrievals(
             .map_err(ExampleError::Cheungfun)?;
 
         // Choose the response with higher average similarity score
-        let best_avg_score = best_response.retrieved_nodes
+        let best_avg_score = best_response
+            .retrieved_nodes
             .iter()
             .map(|n| n.score)
-            .sum::<f32>() / best_response.retrieved_nodes.len() as f32;
+            .sum::<f32>()
+            / best_response.retrieved_nodes.len() as f32;
 
-        let combined_avg_score = combined_response.retrieved_nodes
+        let combined_avg_score = combined_response
+            .retrieved_nodes
             .iter()
             .map(|n| n.score)
-            .sum::<f32>() / combined_response.retrieved_nodes.len() as f32;
+            .sum::<f32>()
+            / combined_response.retrieved_nodes.len() as f32;
 
         if combined_avg_score > best_avg_score {
             Ok(combined_response)
@@ -715,7 +769,11 @@ async fn combine_multiple_hypothetical_retrievals(
 fn create_combined_hypothetical_document(hypothetical_docs: &[HypotheticalDocument]) -> String {
     // Sort by confidence (highest first)
     let mut sorted_docs = hypothetical_docs.to_vec();
-    sorted_docs.sort_by(|a, b| b.confidence.partial_cmp(&a.confidence).unwrap_or(std::cmp::Ordering::Equal));
+    sorted_docs.sort_by(|a, b| {
+        b.confidence
+            .partial_cmp(&a.confidence)
+            .unwrap_or(std::cmp::Ordering::Equal)
+    });
 
     // Take the top 3 documents and combine them intelligently
     let top_docs: Vec<_> = sorted_docs.iter().take(3).collect();
@@ -724,7 +782,11 @@ fn create_combined_hypothetical_document(hypothetical_docs: &[HypotheticalDocume
     combined.push_str("Comprehensive Analysis:\n\n");
 
     for (i, doc) in top_docs.iter().enumerate() {
-        combined.push_str(&format!("Perspective {} ({} approach):\n", i + 1, doc.strategy));
+        combined.push_str(&format!(
+            "Perspective {} ({} approach):\n",
+            i + 1,
+            doc.strategy
+        ));
 
         // Take the first 200 words of each document to avoid too much repetition
         let words: Vec<&str> = doc.hypothetical_content.split_whitespace().collect();
@@ -780,26 +842,31 @@ async fn perform_hyde_retrieval(
 
     // Step 3: Get baseline response if requested
     let baseline_response = if compare_baseline {
-        Some(query_engine
-            .query(query)
-            .await
-            .map_err(|e| ExampleError::Cheungfun(e))?)
+        Some(
+            query_engine
+                .query(query)
+                .await
+                .map_err(|e| ExampleError::Cheungfun(e))?,
+        )
     } else {
         None
     };
 
     // Step 4: Calculate performance metrics
-    let hyde_similarity = hyde_response.retrieved_nodes
+    let hyde_similarity = hyde_response
+        .retrieved_nodes
         .iter()
         .map(|node| node.score)
         .fold(0.0f32, |a, b| a.max(b));
 
     let baseline_similarity = baseline_response
         .as_ref()
-        .map(|resp| resp.retrieved_nodes
-            .iter()
-            .map(|node| node.score)
-            .fold(0.0f32, |a, b| a.max(b)))
+        .map(|resp| {
+            resp.retrieved_nodes
+                .iter()
+                .map(|node| node.score)
+                .fold(0.0f32, |a, b| a.max(b))
+        })
         .unwrap_or(0.0);
 
     let improvement_percentage = if baseline_similarity > 0.0 {
@@ -850,7 +917,8 @@ async fn run_demo_queries(
             query_engine,
             llm_client,
             args.compare_baseline,
-        ).await?;
+        )
+        .await?;
 
         let total_time = timer.finish();
         metrics.record_query(total_time);
@@ -881,7 +949,10 @@ async fn run_interactive_mode(
     let mut compare_baseline = args.compare_baseline;
 
     loop {
-        println!("Current strategy: {:?} | Baseline comparison: {}", current_strategy, compare_baseline);
+        println!(
+            "Current strategy: {:?} | Baseline comparison: {}",
+            current_strategy, compare_baseline
+        );
         print!("❓ Your question (or command): ");
         std::io::Write::flush(&mut std::io::stdout()).unwrap();
 
@@ -902,7 +973,9 @@ async fn run_interactive_mode(
                 "iterative" => current_strategy = HydeStrategy::Iterative,
                 "adaptive" => current_strategy = HydeStrategy::Adaptive,
                 _ => {
-                    println!("❌ Unknown strategy. Available: single, multiple, iterative, adaptive");
+                    println!(
+                        "❌ Unknown strategy. Available: single, multiple, iterative, adaptive"
+                    );
                     continue;
                 }
             }
@@ -933,7 +1006,9 @@ async fn run_interactive_mode(
             query_engine,
             llm_client,
             compare_baseline,
-        ).await {
+        )
+        .await
+        {
             Ok(results) => {
                 let total_time = timer.finish();
                 metrics.record_query(total_time);

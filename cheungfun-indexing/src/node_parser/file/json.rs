@@ -176,7 +176,8 @@ impl JSONNodeParser {
             node.metadata = document.metadata.clone();
 
             // Add JSON-specific metadata
-            node.metadata.insert("section_type".to_string(), "json_object".into());
+            node.metadata
+                .insert("section_type".to_string(), "json_object".into());
             node.metadata.insert("section_index".to_string(), i.into());
 
             nodes.push(node);
@@ -215,12 +216,8 @@ impl NodeParser for JSONNodeParser {
 impl Transform for JSONNodeParser {
     async fn transform(&self, input: TransformInput) -> CoreResult<Vec<Node>> {
         match input {
-            TransformInput::Documents(documents) => {
-                self.parse_nodes(&documents, false).await
-            }
-            TransformInput::Document(document) => {
-                self.parse_nodes(&[document], false).await
-            }
+            TransformInput::Documents(documents) => self.parse_nodes(&documents, false).await,
+            TransformInput::Document(document) => self.parse_nodes(&[document], false).await,
             TransformInput::Node(node) => {
                 // Convert single node back to document and re-parse
                 let document = Document::new(&node.content);

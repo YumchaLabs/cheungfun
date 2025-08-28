@@ -715,10 +715,6 @@ impl HierarchicalConfig {
     }
 }
 
-
-
-
-
 impl Default for MarkdownConfig {
     fn default() -> Self {
         Self {

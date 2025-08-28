@@ -84,8 +84,13 @@ impl HTMLNodeParser {
             })?;
 
             for element in document.select(&selector) {
-                let text = element.text().collect::<Vec<_>>().join(" ").trim().to_string();
-                
+                let text = element
+                    .text()
+                    .collect::<Vec<_>>()
+                    .join(" ")
+                    .trim()
+                    .to_string();
+
                 if text.is_empty() {
                     continue;
                 }
@@ -99,7 +104,7 @@ impl HTMLNodeParser {
                 }
 
                 current_tag = Some(tag_name.clone());
-                
+
                 if !current_content.is_empty() {
                     current_content.push('\n');
                 }
@@ -143,7 +148,8 @@ impl HTMLNodeParser {
 
             if self.config.preserve_tag_attributes {
                 // In a more complete implementation, we'd extract and preserve attributes
-                node.metadata.insert("has_attributes".to_string(), false.into());
+                node.metadata
+                    .insert("has_attributes".to_string(), false.into());
             }
 
             nodes.push(node);
@@ -182,12 +188,8 @@ impl NodeParser for HTMLNodeParser {
 impl Transform for HTMLNodeParser {
     async fn transform(&self, input: TransformInput) -> CoreResult<Vec<Node>> {
         match input {
-            TransformInput::Documents(documents) => {
-                self.parse_nodes(&documents, false).await
-            }
-            TransformInput::Document(document) => {
-                self.parse_nodes(&[document], false).await
-            }
+            TransformInput::Documents(documents) => self.parse_nodes(&documents, false).await,
+            TransformInput::Document(document) => self.parse_nodes(&[document], false).await,
             TransformInput::Node(node) => {
                 // Convert single node back to document and re-parse
                 let document = Document::new(&node.content);

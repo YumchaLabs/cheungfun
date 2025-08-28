@@ -16,7 +16,10 @@ cheungfun = { path = "../cheungfun" }
 cheungfun-core = { path = "../cheungfun-core" }
 cheungfun-indexing = { path = "../cheungfun-indexing" }
 cheungfun-query = { path = "../cheungfun-query" }
-cheungfun-integrations = { path = "../cheungfun-integrations", features = ["simd", "storage"] }
+cheungfun-integrations = { path = "../cheungfun-integrations", features = [
+    "simd",
+    "storage",
+] }
 cheungfun-agents = { path = "../cheungfun-agents" }
 
 # Core async and utilities
@@ -66,7 +69,14 @@ benchmarks = ["criterion", "sysinfo", "performance"]
 gpu = ["cheungfun-integrations/gpu-cuda", "cheungfun-integrations/gpu-metal"]
 
 # Full feature set
-full = ["code-analysis", "document-analysis", "intelligent-assistant", "knowledge-base", "gpu", "benchmarks"]
+full = [
+    "code-analysis",
+    "document-analysis",
+    "intelligent-assistant",
+    "knowledge-base",
+    "gpu",
+    "benchmarks",
+]
 
 # === New RAG Technique Examples ===
 # Foundational examples
@@ -97,11 +107,6 @@ path = "02_query_enhancement/hyde.rs"
 [[bin]]
 name = "fusion_retrieval"
 path = "03_retrieval_optimization/fusion_retrieval.rs"
-
-[[bin]]
-name = "proposition_chunking"
-path = "01_foundational/proposition_chunking.rs"
-required-features = ["fastembed"]
 
 # === Application Examples ===
 [[bin]]
@@ -199,11 +204,6 @@ path = "utilities/enhanced_file_filtering.rs"
 required-features = ["basic"]
 
 [[bin]]
-name = "list_examples"
-path = "utilities/list_examples.rs"
-required-features = ["basic"]
-
-[[bin]]
 name = "modern_api_example"
 path = "utilities/modern_api_example.rs"
 required-features = ["basic"]
@@ -242,37 +242,6 @@ required-features = ["basic"]
 name = "rag_tools"
 path = "utilities/rag_tools.rs"
 required-features = ["basic"]
-
-[[bin]]
-name = "transform_trait_verification"
-path = "utilities/transform_trait_verification.rs"
-required-features = ["basic"]
-
-[[bin]]
-name = "unicode_boundary_test"
-path = "utilities/unicode_boundary_test.rs"
-required-features = ["basic"]
-
-# Performance tests
-[[bin]]
-name = "simple_hnsw_test"
-path = "utilities/simple_hnsw_test.rs"
-required-features = ["performance"]
-
-[[bin]]
-name = "simple_node_parser_test"
-path = "utilities/simple_node_parser_test.rs"
-required-features = ["basic"]
-
-[[bin]]
-name = "simple_parallel_test"
-path = "utilities/simple_parallel_test.rs"
-required-features = ["performance"]
-
-[[bin]]
-name = "simple_simd_test"
-path = "utilities/simple_simd_test.rs"
-required-features = ["performance"]
 
 # === Legacy Examples (keeping for compatibility) ===
 [[bin]]

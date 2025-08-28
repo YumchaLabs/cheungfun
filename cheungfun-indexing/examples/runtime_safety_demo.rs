@@ -89,16 +89,16 @@ async fn demo_async_usage() -> Result<(), Box<dyn std::error::Error>> {
     "#;
 
     let document = Document::new(rust_code);
-    
+
     // ✅ CORRECT: Use parse_nodes() in async context
     let nodes = splitter.parse_nodes(&[document], false).await?;
-    
+
     println!("Successfully parsed {} nodes", nodes.len());
     for (i, node) in nodes.iter().enumerate() {
         println!("  Node {}: {} chars", i + 1, node.content.len());
     }
     println!();
-    
+
     Ok(())
 }
 
@@ -233,7 +233,11 @@ async fn demo_advanced_async_patterns() -> Result<(), Box<dyn std::error::Error>
     // ✅ Batch processing with single call
     let nodes = splitter.parse_nodes(&documents, false).await?;
 
-    println!("Successfully parsed {} nodes from {} documents", nodes.len(), documents.len());
+    println!(
+        "Successfully parsed {} nodes from {} documents",
+        nodes.len(),
+        documents.len()
+    );
 
     // ✅ Concurrent processing of multiple splitters
     use cheungfun_indexing::node_parser::text::SentenceSplitter;
@@ -244,8 +248,11 @@ async fn demo_advanced_async_patterns() -> Result<(), Box<dyn std::error::Error>
         sentence_splitter.parse_nodes(&documents, false)
     );
 
-    println!("Concurrent results: {} code nodes, {} sentence nodes",
-             code_nodes?.len(), sentence_nodes?.len());
+    println!(
+        "Concurrent results: {} code nodes, {} sentence nodes",
+        code_nodes?.len(),
+        sentence_nodes?.len()
+    );
     println!();
 
     Ok(())
@@ -254,10 +261,7 @@ async fn demo_advanced_async_patterns() -> Result<(), Box<dyn std::error::Error>
 /// Helper function to demonstrate proper usage patterns
 #[allow(dead_code)]
 async fn demonstrate_best_practices() {
-    let splitter = CodeSplitter::from_defaults(
-        ProgrammingLanguage::Rust,
-        40, 10, 1500,
-    ).unwrap();
+    let splitter = CodeSplitter::from_defaults(ProgrammingLanguage::Rust, 40, 10, 1500).unwrap();
 
     let document = Document::new("fn main() { println!(\"Hello, world!\"); }");
 

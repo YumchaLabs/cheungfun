@@ -37,18 +37,18 @@
 //! ```bash
 //! # Run with default RRF fusion
 //! cargo run --bin fusion_retrieval --features fastembed
-//! 
+//!
 //! # Run with specific fusion method
 //! cargo run --bin fusion_retrieval --features fastembed -- --fusion-method rrf
 //! cargo run --bin fusion_retrieval --features fastembed -- --fusion-method weighted
 //! cargo run --bin fusion_retrieval --features fastembed -- --fusion-method rank-based
-//! 
+//!
 //! # Compare with individual retrievers
 //! cargo run --bin fusion_retrieval --features fastembed -- --compare-individual
-//! 
+//!
 //! # Interactive mode
 //! cargo run --bin fusion_retrieval --features fastembed -- --interactive
-//! 
+//!
 //! # Verbose output showing fusion process
 //! cargo run --bin fusion_retrieval --features fastembed -- --verbose
 //! ```
@@ -62,10 +62,8 @@ use std::collections::HashMap;
 mod shared;
 
 use shared::{
-    Timer, PerformanceMetrics,
-    get_climate_test_queries, setup_logging,
-    ExampleResult, ExampleError,
-    constants::*,
+    constants::*, get_climate_test_queries, setup_logging, ExampleError, ExampleResult,
+    PerformanceMetrics, Timer,
 };
 use std::{path::PathBuf, sync::Arc};
 
@@ -75,7 +73,7 @@ use cheungfun_core::{
 };
 use cheungfun_indexing::{
     loaders::DirectoryLoader,
-    node_parser::{text::SentenceSplitter, config::SentenceSplitterConfig},
+    node_parser::{config::SentenceSplitterConfig, text::SentenceSplitter},
     pipeline::DefaultIndexingPipeline,
     transformers::MetadataExtractor,
 };
@@ -83,8 +81,8 @@ use cheungfun_integrations::{FastEmbedder, InMemoryVectorStore};
 use cheungfun_query::{
     engine::QueryEngine,
     generator::SiumaiGenerator,
+    prelude::{Query, QueryResponse},
     retriever::VectorRetriever,
-    prelude::{QueryResponse, Query},
 };
 use siumai::prelude::*;
 
@@ -92,7 +90,9 @@ const DEFAULT_EMBEDDING_DIM: usize = 384;
 
 #[derive(Parser, Debug, Clone)]
 #[command(name = "fusion_retrieval")]
-#[command(about = "Fusion Retrieval Example - Combine multiple retrieval methods for better results")]
+#[command(
+    about = "Fusion Retrieval Example - Combine multiple retrieval methods for better results"
+)]
 struct Args {
     /// Path to the document to process
     #[arg(long, default_value = "data/Understanding_Climate_Change.pdf")]
@@ -192,31 +192,38 @@ impl FusionResults {
     pub fn print_summary(&self, verbose: bool) {
         println!("\n🔀 FUSION RETRIEVAL RESULTS");
         println!("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━");
-        
+
         println!("📝 Original Query: {}", self.original_query);
         println!("🎯 Fusion Method: {}", self.fusion_method);
-        println!("📊 Retrieved {} unique documents from {} methods", 
+        println!(
+            "📊 Retrieved {} unique documents from {} methods",
             self.performance_metrics.num_unique_documents,
             self.individual_results.len()
         );
         println!();
-        
+
         if verbose {
             println!("🔍 Individual Retriever Results:");
             for result in &self.individual_results {
-                println!("  📋 {}: {} results in {:.0}ms", 
-                    result.method_name, 
+                println!(
+                    "  📋 {}: {} results in {:.0}ms",
+                    result.method_name,
                     result.nodes.len(),
                     result.retrieval_time.as_millis()
                 );
-                
-                if let Some(score) = self.performance_metrics.individual_scores.get(&result.method_name) {
+
+                if let Some(score) = self
+                    .performance_metrics
+                    .individual_scores
+                    .get(&result.method_name)
+                {
                     println!("     Best Score: {:.3}", score);
                 }
-                
+
                 // Show top 3 results
                 for (i, scored_node) in result.nodes.iter().take(3).enumerate() {
-                    println!("     {}. Score: {:.3} | {}",
+                    println!(
+                        "     {}. Score: {:.3} | {}",
                         i + 1,
                         scored_node.score,
                         if scored_node.node.content.len() > 80 {
@@ -228,10 +235,11 @@ impl FusionResults {
                 }
                 println!();
             }
-            
+
             println!("🔀 Fused Results (Top 5):");
             for (i, scored_node) in self.fused_nodes.iter().take(5).enumerate() {
-                println!("  {}. Score: {:.3} | {}",
+                println!(
+                    "  {}. Score: {:.3} | {}",
                     i + 1,
                     scored_node.score,
                     if scored_node.node.content.len() > 100 {
@@ -243,18 +251,36 @@ impl FusionResults {
             }
             println!();
         }
-        
+
         println!("📊 Performance Metrics:");
-        println!("   ⏱️  Vector Retrieval: {:.0}ms", self.performance_metrics.vector_retrieval_time.as_millis());
-        println!("   ⏱️  Keyword Retrieval: {:.0}ms", self.performance_metrics.keyword_retrieval_time.as_millis());
-        println!("   🔀 Fusion Time: {:.0}ms", self.performance_metrics.fusion_time.as_millis());
-        println!("   💬 Generation Time: {:.0}ms", self.performance_metrics.generation_time.as_millis());
-        println!("   🎯 Fusion Score: {:.3}", self.performance_metrics.fusion_score);
-        println!("   📈 Result Overlap: {:.1}%", self.performance_metrics.overlap_percentage);
-        
+        println!(
+            "   ⏱️  Vector Retrieval: {:.0}ms",
+            self.performance_metrics.vector_retrieval_time.as_millis()
+        );
+        println!(
+            "   ⏱️  Keyword Retrieval: {:.0}ms",
+            self.performance_metrics.keyword_retrieval_time.as_millis()
+        );
+        println!(
+            "   🔀 Fusion Time: {:.0}ms",
+            self.performance_metrics.fusion_time.as_millis()
+        );
+        println!(
+            "   💬 Generation Time: {:.0}ms",
+            self.performance_metrics.generation_time.as_millis()
+        );
+        println!(
+            "   🎯 Fusion Score: {:.3}",
+            self.performance_metrics.fusion_score
+        );
+        println!(
+            "   📈 Result Overlap: {:.1}%",
+            self.performance_metrics.overlap_percentage
+        );
+
         println!("\n📝 Final Response:");
         println!("{}", self.final_response.response.content);
-        
+
         println!("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━");
     }
 }
@@ -263,14 +289,14 @@ impl FusionResults {
 async fn main() -> ExampleResult<()> {
     // Setup logging
     setup_logging();
-    
+
     let args = Args::parse();
-    
+
     println!("🚀 Starting Fusion Retrieval Example...");
-    
+
     // Print configuration
     print_config(&args);
-    
+
     let mut metrics = PerformanceMetrics::new();
 
     // Step 1: Create embedder
@@ -278,13 +304,28 @@ async fn main() -> ExampleResult<()> {
     println!("✅ Embedder initialized: {}", args.embedding_provider);
 
     // Step 2: Create retrievers and query engine
-    let (vector_retriever, keyword_retriever, query_engine) = create_retrievers_and_engine(&args, embedder).await?;
+    let (vector_retriever, keyword_retriever, query_engine) =
+        create_retrievers_and_engine(&args, embedder).await?;
     println!("✅ Retrievers and query engine initialized");
 
     if args.interactive {
-        run_interactive_mode(&vector_retriever, &keyword_retriever, &query_engine, &args, &mut metrics).await?;
+        run_interactive_mode(
+            &vector_retriever,
+            &keyword_retriever,
+            &query_engine,
+            &args,
+            &mut metrics,
+        )
+        .await?;
     } else {
-        run_demo_queries(&vector_retriever, &keyword_retriever, &query_engine, &args, &mut metrics).await?;
+        run_demo_queries(
+            &vector_retriever,
+            &keyword_retriever,
+            &query_engine,
+            &args,
+            &mut metrics,
+        )
+        .await?;
     }
 
     // Print final metrics
@@ -298,18 +339,24 @@ fn print_config(args: &Args) {
     println!("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━");
     println!("📄 Document: {}", args.document_path.display());
     println!("🔤 Embedding Provider: {}", args.embedding_provider);
-    println!("📏 Chunk Size: {} (overlap: {})", args.chunk_size, args.chunk_overlap);
+    println!(
+        "📏 Chunk Size: {} (overlap: {})",
+        args.chunk_size, args.chunk_overlap
+    );
     println!("🔍 Top-K per method: {}", args.top_k);
     println!("🎯 Fusion Method: {:?}", args.fusion_method);
     println!("📊 Compare Individual: {}", args.compare_individual);
     println!("🔍 Verbose: {}", args.verbose);
-    
+
     match args.fusion_method {
         FusionMethod::Rrf => println!("⚙️  RRF K: {}", args.rrf_k),
-        FusionMethod::Weighted => println!("⚙️  Weights: Vector={}, Keyword={}", args.vector_weight, args.keyword_weight),
+        FusionMethod::Weighted => println!(
+            "⚙️  Weights: Vector={}, Keyword={}",
+            args.vector_weight, args.keyword_weight
+        ),
         _ => {}
     }
-    
+
     println!();
 }
 
@@ -381,10 +428,13 @@ async fn create_llm_client() -> ExampleResult<Siumai> {
 
 async fn create_retrievers_and_engine(
     args: &Args,
-    embedder: Arc<dyn Embedder>
+    embedder: Arc<dyn Embedder>,
 ) -> ExampleResult<(Arc<VectorRetriever>, Arc<KeywordRetriever>, QueryEngine)> {
     // Create vector store and index documents
-    let vector_store = Arc::new(InMemoryVectorStore::new(DEFAULT_EMBEDDING_DIM, DistanceMetric::Cosine));
+    let vector_store = Arc::new(InMemoryVectorStore::new(
+        DEFAULT_EMBEDDING_DIM,
+        DistanceMetric::Cosine,
+    ));
 
     // Build indexing pipeline
     let timer = Timer::new("Document indexing");
@@ -410,29 +460,35 @@ async fn create_retrievers_and_engine(
         .build()?;
 
     // Run indexing pipeline with progress reporting
-    let indexing_stats = pipeline.run_with_progress(Box::new(|progress| {
-        if let Some(percentage) = progress.percentage() {
-            println!("📊 {}: {:.1}% ({}/{})",
-                progress.stage,
-                percentage,
-                progress.processed,
-                progress.total.unwrap_or(0)
-            );
-        } else {
-            println!("📊 {}: {} items processed",
-                progress.stage,
-                progress.processed
-            );
-        }
+    let indexing_stats = pipeline
+        .run_with_progress(Box::new(|progress| {
+            if let Some(percentage) = progress.percentage() {
+                println!(
+                    "📊 {}: {:.1}% ({}/{})",
+                    progress.stage,
+                    percentage,
+                    progress.processed,
+                    progress.total.unwrap_or(0)
+                );
+            } else {
+                println!(
+                    "📊 {}: {} items processed",
+                    progress.stage, progress.processed
+                );
+            }
 
-        if let Some(current_item) = &progress.current_item {
-            println!("   └─ {}", current_item);
-        }
-    })).await?;
+            if let Some(current_item) = &progress.current_item {
+                println!("   └─ {}", current_item);
+            }
+        }))
+        .await?;
 
     let indexing_time = timer.finish();
 
-    println!("✅ Completed: Document indexing in {:.2}s", indexing_time.as_secs_f64());
+    println!(
+        "✅ Completed: Document indexing in {:.2}s",
+        indexing_time.as_secs_f64()
+    );
     println!("📊 Indexing completed:");
     println!("  📚 Documents: {}", indexing_stats.documents_processed);
     println!("  🔗 Nodes: {}", indexing_stats.nodes_created);
@@ -442,7 +498,10 @@ async fn create_retrievers_and_engine(
     let vector_retriever = Arc::new(VectorRetriever::new(vector_store.clone(), embedder.clone()));
 
     // Create a proper keyword retriever with TF-IDF-like scoring
-    let keyword_retriever = Arc::new(KeywordRetriever::new(vector_store.clone(), embedder.clone()));
+    let keyword_retriever = Arc::new(KeywordRetriever::new(
+        vector_store.clone(),
+        embedder.clone(),
+    ));
 
     // Create query engine with vector retriever (we'll handle fusion separately)
     let llm_client = create_llm_client().await?;
@@ -461,13 +520,17 @@ pub struct KeywordRetriever {
 
 impl KeywordRetriever {
     pub fn new(vector_store: Arc<InMemoryVectorStore>, embedder: Arc<dyn Embedder>) -> Self {
-        Self { vector_store, embedder }
+        Self {
+            vector_store,
+            embedder,
+        }
     }
 
     /// Perform keyword-based retrieval using a simple TF-IDF-like approach
     pub async fn retrieve(&self, query: &str, top_k: usize) -> ExampleResult<Vec<ScoredNode>> {
         // Extract query terms
-        let query_terms: Vec<String> = query.to_lowercase()
+        let query_terms: Vec<String> = query
+            .to_lowercase()
             .split_whitespace()
             .filter(|term| term.len() > 2) // Filter out very short words
             .map(|s| s.to_string())
@@ -485,8 +548,14 @@ impl KeywordRetriever {
 
         // Query 1: All terms together
         let combined_query = format!("important keywords: {}", query_terms.join(" "));
-        let embedding1 = self.embedder.embed(&combined_query).await.map_err(|e| ExampleError::Config(format!("Embedding error: {}", e)))?;
-        let query1 = Query::new(combined_query).with_embedding(embedding1).with_top_k(top_k);
+        let embedding1 = self
+            .embedder
+            .embed(&combined_query)
+            .await
+            .map_err(|e| ExampleError::Config(format!("Embedding error: {}", e)))?;
+        let query1 = Query::new(combined_query)
+            .with_embedding(embedding1)
+            .with_top_k(top_k);
         if let Ok(results1) = self.vector_store.search(&query1).await {
             all_results.extend(results1);
         }
@@ -494,8 +563,14 @@ impl KeywordRetriever {
         // Query 2: Individual important terms
         for term in &query_terms {
             let term_query = format!("key term: {}", term);
-            let embedding = self.embedder.embed(&term_query).await.map_err(|e| ExampleError::Config(format!("Embedding error: {}", e)))?;
-            let query = Query::new(term_query).with_embedding(embedding).with_top_k(top_k / 2);
+            let embedding = self
+                .embedder
+                .embed(&term_query)
+                .await
+                .map_err(|e| ExampleError::Config(format!("Embedding error: {}", e)))?;
+            let query = Query::new(term_query)
+                .with_embedding(embedding)
+                .with_top_k(top_k / 2);
             if let Ok(results) = self.vector_store.search(&query).await {
                 all_results.extend(results);
             }
@@ -517,7 +592,8 @@ impl KeywordRetriever {
                 if term_count > 0.0 {
                     matched_terms += 1;
                     // Simple TF-IDF-like scoring: term frequency * inverse document frequency (approximated)
-                    keyword_score += term_count * (1.0 + (query_terms.len() as f32 / term_count).ln());
+                    keyword_score +=
+                        term_count * (1.0 + (query_terms.len() as f32 / term_count).ln());
                 }
             }
 
@@ -528,7 +604,9 @@ impl KeywordRetriever {
                 // Combine with original vector similarity score
                 let combined_score = (keyword_score * 0.7) + (scored_node.score * 0.3);
 
-                let entry = scored_results.entry(node_id).or_insert_with(|| scored_node.clone());
+                let entry = scored_results
+                    .entry(node_id)
+                    .or_insert_with(|| scored_node.clone());
                 if combined_score > entry.score {
                     entry.score = combined_score;
                 }
@@ -536,7 +614,11 @@ impl KeywordRetriever {
         }
 
         let mut final_results: Vec<ScoredNode> = scored_results.into_values().collect();
-        final_results.sort_by(|a, b| b.score.partial_cmp(&a.score).unwrap_or(std::cmp::Ordering::Equal));
+        final_results.sort_by(|a, b| {
+            b.score
+                .partial_cmp(&a.score)
+                .unwrap_or(std::cmp::Ordering::Equal)
+        });
         final_results.truncate(top_k);
 
         Ok(final_results)
@@ -558,9 +640,10 @@ async fn perform_fusion_retrieval(
 
     // Vector retrieval
     let vector_timer = Timer::new("Vector retrieval");
-    let vector_query = Query::new(query.to_string())
-        .with_top_k(args.top_k);
-    let vector_nodes = vector_retriever.retrieve(&vector_query).await
+    let vector_query = Query::new(query.to_string()).with_top_k(args.top_k);
+    let vector_nodes = vector_retriever
+        .retrieve(&vector_query)
+        .await
         .map_err(|e| ExampleError::Cheungfun(e))?;
     let vector_time = vector_timer.finish();
 
@@ -585,7 +668,9 @@ async fn perform_fusion_retrieval(
     let fusion_timer = Timer::new("Result fusion");
     let fused_nodes = match args.fusion_method {
         FusionMethod::Rrf => reciprocal_rank_fusion(&individual_results, args.rrf_k),
-        FusionMethod::Weighted => weighted_score_fusion(&individual_results, args.vector_weight, args.keyword_weight),
+        FusionMethod::Weighted => {
+            weighted_score_fusion(&individual_results, args.vector_weight, args.keyword_weight)
+        }
         FusionMethod::RankBased => rank_based_fusion(&individual_results),
         FusionMethod::Adaptive => adaptive_fusion(&individual_results, query),
     };
@@ -643,11 +728,14 @@ fn reciprocal_rank_fusion(results: &[RetrieverResults], k: f32) -> Vec<ScoredNod
             let rrf_score = 1.0 / (k + rank as f32 + 1.0);
 
             *score_map.entry(node_id.clone()).or_insert(0.0) += rrf_score;
-            node_map.entry(node_id).or_insert_with(|| scored_node.clone());
+            node_map
+                .entry(node_id)
+                .or_insert_with(|| scored_node.clone());
         }
     }
 
-    let mut fused_nodes: Vec<_> = score_map.into_iter()
+    let mut fused_nodes: Vec<_> = score_map
+        .into_iter()
         .filter_map(|(id, score)| {
             node_map.get(&id).map(|scored_node| {
                 let mut fused_node = scored_node.clone();
@@ -657,23 +745,38 @@ fn reciprocal_rank_fusion(results: &[RetrieverResults], k: f32) -> Vec<ScoredNod
         })
         .collect();
 
-    fused_nodes.sort_by(|a, b| b.score.partial_cmp(&a.score).unwrap_or(std::cmp::Ordering::Equal));
+    fused_nodes.sort_by(|a, b| {
+        b.score
+            .partial_cmp(&a.score)
+            .unwrap_or(std::cmp::Ordering::Equal)
+    });
     fused_nodes
 }
 
 /// Weighted score fusion
-fn weighted_score_fusion(results: &[RetrieverResults], vector_weight: f32, keyword_weight: f32) -> Vec<ScoredNode> {
+fn weighted_score_fusion(
+    results: &[RetrieverResults],
+    vector_weight: f32,
+    keyword_weight: f32,
+) -> Vec<ScoredNode> {
     let mut score_map: HashMap<String, f32> = HashMap::new();
     let mut node_map: HashMap<String, ScoredNode> = HashMap::new();
 
     let weights = vec![vector_weight, keyword_weight];
 
     for (i, result) in results.iter().enumerate() {
-        let weight = weights.get(i).copied().unwrap_or(1.0 / results.len() as f32);
+        let weight = weights
+            .get(i)
+            .copied()
+            .unwrap_or(1.0 / results.len() as f32);
 
         // Normalize scores within this result set first
         let max_score = result.nodes.iter().map(|n| n.score).fold(0.0f32, f32::max);
-        let min_score = result.nodes.iter().map(|n| n.score).fold(f32::INFINITY, f32::min);
+        let min_score = result
+            .nodes
+            .iter()
+            .map(|n| n.score)
+            .fold(f32::INFINITY, f32::min);
         let score_range = max_score - min_score;
 
         for scored_node in &result.nodes {
@@ -689,11 +792,14 @@ fn weighted_score_fusion(results: &[RetrieverResults], vector_weight: f32, keywo
             let weighted_score = normalized_score * weight;
 
             *score_map.entry(node_id.clone()).or_insert(0.0) += weighted_score;
-            node_map.entry(node_id).or_insert_with(|| scored_node.clone());
+            node_map
+                .entry(node_id)
+                .or_insert_with(|| scored_node.clone());
         }
     }
 
-    let mut fused_nodes: Vec<_> = score_map.into_iter()
+    let mut fused_nodes: Vec<_> = score_map
+        .into_iter()
         .filter_map(|(id, score)| {
             node_map.get(&id).map(|scored_node| {
                 let mut fused_node = scored_node.clone();
@@ -703,7 +809,11 @@ fn weighted_score_fusion(results: &[RetrieverResults], vector_weight: f32, keywo
         })
         .collect();
 
-    fused_nodes.sort_by(|a, b| b.score.partial_cmp(&a.score).unwrap_or(std::cmp::Ordering::Equal));
+    fused_nodes.sort_by(|a, b| {
+        b.score
+            .partial_cmp(&a.score)
+            .unwrap_or(std::cmp::Ordering::Equal)
+    });
     fused_nodes
 }
 
@@ -720,11 +830,14 @@ fn rank_based_fusion(results: &[RetrieverResults]) -> Vec<ScoredNode> {
             let rank_score = 1.0 / (rank as f32 + 1.0);
 
             *rank_map.entry(node_id.clone()).or_insert(0.0) += rank_score;
-            node_map.entry(node_id).or_insert_with(|| scored_node.clone());
+            node_map
+                .entry(node_id)
+                .or_insert_with(|| scored_node.clone());
         }
     }
 
-    let mut fused_nodes: Vec<_> = rank_map.into_iter()
+    let mut fused_nodes: Vec<_> = rank_map
+        .into_iter()
         .filter_map(|(id, score)| {
             node_map.get(&id).map(|scored_node| {
                 let mut fused_node = scored_node.clone();
@@ -734,7 +847,11 @@ fn rank_based_fusion(results: &[RetrieverResults]) -> Vec<ScoredNode> {
         })
         .collect();
 
-    fused_nodes.sort_by(|a, b| b.score.partial_cmp(&a.score).unwrap_or(std::cmp::Ordering::Equal));
+    fused_nodes.sort_by(|a, b| {
+        b.score
+            .partial_cmp(&a.score)
+            .unwrap_or(std::cmp::Ordering::Equal)
+    });
     fused_nodes
 }
 
@@ -742,7 +859,8 @@ fn rank_based_fusion(results: &[RetrieverResults]) -> Vec<ScoredNode> {
 fn adaptive_fusion(results: &[RetrieverResults], query: &str) -> Vec<ScoredNode> {
     // Analyze query to determine best fusion strategy
     let query_length = query.split_whitespace().count();
-    let has_specific_terms = query.contains("what") || query.contains("how") || query.contains("when");
+    let has_specific_terms =
+        query.contains("what") || query.contains("how") || query.contains("when");
 
     if query_length <= 3 && has_specific_terms {
         // Short, specific queries: favor vector search
@@ -766,7 +884,9 @@ async fn generate_response_from_nodes(
     // In a more sophisticated implementation, you might want to create a custom context
     // from the fused nodes
 
-    let response = query_engine.query(query).await
+    let response = query_engine
+        .query(query)
+        .await
         .map_err(|e| ExampleError::Cheungfun(e))?;
 
     Ok(response)
@@ -838,7 +958,8 @@ async fn run_demo_queries(
             keyword_retriever,
             query_engine,
             args,
-        ).await?;
+        )
+        .await?;
 
         let total_time = timer.finish();
         metrics.record_query(total_time);
@@ -849,10 +970,15 @@ async fn run_demo_queries(
         if args.compare_individual {
             println!("\n📊 Individual Retriever Comparison:");
             for individual_result in &results.individual_results {
-                println!("  🔍 {}: {} results, best score: {:.3}",
+                println!(
+                    "  🔍 {}: {} results, best score: {:.3}",
                     individual_result.method_name,
                     individual_result.nodes.len(),
-                    individual_result.nodes.first().map(|n| n.score).unwrap_or(0.0)
+                    individual_result
+                        .nodes
+                        .first()
+                        .map(|n| n.score)
+                        .unwrap_or(0.0)
                 );
             }
         }
@@ -884,8 +1010,10 @@ async fn run_interactive_mode(
     loop {
         println!("Current fusion method: {:?}", current_args.fusion_method);
         if matches!(current_args.fusion_method, FusionMethod::Weighted) {
-            println!("Current weights: Vector={:.1}, Keyword={:.1}",
-                current_args.vector_weight, current_args.keyword_weight);
+            println!(
+                "Current weights: Vector={:.1}, Keyword={:.1}",
+                current_args.vector_weight, current_args.keyword_weight
+            );
         }
         print!("❓ Your question (or command): ");
         std::io::Write::flush(&mut std::io::stdout()).unwrap();
@@ -907,11 +1035,16 @@ async fn run_interactive_mode(
                 "rank-based" => current_args.fusion_method = FusionMethod::RankBased,
                 "adaptive" => current_args.fusion_method = FusionMethod::Adaptive,
                 _ => {
-                    println!("❌ Unknown fusion method. Available: rrf, weighted, rank-based, adaptive");
+                    println!(
+                        "❌ Unknown fusion method. Available: rrf, weighted, rank-based, adaptive"
+                    );
                     continue;
                 }
             }
-            println!("✅ Fusion method changed to: {:?}", current_args.fusion_method);
+            println!(
+                "✅ Fusion method changed to: {:?}",
+                current_args.fusion_method
+            );
             continue;
         }
 
@@ -920,12 +1053,19 @@ async fn run_interactive_mode(
             let weights_str = input.strip_prefix("weights ").unwrap().trim();
             let weights: Vec<&str> = weights_str.split_whitespace().collect();
             if weights.len() == 2 {
-                if let (Ok(vector_weight), Ok(keyword_weight)) = (weights[0].parse::<f32>(), weights[1].parse::<f32>()) {
+                if let (Ok(vector_weight), Ok(keyword_weight)) =
+                    (weights[0].parse::<f32>(), weights[1].parse::<f32>())
+                {
                     current_args.vector_weight = vector_weight;
                     current_args.keyword_weight = keyword_weight;
-                    println!("✅ Weights updated: Vector={:.1}, Keyword={:.1}", vector_weight, keyword_weight);
+                    println!(
+                        "✅ Weights updated: Vector={:.1}, Keyword={:.1}",
+                        vector_weight, keyword_weight
+                    );
                 } else {
-                    println!("❌ Invalid weight values. Use: weights <vector_weight> <keyword_weight>");
+                    println!(
+                        "❌ Invalid weight values. Use: weights <vector_weight> <keyword_weight>"
+                    );
                 }
             } else {
                 println!("❌ Use: weights <vector_weight> <keyword_weight>");
@@ -941,7 +1081,9 @@ async fn run_interactive_mode(
             keyword_retriever,
             query_engine,
             &current_args,
-        ).await {
+        )
+        .await
+        {
             Ok(results) => {
                 let total_time = timer.finish();
                 metrics.record_query(total_time);

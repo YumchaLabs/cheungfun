@@ -15,12 +15,12 @@
 //! ```bash
 //! # Run with all transformation techniques
 //! cargo run --bin query_transformations --features fastembed
-//! 
+//!
 //! # Run with specific transformation technique
 //! cargo run --bin query_transformations --features fastembed -- --technique rewrite
 //! cargo run --bin query_transformations --features fastembed -- --technique stepback
 //! cargo run --bin query_transformations --features fastembed -- --technique decompose
-//! 
+//!
 //! # Interactive mode with transformations
 //! cargo run --bin query_transformations --features fastembed -- --interactive
 //! ```
@@ -33,10 +33,8 @@ use serde::{Deserialize, Serialize};
 mod shared;
 
 use shared::{
-    Timer, PerformanceMetrics,
-    get_climate_test_queries, setup_logging,
-    ExampleResult, ExampleError,
-    constants::*,
+    constants::*, get_climate_test_queries, setup_logging, ExampleError, ExampleResult,
+    PerformanceMetrics, Timer,
 };
 use std::{path::PathBuf, sync::Arc};
 
@@ -46,16 +44,14 @@ use cheungfun_core::{
 };
 use cheungfun_indexing::{
     loaders::DirectoryLoader,
-    node_parser::{text::SentenceSplitter, config::SentenceSplitterConfig},
+    node_parser::{config::SentenceSplitterConfig, text::SentenceSplitter},
     pipeline::DefaultIndexingPipeline,
     transformers::MetadataExtractor,
 };
 use cheungfun_integrations::{FastEmbedder, InMemoryVectorStore};
 use cheungfun_query::{
-    engine::QueryEngine,
-    generator::SiumaiGenerator,
+    engine::QueryEngine, generator::SiumaiGenerator, prelude::QueryResponse,
     retriever::VectorRetriever,
-    prelude::QueryResponse,
 };
 use siumai::prelude::*;
 
@@ -148,11 +144,14 @@ impl TransformationResults {
     pub fn print_summary(&self, verbose: bool) {
         println!("\n🔄 QUERY TRANSFORMATION RESULTS");
         println!("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━");
-        
+
         println!("📝 Original Query: {}", self.original_query);
-        println!("🎯 Generated {} transformed queries", self.transformed_queries.len());
+        println!(
+            "🎯 Generated {} transformed queries",
+            self.transformed_queries.len()
+        );
         println!();
-        
+
         if verbose {
             println!("🔍 All Transformations:");
             for (i, tq) in self.transformed_queries.iter().enumerate() {
@@ -162,31 +161,56 @@ impl TransformationResults {
                 println!();
             }
         }
-        
+
         // Find best performing transformation
-        let best_transform = self.all_responses
-            .iter()
-            .max_by(|a, b| {
-                let score_a = a.1.retrieved_nodes.iter().map(|n| n.score).fold(0.0f32, |acc, s| acc.max(s));
-                let score_b = b.1.retrieved_nodes.iter().map(|n| n.score).fold(0.0f32, |acc, s| acc.max(s));
-                score_a.partial_cmp(&score_b).unwrap()
-            });
-            
+        let best_transform = self.all_responses.iter().max_by(|a, b| {
+            let score_a =
+                a.1.retrieved_nodes
+                    .iter()
+                    .map(|n| n.score)
+                    .fold(0.0f32, |acc, s| acc.max(s));
+            let score_b =
+                b.1.retrieved_nodes
+                    .iter()
+                    .map(|n| n.score)
+                    .fold(0.0f32, |acc, s| acc.max(s));
+            score_a.partial_cmp(&score_b).unwrap()
+        });
+
         if let Some((best_tq, best_resp)) = best_transform {
-            let best_score = best_resp.retrieved_nodes.iter().map(|n| n.score).fold(0.0f32, |acc, s| acc.max(s));
+            let best_score = best_resp
+                .retrieved_nodes
+                .iter()
+                .map(|n| n.score)
+                .fold(0.0f32, |acc, s| acc.max(s));
             println!("🏆 Best Performing Transformation:");
             println!("   Technique: {}", best_tq.technique);
             println!("   Query: {}", best_tq.transformed_query);
             println!("   Similarity Score: {:.3}", best_score);
-            println!("   Improvement: {:.1}%", self.performance_metrics.improvement_over_original * 100.0);
+            println!(
+                "   Improvement: {:.1}%",
+                self.performance_metrics.improvement_over_original * 100.0
+            );
         }
-        
+
         println!("\n📊 Performance Metrics:");
-        println!("   ⏱️  Avg Transformation Time: {:.0}ms", self.performance_metrics.avg_transformation_time.as_millis());
-        println!("   🔍 Avg Retrieval Time: {:.0}ms", self.performance_metrics.avg_retrieval_time.as_millis());
-        println!("   🎯 Best Similarity Score: {:.3}", self.performance_metrics.best_similarity_score);
-        println!("   📈 Overall Improvement: {:.1}%", self.performance_metrics.improvement_over_original * 100.0);
-        
+        println!(
+            "   ⏱️  Avg Transformation Time: {:.0}ms",
+            self.performance_metrics.avg_transformation_time.as_millis()
+        );
+        println!(
+            "   🔍 Avg Retrieval Time: {:.0}ms",
+            self.performance_metrics.avg_retrieval_time.as_millis()
+        );
+        println!(
+            "   🎯 Best Similarity Score: {:.3}",
+            self.performance_metrics.best_similarity_score
+        );
+        println!(
+            "   📈 Overall Improvement: {:.1}%",
+            self.performance_metrics.improvement_over_original * 100.0
+        );
+
         println!("\n📝 Best Response:");
         println!("{}", self.best_response.response.content);
         println!("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━");
@@ -197,14 +221,14 @@ impl TransformationResults {
 async fn main() -> ExampleResult<()> {
     // Setup logging
     setup_logging();
-    
+
     let args = Args::parse();
-    
+
     println!("🚀 Starting Query Transformations Example...");
-    
+
     // Print configuration
     print_config(&args);
-    
+
     let mut metrics = PerformanceMetrics::new();
 
     // Step 1: Create embedder
@@ -236,15 +260,18 @@ fn print_config(args: &Args) {
     println!("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━");
     println!("📄 Document: {}", args.document_path.display());
     println!("🔤 Embedding Provider: {}", args.embedding_provider);
-    println!("📏 Chunk Size: {} (overlap: {})", args.chunk_size, args.chunk_overlap);
+    println!(
+        "📏 Chunk Size: {} (overlap: {})",
+        args.chunk_size, args.chunk_overlap
+    );
     println!("🔍 Top-K: {}", args.top_k);
-    
+
     if let Some(ref technique) = args.technique {
         println!("🎯 Technique: {:?}", technique);
     } else {
         println!("🎯 Technique: All techniques");
     }
-    
+
     println!("🔍 Verbose: {}", args.verbose);
     println!();
 }
@@ -299,12 +326,12 @@ async fn create_llm_client() -> ExampleResult<Siumai> {
                 .map_err(|e| ExampleError::Config(format!("Failed to initialize OpenAI: {}", e)));
         }
     }
-    
+
     // Fallback to Ollama
     println!("🤖 No valid OpenAI API key found, using Ollama for query transformations (local)");
     println!("💡 Make sure Ollama is running with: ollama serve");
     println!("💡 And pull a model with: ollama pull llama3.2");
-    
+
     Siumai::builder()
         .ollama()
         .base_url("http://localhost:11434")
@@ -315,9 +342,15 @@ async fn create_llm_client() -> ExampleResult<Siumai> {
         .map_err(|e| ExampleError::Config(format!("Failed to initialize Ollama: {}. Make sure Ollama is running with 'ollama serve' and you have pulled a model with 'ollama pull llama3.2'", e)))
 }
 
-async fn create_query_engine(args: &Args, embedder: Arc<dyn Embedder>) -> ExampleResult<QueryEngine> {
+async fn create_query_engine(
+    args: &Args,
+    embedder: Arc<dyn Embedder>,
+) -> ExampleResult<QueryEngine> {
     // Create vector store
-    let vector_store = Arc::new(InMemoryVectorStore::new(DEFAULT_EMBEDDING_DIM, DistanceMetric::Cosine));
+    let vector_store = Arc::new(InMemoryVectorStore::new(
+        DEFAULT_EMBEDDING_DIM,
+        DistanceMetric::Cosine,
+    ));
 
     // Step 2: Build indexing pipeline
     let timer = Timer::new("Document indexing");
@@ -343,29 +376,35 @@ async fn create_query_engine(args: &Args, embedder: Arc<dyn Embedder>) -> Exampl
         .build()?;
 
     // Run indexing pipeline with progress reporting
-    let indexing_stats = pipeline.run_with_progress(Box::new(|progress| {
-        if let Some(percentage) = progress.percentage() {
-            println!("📊 {}: {:.1}% ({}/{})",
-                progress.stage,
-                percentage,
-                progress.processed,
-                progress.total.unwrap_or(0)
-            );
-        } else {
-            println!("📊 {}: {} items processed",
-                progress.stage,
-                progress.processed
-            );
-        }
+    let indexing_stats = pipeline
+        .run_with_progress(Box::new(|progress| {
+            if let Some(percentage) = progress.percentage() {
+                println!(
+                    "📊 {}: {:.1}% ({}/{})",
+                    progress.stage,
+                    percentage,
+                    progress.processed,
+                    progress.total.unwrap_or(0)
+                );
+            } else {
+                println!(
+                    "📊 {}: {} items processed",
+                    progress.stage, progress.processed
+                );
+            }
 
-        if let Some(current_item) = &progress.current_item {
-            println!("   └─ {}", current_item);
-        }
-    })).await?;
+            if let Some(current_item) = &progress.current_item {
+                println!("   └─ {}", current_item);
+            }
+        }))
+        .await?;
 
     let indexing_time = timer.finish();
 
-    println!("✅ Completed: Document indexing in {:.2}s", indexing_time.as_secs_f64());
+    println!(
+        "✅ Completed: Document indexing in {:.2}s",
+        indexing_time.as_secs_f64()
+    );
     println!("📊 Indexing completed:");
     println!("  📚 Documents: {}", indexing_stats.documents_processed);
     println!("  🔗 Nodes: {}", indexing_stats.nodes_created);
@@ -419,9 +458,13 @@ async fn transform_query(
     match technique {
         TransformationTechnique::Rewrite => query_rewrite(original_query, llm_client).await,
         TransformationTechnique::Stepback => step_back_prompting(original_query, llm_client).await,
-        TransformationTechnique::Decompose => sub_query_decomposition(original_query, llm_client).await,
+        TransformationTechnique::Decompose => {
+            sub_query_decomposition(original_query, llm_client).await
+        }
         TransformationTechnique::Expand => query_expansion(original_query, llm_client).await,
-        TransformationTechnique::Multiperspective => multi_perspective_queries(original_query, llm_client).await,
+        TransformationTechnique::Multiperspective => {
+            multi_perspective_queries(original_query, llm_client).await
+        }
         TransformationTechnique::All => {
             let mut all_transforms = Vec::new();
 
@@ -438,7 +481,8 @@ async fn transform_query(
             if let Ok(mut transforms) = query_expansion(original_query, llm_client).await {
                 all_transforms.append(&mut transforms);
             }
-            if let Ok(mut transforms) = multi_perspective_queries(original_query, llm_client).await {
+            if let Ok(mut transforms) = multi_perspective_queries(original_query, llm_client).await
+            {
                 all_transforms.append(&mut transforms);
             }
 
@@ -448,7 +492,10 @@ async fn transform_query(
 }
 
 /// Query rewriting technique
-async fn query_rewrite(original_query: &str, llm_client: &Siumai) -> ExampleResult<Vec<TransformedQuery>> {
+async fn query_rewrite(
+    original_query: &str,
+    llm_client: &Siumai,
+) -> ExampleResult<Vec<TransformedQuery>> {
     let prompt = format!(
         r#"You are an expert at rewriting search queries to improve retrieval effectiveness.
 
@@ -492,7 +539,10 @@ Format your response as JSON:
 }
 
 /// Step-back prompting technique
-async fn step_back_prompting(original_query: &str, llm_client: &Siumai) -> ExampleResult<Vec<TransformedQuery>> {
+async fn step_back_prompting(
+    original_query: &str,
+    llm_client: &Siumai,
+) -> ExampleResult<Vec<TransformedQuery>> {
     let prompt = format!(
         r#"You are an expert at creating step-back prompts for better information retrieval.
 
@@ -537,7 +587,10 @@ Format your response as JSON:
 }
 
 /// Sub-query decomposition technique
-async fn sub_query_decomposition(original_query: &str, llm_client: &Siumai) -> ExampleResult<Vec<TransformedQuery>> {
+async fn sub_query_decomposition(
+    original_query: &str,
+    llm_client: &Siumai,
+) -> ExampleResult<Vec<TransformedQuery>> {
     let prompt = format!(
         r#"You are an expert at breaking down complex queries into simpler sub-queries.
 
@@ -578,7 +631,10 @@ Format your response as JSON:
 }
 
 /// Query expansion technique
-async fn query_expansion(original_query: &str, llm_client: &Siumai) -> ExampleResult<Vec<TransformedQuery>> {
+async fn query_expansion(
+    original_query: &str,
+    llm_client: &Siumai,
+) -> ExampleResult<Vec<TransformedQuery>> {
     let prompt = format!(
         r#"You are an expert at expanding queries with related terms and synonyms.
 
@@ -621,7 +677,10 @@ Format your response as JSON:
 }
 
 /// Multi-perspective queries technique
-async fn multi_perspective_queries(original_query: &str, llm_client: &Siumai) -> ExampleResult<Vec<TransformedQuery>> {
+async fn multi_perspective_queries(
+    original_query: &str,
+    llm_client: &Siumai,
+) -> ExampleResult<Vec<TransformedQuery>> {
     let prompt = format!(
         r#"You are an expert at creating multi-perspective queries for comprehensive information retrieval.
 
@@ -682,7 +741,8 @@ fn parse_transformation_response(
             let mut transformed_queries = Vec::new();
 
             // Handle different response formats
-            let queries_array = parsed.get("rewrites")
+            let queries_array = parsed
+                .get("rewrites")
                 .or_else(|| parsed.get("stepbacks"))
                 .or_else(|| parsed.get("subqueries"))
                 .or_else(|| parsed.get("expansions"))
@@ -733,7 +793,10 @@ async fn run_demo_queries(
     println!();
 
     let queries = get_climate_test_queries();
-    let technique = args.technique.as_ref().unwrap_or(&TransformationTechnique::All);
+    let technique = args
+        .technique
+        .as_ref()
+        .unwrap_or(&TransformationTechnique::All);
 
     for (i, query) in queries.iter().enumerate() {
         println!("🧪 Demo Query {}/{}: {}", i + 1, queries.len(), query);
@@ -741,13 +804,8 @@ async fn run_demo_queries(
 
         let timer = Timer::new("Query transformation and retrieval");
 
-        let results = perform_query_transformation(
-            query,
-            technique,
-            query_engine,
-            llm_client,
-            args,
-        ).await?;
+        let results =
+            perform_query_transformation(query, technique, query_engine, llm_client, args).await?;
 
         let total_time = timer.finish();
         metrics.record_query(total_time);
@@ -773,7 +831,11 @@ async fn run_interactive_mode(
     println!("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━");
     println!();
 
-    let mut current_technique = args.technique.as_ref().unwrap_or(&TransformationTechnique::All).clone();
+    let mut current_technique = args
+        .technique
+        .as_ref()
+        .unwrap_or(&TransformationTechnique::All)
+        .clone();
 
     loop {
         println!("Current technique: {:?}", current_technique);
@@ -815,7 +877,9 @@ async fn run_interactive_mode(
             query_engine,
             llm_client,
             args,
-        ).await {
+        )
+        .await
+        {
             Ok(results) => {
                 let total_time = timer.finish();
                 metrics.record_query(total_time);
@@ -847,8 +911,11 @@ async fn perform_query_transformation(
     let transformation_time = transform_timer.finish();
 
     if args.verbose {
-        println!("🔄 Generated {} transformed queries in {:.0}ms",
-            transformed_queries.len(), transformation_time.as_millis());
+        println!(
+            "🔄 Generated {} transformed queries in {:.0}ms",
+            transformed_queries.len(),
+            transformation_time.as_millis()
+        );
     }
 
     // Step 2: Execute original query for baseline
@@ -859,7 +926,8 @@ async fn perform_query_transformation(
         .map_err(|e| ExampleError::Cheungfun(e))?;
     let original_time = original_timer.finish();
 
-    let original_score = original_response.retrieved_nodes
+    let original_score = original_response
+        .retrieved_nodes
         .iter()
         .map(|node| node.score)
         .fold(0.0f32, |a, b| a.max(b));
@@ -878,7 +946,8 @@ async fn perform_query_transformation(
                 let retrieval_time = retrieval_timer.finish();
                 retrieval_times.push(retrieval_time);
 
-                let max_score = response.retrieved_nodes
+                let max_score = response
+                    .retrieved_nodes
                     .iter()
                     .map(|node| node.score)
                     .fold(0.0f32, |a, b| a.max(b));
@@ -891,7 +960,10 @@ async fn perform_query_transformation(
                 all_responses.push((tq.clone(), response));
             }
             Err(e) => {
-                println!("⚠️  Failed to execute transformed query '{}': {}", tq.transformed_query, e);
+                println!(
+                    "⚠️  Failed to execute transformed query '{}': {}",
+                    tq.transformed_query, e
+                );
             }
         }
     }

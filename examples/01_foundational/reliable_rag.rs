@@ -22,29 +22,25 @@ use clap::Parser;
 mod shared;
 
 use shared::{
-    Timer, PerformanceMetrics,
-    get_climate_test_queries, print_query_results, setup_logging,
-    ExampleResult, ExampleError,
-    constants::*,
+    constants::*, get_climate_test_queries, print_query_results, setup_logging, ExampleError,
+    ExampleResult, PerformanceMetrics, Timer,
 };
 use std::{path::PathBuf, sync::Arc};
 
 use cheungfun_core::{
-    traits::{Embedder, VectorStore, IndexingPipeline},
+    traits::{Embedder, IndexingPipeline, VectorStore},
     DistanceMetric,
 };
 use cheungfun_indexing::{
     loaders::DirectoryLoader,
-    node_parser::{text::SentenceSplitter, config::SentenceSplitterConfig},
+    node_parser::{config::SentenceSplitterConfig, text::SentenceSplitter},
     pipeline::DefaultIndexingPipeline,
     transformers::MetadataExtractor,
 };
 use cheungfun_integrations::{FastEmbedder, InMemoryVectorStore};
 use cheungfun_query::{
-    engine::QueryEngine,
-    generator::SiumaiGenerator,
+    engine::QueryEngine, generator::SiumaiGenerator, prelude::QueryResponse,
     retriever::VectorRetriever,
-    prelude::QueryResponse,
 };
 use siumai::prelude::*;
 
@@ -102,10 +98,16 @@ impl ReliabilityMetrics {
     pub fn new() -> Self {
         Self::default()
     }
-    
-    pub fn record_query(&mut self, confidence: f32, similarity: f32, is_fallback: bool, confidence_threshold: f32) {
+
+    pub fn record_query(
+        &mut self,
+        confidence: f32,
+        similarity: f32,
+        is_fallback: bool,
+        confidence_threshold: f32,
+    ) {
         self.total_queries += 1;
-        
+
         if is_fallback {
             self.fallback_responses += 1;
         } else if confidence >= confidence_threshold {
@@ -113,26 +115,29 @@ impl ReliabilityMetrics {
         } else {
             self.low_confidence_responses += 1;
         }
-        
+
         // Update running averages
         let n = self.total_queries as f32;
         self.avg_confidence_score = ((self.avg_confidence_score * (n - 1.0)) + confidence) / n;
         self.avg_similarity_score = ((self.avg_similarity_score * (n - 1.0)) + similarity) / n;
     }
-    
+
     pub fn print_summary(&self) {
         println!("\n📊 Reliability Summary");
         println!("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━");
         println!("📈 Total Queries: {}", self.total_queries);
-        println!("✅ High Confidence: {} ({:.1}%)", 
+        println!(
+            "✅ High Confidence: {} ({:.1}%)",
             self.high_confidence_responses,
             (self.high_confidence_responses as f32 / self.total_queries as f32) * 100.0
         );
-        println!("⚠️  Low Confidence: {} ({:.1}%)", 
+        println!(
+            "⚠️  Low Confidence: {} ({:.1}%)",
             self.low_confidence_responses,
             (self.low_confidence_responses as f32 / self.total_queries as f32) * 100.0
         );
-        println!("🔄 Fallback Used: {} ({:.1}%)", 
+        println!(
+            "🔄 Fallback Used: {} ({:.1}%)",
             self.fallback_responses,
             (self.fallback_responses as f32 / self.total_queries as f32) * 100.0
         );
@@ -157,14 +162,14 @@ struct ReliableResponse {
 async fn main() -> ExampleResult<()> {
     // Setup logging
     setup_logging();
-    
+
     let args = Args::parse();
-    
+
     println!("🚀 Starting Reliable RAG Example...");
-    
+
     // Print configuration
     print_config(&args);
-    
+
     let mut metrics = PerformanceMetrics::new();
     let mut reliability_metrics = ReliabilityMetrics::new();
 
@@ -173,19 +178,22 @@ async fn main() -> ExampleResult<()> {
     println!("✅ Embedder initialized: {}", args.embedding_provider);
 
     // Step 2: Create vector store
-    let vector_store = Arc::new(InMemoryVectorStore::new(DEFAULT_EMBEDDING_DIM, DistanceMetric::Cosine));
+    let vector_store = Arc::new(InMemoryVectorStore::new(
+        DEFAULT_EMBEDDING_DIM,
+        DistanceMetric::Cosine,
+    ));
     println!("✅ Vector store initialized");
 
     // Step 3: Build indexing pipeline
     let timer = Timer::new("Document indexing");
-    
+
     // Get the directory containing the document
     let default_path = PathBuf::from(".");
     let data_dir = args.document_path.parent().unwrap_or(&default_path);
     println!("📂 Loading from directory: {}", data_dir.display());
-    
+
     let loader = Arc::new(DirectoryLoader::new(data_dir)?);
-    
+
     // Create text splitter with custom configuration
     let splitter_config = SentenceSplitterConfig::default();
     let splitter = Arc::new(SentenceSplitter::new(splitter_config)?);
@@ -200,33 +208,39 @@ async fn main() -> ExampleResult<()> {
         .build()?;
 
     // Run indexing pipeline with progress reporting
-    let indexing_stats = pipeline.run_with_progress(Box::new(|progress| {
-        if let Some(percentage) = progress.percentage() {
-            println!("📊 {}: {:.1}% ({}/{})", 
-                progress.stage, 
-                percentage,
-                progress.processed,
-                progress.total.unwrap_or(0)
-            );
-        } else {
-            println!("📊 {}: {} items processed", 
-                progress.stage, 
-                progress.processed
-            );
-        }
-        
-        if let Some(current_item) = &progress.current_item {
-            println!("   └─ {}", current_item);
-        }
-    })).await?;
-    
+    let indexing_stats = pipeline
+        .run_with_progress(Box::new(|progress| {
+            if let Some(percentage) = progress.percentage() {
+                println!(
+                    "📊 {}: {:.1}% ({}/{})",
+                    progress.stage,
+                    percentage,
+                    progress.processed,
+                    progress.total.unwrap_or(0)
+                );
+            } else {
+                println!(
+                    "📊 {}: {} items processed",
+                    progress.stage, progress.processed
+                );
+            }
+
+            if let Some(current_item) = &progress.current_item {
+                println!("   └─ {}", current_item);
+            }
+        }))
+        .await?;
+
     let indexing_time = timer.finish();
-    
+
     metrics.record_indexing_time(indexing_time);
     metrics.total_documents = indexing_stats.documents_processed;
     metrics.total_nodes = indexing_stats.nodes_created;
 
-    println!("✅ Completed: Document indexing in {:.2}s", indexing_time.as_secs_f64());
+    println!(
+        "✅ Completed: Document indexing in {:.2}s",
+        indexing_time.as_secs_f64()
+    );
     println!("📊 Indexing completed:");
     println!("  📚 Documents: {}", indexing_stats.documents_processed);
     println!("  🔗 Nodes: {}", indexing_stats.nodes_created);
@@ -234,13 +248,13 @@ async fn main() -> ExampleResult<()> {
 
     // Step 4: Create reliable query engine
     let retriever = Arc::new(VectorRetriever::new(vector_store, embedder));
-    
+
     // Create LLM client - try OpenAI first, fallback to Ollama
     let llm_client = create_llm_client().await?;
     let generator = Arc::new(SiumaiGenerator::new(llm_client));
-    
+
     let query_engine = QueryEngine::new(retriever, generator);
-    
+
     println!("✅ Reliable query engine initialized");
     println!("🎯 Confidence threshold: {:.2}", args.confidence_threshold);
     println!("🎯 Similarity threshold: {:.2}", args.similarity_threshold);
@@ -265,7 +279,10 @@ fn print_config(args: &Args) {
     println!("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━");
     println!("📄 Document: {}", args.document_path.display());
     println!("🔤 Embedding Provider: {}", args.embedding_provider);
-    println!("📏 Chunk Size: {} (overlap: {})", args.chunk_size, args.chunk_overlap);
+    println!(
+        "📏 Chunk Size: {} (overlap: {})",
+        args.chunk_size, args.chunk_overlap
+    );
     println!("🔍 Top-K: {}", args.top_k);
     println!("🎯 Confidence Threshold: {:.2}", args.confidence_threshold);
     println!("🎯 Similarity Threshold: {:.2}", args.similarity_threshold);
@@ -322,12 +339,12 @@ async fn create_llm_client() -> ExampleResult<Siumai> {
                 .map_err(|e| ExampleError::Config(format!("Failed to initialize OpenAI: {}", e)));
         }
     }
-    
+
     // Fallback to Ollama
     println!("🤖 No valid OpenAI API key found, using Ollama for LLM generation (local)");
     println!("💡 Make sure Ollama is running with: ollama serve");
     println!("💡 And pull a model with: ollama pull llama3.2");
-    
+
     Siumai::builder()
         .ollama()
         .base_url("http://localhost:11434")
@@ -351,7 +368,8 @@ async fn reliable_query(
         .map_err(|e| ExampleError::Cheungfun(e))?;
 
     // Extract similarity scores from retrieved context
-    let max_similarity = response.retrieved_nodes
+    let max_similarity = response
+        .retrieved_nodes
         .iter()
         .map(|node| node.score)
         .fold(0.0f32, |a, b| a.max(b));
@@ -422,9 +440,11 @@ fn calculate_consistency_factor(context_nodes: &[cheungfun_core::ScoredNode]) ->
 
     let scores: Vec<f32> = context_nodes.iter().map(|node| node.score).collect();
     let mean = scores.iter().sum::<f32>() / scores.len() as f32;
-    let variance = scores.iter()
+    let variance = scores
+        .iter()
         .map(|score| (score - mean).powi(2))
-        .sum::<f32>() / scores.len() as f32;
+        .sum::<f32>()
+        / scores.len() as f32;
     let std_dev = variance.sqrt();
 
     // Lower standard deviation means more consistent scores
@@ -441,7 +461,10 @@ fn perform_quality_checks(
 
     // Check 1: Minimum similarity threshold
     if max_similarity < args.similarity_threshold {
-        issues.push(format!("Low similarity score: {:.3} < {:.3}", max_similarity, args.similarity_threshold));
+        issues.push(format!(
+            "Low similarity score: {:.3} < {:.3}",
+            max_similarity, args.similarity_threshold
+        ));
     }
 
     // Check 2: Response length
@@ -458,7 +481,12 @@ fn perform_quality_checks(
     ];
 
     for phrase in &generic_phrases {
-        if response.response.content.to_lowercase().contains(&phrase.to_lowercase()) {
+        if response
+            .response
+            .content
+            .to_lowercase()
+            .contains(&phrase.to_lowercase())
+        {
             issues.push("Generic or uncertain response detected".to_string());
             break;
         }
@@ -585,11 +613,16 @@ fn print_reliable_results(query: &str, response: &ReliableResponse, args: &Args)
         "⚠️"
     };
 
-    println!("{} Reliability: {} (Confidence: {:.3}, Similarity: {:.3})",
+    println!(
+        "{} Reliability: {} (Confidence: {:.3}, Similarity: {:.3})",
         reliability_icon,
-        if response.is_fallback { "Fallback" }
-        else if response.is_reliable { "High" }
-        else { "Low" },
+        if response.is_fallback {
+            "Fallback"
+        } else if response.is_reliable {
+            "High"
+        } else {
+            "Low"
+        },
         response.confidence_score,
         response.max_similarity_score
     );
