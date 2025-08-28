@@ -98,19 +98,19 @@ Each example can be run independently:
 
 ```bash
 # Run simple RAG example
-cargo run --example simple_rag
+cargo run --bin simple_rag --features fastembed
 
 # Run CSV RAG example
-cargo run --example csv_rag
+cargo run --bin csv_rag --features fastembed
 
 # Run reliable RAG example
-cargo run --example reliable_rag
+cargo run --bin reliable_rag --features fastembed
 
 # Run chunk size optimization
-cargo run --example chunk_size_optimization
+cargo run --bin chunk_size_optimization --features fastembed
 
 # Run proposition chunking
-cargo run --example proposition_chunking
+cargo run --bin proposition_chunking --features fastembed
 ```
 
 ### Configuration
@@ -119,16 +119,22 @@ Examples support multiple configuration options:
 
 ```bash
 # Use FastEmbed (default, no API key required)
-cargo run --example simple_rag
+cargo run --bin simple_rag --features fastembed
 
 # Use OpenAI embeddings (requires OPENAI_API_KEY)
-cargo run --example simple_rag -- --embedding-provider openai
+cargo run --bin simple_rag --features fastembed -- --embedding-provider openai
 
 # Use custom chunk size
-cargo run --example simple_rag -- --chunk-size 500 --chunk-overlap 100
+cargo run --bin simple_rag --features fastembed -- --chunk-size 500 --chunk-overlap 100
+
+# Enable interactive mode
+cargo run --bin simple_rag --features fastembed -- --interactive
+
+# Proposition chunking with comparison
+cargo run --bin proposition_chunking --features fastembed -- --compare-traditional --verbose
 
 # Enable verbose logging
-RUST_LOG=info cargo run --example simple_rag
+RUST_LOG=info cargo run --bin simple_rag --features fastembed
 ```
 
 ## 📊 Performance Expectations

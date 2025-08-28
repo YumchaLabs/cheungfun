@@ -97,6 +97,10 @@ name = "chunk_size_optimization"
 path = "01_foundational/chunk_size_optimization.rs"
 
 [[bin]]
+name = "proposition_chunking"
+path = "01_foundational/proposition_chunking.rs"
+
+[[bin]]
 name = "query_transformations"
 path = "02_query_enhancement/query_transformations.rs"
 
@@ -105,8 +109,24 @@ name = "hyde"
 path = "02_query_enhancement/hyde.rs"
 
 [[bin]]
+name = "hype"
+path = "02_query_enhancement/hype.rs"
+
+[[bin]]
+name = "contextual_chunk_headers"
+path = "03_context_enrichment/contextual_chunk_headers.rs"
+
+[[bin]]
 name = "fusion_retrieval"
 path = "03_retrieval_optimization/fusion_retrieval.rs"
+
+[[bin]]
+name = "intelligent_reranking"
+path = "03_retrieval_optimization/intelligent_reranking.rs"
+
+[[bin]]
+name = "multi_faceted_filtering"
+path = "03_retrieval_optimization/multi_faceted_filtering.rs"
 
 # === Application Examples ===
 [[bin]]
@@ -246,85 +266,85 @@ required-features = ["basic"]
 # === Legacy Examples (keeping for compatibility) ===
 [[bin]]
 name = "hello_world"
-path = "01_getting_started/hello_world.rs"
+path = "backup/01_getting_started/hello_world.rs"
 required-features = ["basic"]
 
 [[bin]]
 name = "basic_indexing"
-path = "01_getting_started/basic_indexing.rs"
+path = "backup/01_getting_started/basic_indexing.rs"
 required-features = ["basic"]
 
 [[bin]]
 name = "basic_querying"
-path = "01_getting_started/basic_querying.rs"
+path = "backup/01_getting_started/basic_querying.rs"
 required-features = ["basic"]
 
 [[bin]]
 name = "basic_usage"
-path = "01_getting_started/basic_usage.rs"
+path = "backup/01_getting_started/basic_usage.rs"
 required-features = ["basic"]
 
 [[bin]]
 name = "candle_embedder_demo"
-path = "02_core_components/embedders/candle_embedder_demo.rs"
+path = "backup/02_core_components/embedders/candle_embedder_demo.rs"
 required-features = ["candle"]
 
 [[bin]]
 name = "candle_embedder_performance"
-path = "02_core_components/embedders/candle_embedder_performance.rs"
+path = "backup/02_core_components/embedders/candle_embedder_performance.rs"
 required-features = ["candle", "benchmarks"]
 
 [[bin]]
 name = "qdrant_vector_store_demo"
-path = "02_core_components/vector_stores/qdrant_vector_store_demo.rs"
+path = "backup/02_core_components/vector_stores/qdrant_vector_store_demo.rs"
 required-features = ["qdrant"]
 
 [[bin]]
 name = "advanced_retrieval_demo"
-path = "03_advanced_features/advanced_retrieval_demo.rs"
+path = "backup/03_advanced_features/advanced_retrieval_demo.rs"
 required-features = ["performance"]
 
 [[bin]]
 name = "mcp_integration_example"
-path = "04_integrations/mcp_integration_example.rs"
+path = "backup/04_integrations/mcp_integration_example.rs"
 required-features = ["intelligent-assistant"]
 
 [[bin]]
 name = "complete_rag_demo"
-path = "06_production/complete_rag_demo.rs"
+path = "backup/06_production/complete_rag_demo.rs"
 required-features = ["knowledge-base"]
 
 [[bin]]
 name = "end_to_end_indexing"
-path = "06_production/end_to_end_indexing.rs"
+path = "backup/06_production/end_to_end_indexing.rs"
 required-features = ["knowledge-base"]
 
 [[bin]]
 name = "end_to_end_query"
-path = "06_production/end_to_end_query.rs"
+path = "backup/06_production/end_to_end_query.rs"
 required-features = ["knowledge-base"]
 
 [[bin]]
 name = "end_to_end_retrieval_demo"
-path = "06_production/end_to_end_retrieval_demo.rs"
+path = "backup/06_production/end_to_end_retrieval_demo.rs"
 required-features = ["knowledge-base"]
 
 [[bin]]
 name = "cuda_embedder_demo"
-path = "07_gpu_acceleration/cuda_embedder_demo.rs"
+path = "backup/07_gpu_acceleration/cuda_embedder_demo.rs"
 required-features = ["gpu"]
 
 [[bin]]
 name = "metal_embedder_demo"
-path = "07_gpu_acceleration/metal_embedder_demo.rs"
+path = "backup/07_gpu_acceleration/metal_embedder_demo.rs"
 required-features = ["gpu"]
 
 [[bin]]
 name = "rag_agent_main"
-path = "08_rag_agent/main.rs"
+path = "backup/08_rag_agent/main.rs"
 required-features = ["intelligent-assistant"]
 
 [[bin]]
 name = "simple_rag_agent"
-path = "08_rag_agent/simple_main.rs"
+path = "backup/08_rag_agent/simple_main.rs"
 required-features = ["intelligent-assistant"]

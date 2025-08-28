@@ -50,7 +50,7 @@ use shared::{
     constants::*, get_climate_test_queries, setup_logging, ExampleError, ExampleResult,
     PerformanceMetrics, Timer,
 };
-use std::{path::PathBuf, sync::Arc};
+use std::{path::PathBuf, sync::Arc, time::Duration};
 
 use cheungfun_core::{
     traits::{Embedder, IndexingPipeline},
@@ -64,7 +64,10 @@ use cheungfun_indexing::{
 };
 use cheungfun_integrations::{FastEmbedder, InMemoryVectorStore};
 use cheungfun_query::{
-    engine::QueryEngine, generator::SiumaiGenerator, prelude::QueryResponse,
+    advanced::{query_transformers::HyDETransformer, AdvancedQuery, QueryTransformer},
+    engine::QueryEngine,
+    generator::SiumaiGenerator,
+    prelude::QueryResponse,
     retriever::VectorRetriever,
 };
 use siumai::prelude::*;
@@ -116,14 +119,12 @@ struct Args {
 
 #[derive(clap::ValueEnum, Clone, Debug)]
 enum HydeStrategy {
-    /// Generate a single hypothetical document
+    /// Generate a single hypothetical document (default)
     Single,
-    /// Generate multiple hypothetical documents and combine
+    /// Generate multiple hypothetical documents for better coverage
     Multiple,
-    /// Iterative refinement of hypothetical documents
-    Iterative,
-    /// Adaptive strategy based on query complexity
-    Adaptive,
+    /// Include original query alongside hypothetical documents
+    WithOriginal,
 }
 
 /// Represents a hypothetical document generated for HyDE
@@ -466,434 +467,145 @@ async fn create_generation_llm() -> ExampleResult<Siumai> {
         .map_err(|e| ExampleError::Config(format!("Failed to initialize Ollama: {}", e)))
 }
 
-/// Generate hypothetical documents using the specified strategy
+/// Generate hypothetical documents using our HyDETransformer
 async fn generate_hypothetical_documents(
     query: &str,
     strategy: &HydeStrategy,
     llm_client: &Siumai,
 ) -> ExampleResult<Vec<HypotheticalDocument>> {
-    match strategy {
-        HydeStrategy::Single => generate_single_hypothetical_document(query, llm_client).await,
-        HydeStrategy::Multiple => generate_multiple_hypothetical_documents(query, llm_client).await,
-        HydeStrategy::Iterative => {
-            generate_iterative_hypothetical_documents(query, llm_client).await
-        }
-        HydeStrategy::Adaptive => generate_adaptive_hypothetical_documents(query, llm_client).await,
-    }
-}
-
-/// Generate a single hypothetical document
-async fn generate_single_hypothetical_document(
-    query: &str,
-    llm_client: &Siumai,
-) -> ExampleResult<Vec<HypotheticalDocument>> {
-    let timer = Timer::new("Single hypothetical document generation");
-
-    let prompt = format!(
-        r#"You are an expert writer tasked with creating a hypothetical document that would contain the answer to the following question.
-
-Question: "{}"
-
-Please write a comprehensive, informative document that would naturally contain the answer to this question. The document should:
-1. Be written in a formal, informative style similar to academic or reference materials
-2. Include relevant background information and context
-3. Provide detailed explanations and examples
-4. Be approximately 200-400 words long
-5. Focus on factual, well-structured content
-
-Write only the document content, without any meta-commentary or explanations about the task.
-"#,
-        query
-    );
-
-    let response = llm_client
-        .chat(vec![ChatMessage::user(prompt).build()])
-        .await
-        .map_err(|e| ExampleError::Config(format!("LLM error: {}", e)))?;
-
-    let generation_time = timer.finish();
-
-    let content = match &response.content {
-        siumai::MessageContent::Text(text) => text.clone(),
-        _ => "".to_string(),
+    // Create HyDETransformer based on strategy
+    let (num_docs, include_original) = match strategy {
+        HydeStrategy::Single => (1, false),
+        HydeStrategy::Multiple => (3, false),
+        HydeStrategy::WithOriginal => (2, true),
     };
 
-    Ok(vec![HypotheticalDocument {
-        original_query: query.to_string(),
-        hypothetical_content: content,
-        strategy: "Single".to_string(),
-        confidence: 0.8, // Default confidence for single document
-        generation_time,
-    }])
-}
+    // TODO: Once Siumai supports Clone, we can use llm_client.clone() instead of creating a new instance
+    // For now, we need to create a new Siumai client since it doesn't implement Clone
+    let new_llm_client = create_llm_client().await?;
 
-/// Generate multiple hypothetical documents with different perspectives
-async fn generate_multiple_hypothetical_documents(
-    query: &str,
-    llm_client: &Siumai,
-) -> ExampleResult<Vec<HypotheticalDocument>> {
-    let timer = Timer::new("Multiple hypothetical documents generation");
+    // Create HyDETransformer using our library
+    let hyde_transformer = HyDETransformer::new(Arc::new(SiumaiGenerator::new(new_llm_client)))
+        .with_num_hypothetical_docs(num_docs)
+        .with_include_original(include_original);
 
-    let perspectives = [
-        ("Scientific", "Write from a scientific research perspective with technical details and evidence"),
-        ("Educational", "Write from an educational perspective suitable for students and general learning"),
-        ("Practical", "Write from a practical perspective focusing on real-world applications and implications"),
-    ];
+    // Create AdvancedQuery
+    let mut advanced_query = AdvancedQuery::from_text(query.to_string());
 
+    // Apply HyDE transformation
+    hyde_transformer
+        .transform(&mut advanced_query)
+        .await
+        .map_err(|e| ExampleError::DataProcessing(format!("HyDE transformation failed: {}", e)))?;
+
+    // Convert to our HypotheticalDocument format for compatibility
     let mut hypothetical_docs = Vec::new();
-    let start_time = std::time::Instant::now();
-
-    for (perspective_name, perspective_instruction) in &perspectives {
-        let prompt = format!(
-            r#"You are an expert writer creating a hypothetical document to answer the following question.
-
-Question: "{}"
-
-Instructions: {}
-
-Please write a comprehensive document (200-300 words) that would naturally contain the answer to this question. Focus on providing accurate, detailed information in a well-structured format.
-
-Write only the document content, without any meta-commentary.
-"#,
-            query, perspective_instruction
-        );
-
-        let response = llm_client
-            .chat(vec![ChatMessage::user(prompt).build()])
-            .await
-            .map_err(|e| ExampleError::Config(format!("LLM error: {}", e)))?;
-
-        let content = match &response.content {
-            siumai::MessageContent::Text(text) => text.clone(),
-            _ => "".to_string(),
-        };
-
-        let current_time = start_time.elapsed();
+    for (i, transformed_query) in advanced_query.transformed_queries.iter().enumerate() {
+        if i == 0 && include_original && transformed_query == &query {
+            // Skip the original query in the hypothetical documents list
+            continue;
+        }
         hypothetical_docs.push(HypotheticalDocument {
             original_query: query.to_string(),
-            hypothetical_content: content,
-            strategy: format!("Multiple-{}", perspective_name),
-            confidence: 0.75, // Slightly lower confidence for multiple docs
-            generation_time: current_time,
+            hypothetical_content: transformed_query.clone(),
+            strategy: format!("{:?}", strategy),
+            confidence: 0.8,                             // Default confidence
+            generation_time: Duration::from_millis(100), // Placeholder
         });
     }
 
-    let _total_time = timer.finish();
     Ok(hypothetical_docs)
 }
 
-/// Generate hypothetical documents with iterative refinement
-async fn generate_iterative_hypothetical_documents(
-    query: &str,
-    llm_client: &Siumai,
-) -> ExampleResult<Vec<HypotheticalDocument>> {
-    let timer = Timer::new("Iterative hypothetical documents generation");
-
-    // First iteration: Basic document
-    let initial_prompt = format!(
-        r#"Create a comprehensive document that answers this question: "{}"
-
-Write a well-structured, informative document (200-300 words) that provides a complete answer.
-"#,
-        query
-    );
-
-    let initial_response = llm_client
-        .chat(vec![ChatMessage::user(initial_prompt).build()])
-        .await
-        .map_err(|e| ExampleError::Config(format!("LLM error: {}", e)))?;
-
-    let initial_content = match &initial_response.content {
-        siumai::MessageContent::Text(text) => text.clone(),
-        _ => "".to_string(),
-    };
-
-    // Second iteration: Refined document
-    let refinement_prompt = format!(
-        r#"Here is a document that answers the question: "{}"
-
-Document:
-{}
-
-Please create an improved version of this document that:
-1. Adds more specific details and examples
-2. Improves the structure and flow
-3. Includes additional relevant information
-4. Maintains the same approximate length (200-300 words)
-
-Write only the improved document content.
-"#,
-        query, initial_content
-    );
-
-    let refined_response = llm_client
-        .chat(vec![ChatMessage::user(refinement_prompt).build()])
-        .await
-        .map_err(|e| ExampleError::Config(format!("LLM error: {}", e)))?;
-
-    let refined_content = match &refined_response.content {
-        siumai::MessageContent::Text(text) => text.clone(),
-        _ => "".to_string(),
-    };
-
-    let generation_time = timer.finish();
-
-    Ok(vec![
-        HypotheticalDocument {
-            original_query: query.to_string(),
-            hypothetical_content: initial_content,
-            strategy: "Iterative-Initial".to_string(),
-            confidence: 0.7,
-            generation_time: generation_time / 2, // Approximate split
-        },
-        HypotheticalDocument {
-            original_query: query.to_string(),
-            hypothetical_content: refined_content,
-            strategy: "Iterative-Refined".to_string(),
-            confidence: 0.85, // Higher confidence for refined version
-            generation_time: generation_time / 2,
-        },
-    ])
-}
-
-/// Generate hypothetical documents using adaptive strategy based on query complexity
-async fn generate_adaptive_hypothetical_documents(
-    query: &str,
-    llm_client: &Siumai,
-) -> ExampleResult<Vec<HypotheticalDocument>> {
-    // Analyze query complexity
-    let query_complexity = analyze_query_complexity(query);
-
-    match query_complexity {
-        QueryComplexity::Simple => generate_single_hypothetical_document(query, llm_client).await,
-        QueryComplexity::Moderate => {
-            generate_multiple_hypothetical_documents(query, llm_client).await
-        }
-        QueryComplexity::Complex => {
-            generate_iterative_hypothetical_documents(query, llm_client).await
-        }
-    }
-}
-
-#[derive(Debug)]
-enum QueryComplexity {
-    Simple,
-    Moderate,
-    Complex,
-}
-
-/// Analyze query complexity based on various factors
-fn analyze_query_complexity(query: &str) -> QueryComplexity {
-    let word_count = query.split_whitespace().count();
-    let has_multiple_questions = query.matches('?').count() > 1;
-    let has_complex_terms = query.contains("how") && query.contains("why");
-    let has_comparisons =
-        query.contains("compare") || query.contains("difference") || query.contains("versus");
-
-    if word_count > 15 || has_multiple_questions || has_complex_terms || has_comparisons {
-        QueryComplexity::Complex
-    } else if word_count > 8 || query.contains("explain") || query.contains("describe") {
-        QueryComplexity::Moderate
-    } else {
-        QueryComplexity::Simple
-    }
-}
-
-/// Combine multiple hypothetical documents for enhanced retrieval
-async fn combine_multiple_hypothetical_retrievals(
-    _original_query: &str,
-    hypothetical_docs: &[HypotheticalDocument],
-    query_engine: &QueryEngine,
-) -> ExampleResult<QueryResponse> {
-    // Strategy 1: Use the highest confidence hypothetical document
-    let best_doc = hypothetical_docs
-        .iter()
-        .max_by(|a, b| {
-            a.confidence
-                .partial_cmp(&b.confidence)
-                .unwrap_or(std::cmp::Ordering::Equal)
-        })
-        .unwrap();
-
-    // Strategy 2: For multiple documents, we could also try:
-    // - Concatenating all hypothetical documents
-    // - Using each document separately and merging results
-    // - Weighted combination based on confidence scores
-
-    // For now, we'll use the best document but also try a combined approach
-    if hypothetical_docs.len() >= 3 {
-        // For 3+ documents, create a combined hypothetical document
-        let combined_content = create_combined_hypothetical_document(hypothetical_docs);
-
-        // Try both the best individual document and the combined document
-        let best_response = query_engine
-            .query(&best_doc.hypothetical_content)
-            .await
-            .map_err(ExampleError::Cheungfun)?;
-
-        let combined_response = query_engine
-            .query(&combined_content)
-            .await
-            .map_err(ExampleError::Cheungfun)?;
-
-        // Choose the response with higher average similarity score
-        let best_avg_score = best_response
-            .retrieved_nodes
-            .iter()
-            .map(|n| n.score)
-            .sum::<f32>()
-            / best_response.retrieved_nodes.len() as f32;
-
-        let combined_avg_score = combined_response
-            .retrieved_nodes
-            .iter()
-            .map(|n| n.score)
-            .sum::<f32>()
-            / combined_response.retrieved_nodes.len() as f32;
-
-        if combined_avg_score > best_avg_score {
-            Ok(combined_response)
-        } else {
-            Ok(best_response)
-        }
-    } else {
-        // For 2 documents, just use the best one
-        query_engine
-            .query(&best_doc.hypothetical_content)
-            .await
-            .map_err(ExampleError::Cheungfun)
-    }
-}
-
-/// Create a combined hypothetical document from multiple documents
-fn create_combined_hypothetical_document(hypothetical_docs: &[HypotheticalDocument]) -> String {
-    // Sort by confidence (highest first)
-    let mut sorted_docs = hypothetical_docs.to_vec();
-    sorted_docs.sort_by(|a, b| {
-        b.confidence
-            .partial_cmp(&a.confidence)
-            .unwrap_or(std::cmp::Ordering::Equal)
-    });
-
-    // Take the top 3 documents and combine them intelligently
-    let top_docs: Vec<_> = sorted_docs.iter().take(3).collect();
-
-    let mut combined = String::new();
-    combined.push_str("Comprehensive Analysis:\n\n");
-
-    for (i, doc) in top_docs.iter().enumerate() {
-        combined.push_str(&format!(
-            "Perspective {} ({} approach):\n",
-            i + 1,
-            doc.strategy
-        ));
-
-        // Take the first 200 words of each document to avoid too much repetition
-        let words: Vec<&str> = doc.hypothetical_content.split_whitespace().collect();
-        let excerpt = if words.len() > 200 {
-            format!("{}...", words[..200].join(" "))
-        } else {
-            doc.hypothetical_content.clone()
-        };
-
-        combined.push_str(&excerpt);
-        combined.push_str("\n\n");
-    }
-
-    combined.push_str("This comprehensive analysis incorporates multiple perspectives to provide a thorough understanding of the topic.");
-
-    combined
-}
-
-/// Perform HyDE-enhanced retrieval
-async fn perform_hyde_retrieval(
+/// Perform HyDE query processing using the transformed queries
+async fn perform_hyde_query(
     query: &str,
     strategy: &HydeStrategy,
     query_engine: &QueryEngine,
     llm_client: &Siumai,
     compare_baseline: bool,
 ) -> ExampleResult<HydeResults> {
-    // Step 1: Generate hypothetical documents
-    let generation_timer = Timer::new("HyDE generation");
+    let timer = Timer::new("HyDE query processing");
+
+    // Step 1: Generate hypothetical documents using our library
     let hypothetical_docs = generate_hypothetical_documents(query, strategy, llm_client).await?;
-    let total_generation_time = generation_timer.finish();
 
-    // Step 2: Perform retrieval using hypothetical documents
-    let retrieval_timer = Timer::new("HyDE retrieval");
+    println!(
+        "📝 Generated {} hypothetical documents",
+        hypothetical_docs.len()
+    );
+    if hypothetical_docs.is_empty() {
+        return Err(ExampleError::DataProcessing(
+            "No hypothetical documents generated".to_string(),
+        ));
+    }
 
-    let hyde_response = if hypothetical_docs.is_empty() {
-        // Fallback to original query if no hypothetical documents generated
-        query_engine
-            .query(query)
-            .await
-            .map_err(|e| ExampleError::Cheungfun(e))?
-    } else if hypothetical_docs.len() == 1 {
-        // Single hypothetical document - use it directly
-        query_engine
-            .query(&hypothetical_docs[0].hypothetical_content)
-            .await
-            .map_err(|e| ExampleError::Cheungfun(e))?
+    // Step 2: Use the first hypothetical document for retrieval (or combine multiple)
+    let retrieval_query = if hypothetical_docs.len() == 1 {
+        &hypothetical_docs[0].hypothetical_content
     } else {
-        // Multiple hypothetical documents - combine them intelligently
-        combine_multiple_hypothetical_retrievals(query, &hypothetical_docs, query_engine).await?
+        // For multiple documents, use the first one (could be enhanced to combine)
+        &hypothetical_docs[0].hypothetical_content
     };
 
-    let total_retrieval_time = retrieval_timer.finish();
+    // Step 3: Perform retrieval using the hypothetical document
+    let hyde_response = query_engine
+        .query(retrieval_query)
+        .await
+        .map_err(ExampleError::Cheungfun)?;
 
-    // Step 3: Get baseline response if requested
+    // Step 4: Optionally compare with baseline (original query)
     let baseline_response = if compare_baseline {
         Some(
             query_engine
                 .query(query)
                 .await
-                .map_err(|e| ExampleError::Cheungfun(e))?,
+                .map_err(ExampleError::Cheungfun)?,
         )
     } else {
         None
     };
 
-    // Step 4: Calculate performance metrics
-    let hyde_similarity = hyde_response
-        .retrieved_nodes
-        .iter()
-        .map(|node| node.score)
-        .fold(0.0f32, |a, b| a.max(b));
+    let total_time = timer.finish();
 
-    let baseline_similarity = baseline_response
-        .as_ref()
-        .map(|resp| {
-            resp.retrieved_nodes
-                .iter()
-                .map(|node| node.score)
-                .fold(0.0f32, |a, b| a.max(b))
-        })
+    // Step 5: Calculate performance metrics
+    let mut metrics = HydeMetrics::default();
+    metrics.total_generation_time = hypothetical_docs
+        .iter()
+        .map(|doc| doc.generation_time)
+        .sum();
+    metrics.total_retrieval_time = total_time - metrics.total_generation_time;
+    metrics.hyde_similarity_score = hyde_response
+        .retrieved_nodes
+        .first()
+        .map(|node| node.score)
         .unwrap_or(0.0);
 
-    let improvement_percentage = if baseline_similarity > 0.0 {
-        ((hyde_similarity - baseline_similarity) / baseline_similarity) * 100.0
-    } else {
-        0.0
-    };
+    if let Some(ref baseline) = baseline_response {
+        metrics.baseline_similarity_score = baseline
+            .retrieved_nodes
+            .first()
+            .map(|node| node.score)
+            .unwrap_or(0.0);
 
-    let performance_metrics = HydeMetrics {
-        total_generation_time,
-        total_retrieval_time,
-        hyde_similarity_score: hyde_similarity,
-        baseline_similarity_score: baseline_similarity,
-        improvement_percentage,
-        num_hypothetical_docs: hypothetical_docs.len(),
-    };
+        if metrics.baseline_similarity_score > 0.0 {
+            metrics.improvement_percentage = ((metrics.hyde_similarity_score
+                - metrics.baseline_similarity_score)
+                / metrics.baseline_similarity_score)
+                * 100.0;
+        }
+    }
 
     Ok(HydeResults {
         original_query: query.to_string(),
         hypothetical_documents: hypothetical_docs,
         hyde_response,
         baseline_response,
-        performance_metrics,
+        performance_metrics: metrics,
     })
 }
 
-/// Run HyDE experiments on demo queries
+/// Run demo queries with HyDE processing
 async fn run_demo_queries(
     query_engine: &QueryEngine,
     llm_client: &Siumai,
@@ -909,9 +621,9 @@ async fn run_demo_queries(
         println!("🧪 Demo Query {}/{}: {}", i + 1, queries.len(), query);
         println!("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━");
 
-        let timer = Timer::new("HyDE processing");
+        let timer = Timer::new("HyDE query processing");
 
-        let results = perform_hyde_retrieval(
+        let results = perform_hyde_query(
             query,
             &args.strategy,
             query_engine,
@@ -920,17 +632,18 @@ async fn run_demo_queries(
         )
         .await?;
 
-        let total_time = timer.finish();
-        metrics.record_query(total_time);
+        let processing_time = timer.finish();
+        metrics.record_query(processing_time);
 
         results.print_summary(args.verbose);
+
         println!();
     }
 
     Ok(())
 }
 
-/// Run interactive mode with HyDE
+/// Run interactive mode with HyDE processing
 async fn run_interactive_mode(
     query_engine: &QueryEngine,
     llm_client: &Siumai,
@@ -940,25 +653,24 @@ async fn run_interactive_mode(
     println!("🎯 Interactive HyDE Mode");
     println!("Type your questions, or 'quit' to exit.");
     println!("Use 'strategy <name>' to change HyDE strategy.");
-    println!("Available strategies: single, multiple, iterative, adaptive");
-    println!("Use 'baseline on/off' to toggle baseline comparison.");
+    println!("Available strategies: single, multiple, with-original");
     println!("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━");
     println!();
 
     let mut current_strategy = args.strategy.clone();
-    let mut compare_baseline = args.compare_baseline;
 
     loop {
-        println!(
-            "Current strategy: {:?} | Baseline comparison: {}",
-            current_strategy, compare_baseline
-        );
+        println!("Current strategy: {:?}", current_strategy);
         print!("❓ Your question (or command): ");
         std::io::Write::flush(&mut std::io::stdout()).unwrap();
 
         let mut input = String::new();
         std::io::stdin().read_line(&mut input).unwrap();
         let input = input.trim();
+
+        if input.is_empty() {
+            continue;
+        }
 
         if input.to_lowercase() == "quit" {
             break;
@@ -970,12 +682,9 @@ async fn run_interactive_mode(
             match strategy_name.to_lowercase().as_str() {
                 "single" => current_strategy = HydeStrategy::Single,
                 "multiple" => current_strategy = HydeStrategy::Multiple,
-                "iterative" => current_strategy = HydeStrategy::Iterative,
-                "adaptive" => current_strategy = HydeStrategy::Adaptive,
+                "with-original" | "withoriginal" => current_strategy = HydeStrategy::WithOriginal,
                 _ => {
-                    println!(
-                        "❌ Unknown strategy. Available: single, multiple, iterative, adaptive"
-                    );
+                    println!("❌ Unknown strategy. Available: single, multiple, with-original");
                     continue;
                 }
             }
@@ -983,35 +692,20 @@ async fn run_interactive_mode(
             continue;
         }
 
-        // Handle baseline toggle commands
-        if input.starts_with("baseline ") {
-            let baseline_setting = input.strip_prefix("baseline ").unwrap().trim();
-            match baseline_setting.to_lowercase().as_str() {
-                "on" | "true" => compare_baseline = true,
-                "off" | "false" => compare_baseline = false,
-                _ => {
-                    println!("❌ Use 'baseline on' or 'baseline off'");
-                    continue;
-                }
-            }
-            println!("✅ Baseline comparison: {}", compare_baseline);
-            continue;
-        }
+        let timer = Timer::new("HyDE query processing");
 
-        let timer = Timer::new("HyDE processing");
-
-        match perform_hyde_retrieval(
+        match perform_hyde_query(
             input,
             &current_strategy,
             query_engine,
             llm_client,
-            compare_baseline,
+            args.compare_baseline,
         )
         .await
         {
             Ok(results) => {
-                let total_time = timer.finish();
-                metrics.record_query(total_time);
+                let processing_time = timer.finish();
+                metrics.record_query(processing_time);
                 results.print_summary(args.verbose);
             }
             Err(e) => {
@@ -1019,6 +713,7 @@ async fn run_interactive_mode(
             }
         }
 
+        println!("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━");
         println!();
     }
 

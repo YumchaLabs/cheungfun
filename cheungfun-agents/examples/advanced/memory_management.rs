@@ -164,17 +164,17 @@ async fn context_sharing_example() -> Result<()> {
     println!("🤝 Example 3: Context Sharing Between Agents");
     println!("{}", "-".repeat(30));
 
-    let llm_client1 = SiumaiLlmClient::openai(
+    // Create one LLM client and clone it for the second agent
+    // This is more efficient as it shares the underlying HTTP client and configuration
+    let base_llm_client = SiumaiLlmClient::openai(
         std::env::var("OPENAI_API_KEY").unwrap_or_else(|_| "demo-key".to_string()),
         "gpt-4",
     )
     .await?;
 
-    let llm_client2 = SiumaiLlmClient::openai(
-        std::env::var("OPENAI_API_KEY").unwrap_or_else(|_| "demo-key".to_string()),
-        "gpt-4",
-    )
-    .await?;
+    // Clone the client (lightweight operation in siumai v0.9.1+)
+    let llm_client1 = base_llm_client.clone();
+    let llm_client2 = base_llm_client;
 
     let mut tools = ToolRegistry::new();
     tools.register(Arc::new(EchoTool::new()))?;

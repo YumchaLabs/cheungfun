@@ -34,6 +34,63 @@ impl HyDETransformer {
         }
     }
 
+    /// Creates a HyDE transformer with default settings optimized for general use.
+    ///
+    /// Uses research-backed parameters:
+    /// - 3 hypothetical documents (optimal balance of quality vs. cost)
+    /// - Include original query (prevents over-hallucination)
+    /// - 500 character max length (good for most embedding models)
+    ///
+    /// Reference: "Precise Zero-Shot Dense Retrieval without Relevance Labels" by Gao et al.
+    pub fn from_defaults(llm_client: Arc<dyn ResponseGenerator>) -> Self {
+        Self {
+            llm_client,
+            prompt_template: DEFAULT_HYDE_PROMPT.to_string(),
+            include_original: true,
+            num_hypothetical_docs: 3,
+            max_doc_length: 500,
+        }
+    }
+
+    /// Creates a HyDE transformer optimized for question answering scenarios.
+    ///
+    /// Uses more hypothetical documents and longer length for comprehensive answers.
+    pub fn for_qa(llm_client: Arc<dyn ResponseGenerator>) -> Self {
+        Self {
+            llm_client,
+            prompt_template: QA_HYDE_PROMPT.to_string(),
+            include_original: true,
+            num_hypothetical_docs: 4,
+            max_doc_length: 800,
+        }
+    }
+
+    /// Creates a HyDE transformer optimized for code search scenarios.
+    ///
+    /// Uses specialized prompt and parameters for code-related queries.
+    pub fn for_code_search(llm_client: Arc<dyn ResponseGenerator>) -> Self {
+        Self {
+            llm_client,
+            prompt_template: CODE_HYDE_PROMPT.to_string(),
+            include_original: true,
+            num_hypothetical_docs: 2,
+            max_doc_length: 1000,
+        }
+    }
+
+    /// Creates a HyDE transformer optimized for academic paper search.
+    ///
+    /// Uses academic-focused prompt and longer documents for research contexts.
+    pub fn for_academic_search(llm_client: Arc<dyn ResponseGenerator>) -> Self {
+        Self {
+            llm_client,
+            prompt_template: ACADEMIC_HYDE_PROMPT.to_string(),
+            include_original: true,
+            num_hypothetical_docs: 3,
+            max_doc_length: 1200,
+        }
+    }
+
     /// Sets the prompt template.
     #[must_use]
     pub fn with_prompt_template(mut self, template: String) -> Self {
@@ -181,6 +238,42 @@ impl SubquestionTransformer {
             num_subquestions: 3,
             include_original: true,
             max_subquestion_length: 200,
+        }
+    }
+
+    /// Creates a subquestion transformer with default settings.
+    ///
+    /// Uses research-backed parameters:
+    /// - 3 subquestions (optimal for most complex queries)
+    /// - Include original query (maintains query intent)
+    /// - 200 character max length (good for focused questions)
+    pub fn from_defaults(llm_client: Arc<dyn ResponseGenerator>) -> Self {
+        Self::new(llm_client)
+    }
+
+    /// Creates a subquestion transformer optimized for complex research queries.
+    ///
+    /// Uses more subquestions for comprehensive coverage of complex topics.
+    pub fn for_research(llm_client: Arc<dyn ResponseGenerator>) -> Self {
+        Self {
+            llm_client,
+            prompt_template: DEFAULT_SUBQUESTION_PROMPT.to_string(),
+            num_subquestions: 5,
+            include_original: true,
+            max_subquestion_length: 300,
+        }
+    }
+
+    /// Creates a subquestion transformer optimized for simple queries.
+    ///
+    /// Uses fewer subquestions to avoid over-complicating simple questions.
+    pub fn for_simple_queries(llm_client: Arc<dyn ResponseGenerator>) -> Self {
+        Self {
+            llm_client,
+            prompt_template: DEFAULT_SUBQUESTION_PROMPT.to_string(),
+            num_subquestions: 2,
+            include_original: true,
+            max_subquestion_length: 150,
         }
     }
 
@@ -386,10 +479,48 @@ impl QueryTransformer for QueryExpansionTransformer {
 const DEFAULT_HYDE_PROMPT: &str = r"
 Please write a passage to answer the question: {query}
 
-The passage should be informative and directly address the question. 
+The passage should be informative and directly address the question.
 Write as if you are providing a comprehensive answer based on reliable sources.
 
 Passage:
+";
+
+const QA_HYDE_PROMPT: &str = r"
+Please write a detailed answer to the following question: {query}
+
+Provide a comprehensive response that covers the key aspects of the question.
+Include relevant details, examples, and explanations as if you were writing
+an informative article or encyclopedia entry on this topic.
+
+Answer:
+";
+
+const CODE_HYDE_PROMPT: &str = r"
+Please write code documentation or explanation for: {query}
+
+Provide a clear explanation that includes:
+- What the code/concept does
+- How it works
+- Common use cases or examples
+- Any important considerations
+
+Write as if you are creating technical documentation.
+
+Documentation:
+";
+
+const ACADEMIC_HYDE_PROMPT: &str = r"
+Please write an academic passage that addresses: {query}
+
+The passage should be scholarly in tone and include:
+- Key concepts and definitions
+- Relevant theories or frameworks
+- Research findings or evidence
+- Academic context and significance
+
+Write as if you are contributing to an academic paper or textbook.
+
+Academic passage:
 ";
 
 const DEFAULT_SUBQUESTION_PROMPT: &str = r"

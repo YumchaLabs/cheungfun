@@ -12,7 +12,7 @@
 > - Practice LlamaIndex design philosophy and interface patterns
 > - Provide learning and reference code examples
 
-Cheungfun is a high-performance RAG framework built in Rust, inspired by LlamaIndex. It features modular design, streaming processing architecture, and performance optimization capabilities, primarily designed for learning and exploring modern RAG system implementations.
+Cheungfun is a high-performance RAG (Retrieval-Augmented Generation) framework built in Rust, inspired by LlamaIndex. It features modular design, streaming processing architecture, and performance optimization capabilities, primarily designed for learning and exploring modern RAG system implementations.
 
 ## ✨ Learning Features
 

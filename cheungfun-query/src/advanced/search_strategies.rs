@@ -83,6 +83,10 @@ pub struct FusionConfig {
     pub final_top_k: usize,
     /// Intermediate result multiplier.
     pub intermediate_multiplier: f32,
+    /// Vector search weight (optional, used by weighted fusion methods).
+    pub vector_weight: Option<f32>,
+    /// Keyword search weight (optional, used by weighted fusion methods).
+    pub keyword_weight: Option<f32>,
 }
 
 impl Default for FusionConfig {
@@ -92,6 +96,8 @@ impl Default for FusionConfig {
             normalization: NormalizationMethod::Rank,
             final_top_k: 10,
             intermediate_multiplier: 2.0,
+            vector_weight: None,
+            keyword_weight: None,
         }
     }
 }
@@ -288,6 +294,73 @@ impl HybridSearchStrategy {
         HybridSearchStrategyBuilder::new()
     }
 
+    /// Create a hybrid search strategy optimized for general Q&A scenarios.
+    ///
+    /// Uses Reciprocal Rank Fusion with k=60 (as recommended in the original paper),
+    /// balanced vector/keyword weights (0.7/0.3), and rank normalization.
+    ///
+    /// Reference: "Reciprocal rank fusion outperforms Condorcet and individual rank learning methods"
+    /// by Cormack et al.
+    #[must_use]
+    pub fn for_general_qa() -> HybridSearchStrategyBuilder {
+        HybridSearchStrategyBuilder::new()
+            .fusion_method(FusionMethod::ReciprocalRankFusion { k: 60.0 })
+            .vector_weight(0.7)
+            .keyword_weight(0.3)
+            .normalization_method(NormalizationMethod::Rank)
+            .top_k(10)
+    }
+
+    /// Create a hybrid search strategy optimized for code search scenarios.
+    ///
+    /// Uses Linear Combination fusion with higher vector weight (0.8/0.2)
+    /// since code search benefits more from semantic similarity.
+    #[must_use]
+    pub fn for_code_search() -> HybridSearchStrategyBuilder {
+        HybridSearchStrategyBuilder::new()
+            .fusion_method(FusionMethod::LinearCombination)
+            .vector_weight(0.8)
+            .keyword_weight(0.2)
+            .normalization_method(NormalizationMethod::MinMax)
+            .top_k(15)
+    }
+
+    /// Create a hybrid search strategy optimized for academic paper search.
+    ///
+    /// Uses Weighted Average fusion with balanced weights and higher top_k
+    /// for comprehensive academic research.
+    #[must_use]
+    pub fn for_academic_papers() -> HybridSearchStrategyBuilder {
+        HybridSearchStrategyBuilder::new()
+            .fusion_method(FusionMethod::WeightedAverage)
+            .vector_weight(0.6)
+            .keyword_weight(0.4)
+            .normalization_method(NormalizationMethod::ZScore)
+            .top_k(20)
+    }
+
+    /// Create a hybrid search strategy optimized for customer support/FAQ scenarios.
+    ///
+    /// Uses RRF with lower k value for more aggressive reranking,
+    /// higher keyword weight for exact term matching.
+    #[must_use]
+    pub fn for_customer_support() -> HybridSearchStrategyBuilder {
+        HybridSearchStrategyBuilder::new()
+            .fusion_method(FusionMethod::ReciprocalRankFusion { k: 30.0 })
+            .vector_weight(0.5)
+            .keyword_weight(0.5)
+            .normalization_method(NormalizationMethod::Rank)
+            .top_k(8)
+    }
+
+    /// Create a hybrid search strategy with default settings.
+    ///
+    /// Equivalent to `for_general_qa()` but follows LlamaIndex naming convention.
+    #[must_use]
+    pub fn from_defaults() -> HybridSearchStrategyBuilder {
+        Self::for_general_qa()
+    }
+
     /// Execute vector search.
     async fn vector_search(
         &self,
@@ -480,17 +553,54 @@ impl HybridSearchStrategyBuilder {
         self
     }
 
+    /// Set the vector search weight for fusion.
     #[must_use]
-    pub fn with_vector_weight(self, _weight: f32) -> Self {
-        // The weight in the fusion config can be adjusted here.
-        // This is a placeholder; a real implementation would pass this to the fusion method.
+    pub fn vector_weight(mut self, weight: f32) -> Self {
+        // Store weight in fusion config for later use
+        self.fusion_config.vector_weight = Some(weight);
         self
     }
 
+    /// Set the keyword search weight for fusion.
     #[must_use]
-    pub fn with_keyword_weight(self, _weight: f32) -> Self {
-        // The weight in the fusion config can be adjusted here.
-        // This is a placeholder; a real implementation would pass this to the fusion method.
+    pub fn keyword_weight(mut self, weight: f32) -> Self {
+        // Store weight in fusion config for later use
+        self.fusion_config.keyword_weight = Some(weight);
+        self
+    }
+
+    /// Set the fusion method.
+    #[must_use]
+    pub fn fusion_method(mut self, method: FusionMethod) -> Self {
+        self.fusion_config.method = method;
+        self
+    }
+
+    /// Set the normalization method.
+    #[must_use]
+    pub fn normalization_method(mut self, method: NormalizationMethod) -> Self {
+        self.fusion_config.normalization = method;
+        self
+    }
+
+    /// Set the final top-k results to return.
+    #[must_use]
+    pub fn top_k(mut self, k: usize) -> Self {
+        self.fusion_config.final_top_k = k;
+        self
+    }
+
+    /// Set the distance metric for vector search.
+    #[must_use]
+    pub fn distance_metric(mut self, metric: DistanceMetric) -> Self {
+        self.vector_config.distance_metric = metric;
+        self
+    }
+
+    /// Set the BM25 parameters for keyword search.
+    #[must_use]
+    pub fn bm25_params(mut self, k1: f32, b: f32) -> Self {
+        self.keyword_config.bm25_params = Some(BM25Params { k1, b });
         self
     }
 

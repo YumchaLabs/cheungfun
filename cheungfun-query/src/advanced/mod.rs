@@ -313,18 +313,8 @@ pub trait ResponseTransformer: Send + Sync + std::fmt::Debug {
     }
 }
 
-/// Enum for distance metrics.
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub enum DistanceMetric {
-    /// Cosine similarity distance.
-    Cosine,
-    /// Euclidean distance.
-    Euclidean,
-    /// Dot product distance.
-    DotProduct,
-    /// Manhattan distance.
-    Manhattan,
-}
+// Re-export DistanceMetric from cheungfun-core for consistency
+pub use cheungfun_core::traits::DistanceMetric;
 
 /// Enum for normalization methods.
 #[derive(Debug, Clone, Serialize, Deserialize)]
