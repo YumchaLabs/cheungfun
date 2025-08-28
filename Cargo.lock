@@ -1194,6 +1194,8 @@ dependencies = [
  "anyhow",
  "async-trait",
  "cheungfun-core",
+ "cheungfun-indexing",
+ "cheungfun-integrations",
  "chrono",
  "futures",
  "futures-util",

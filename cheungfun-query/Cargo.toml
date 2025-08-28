@@ -22,6 +22,7 @@ path = "examples/basic_query.rs"
 
 [dependencies]
 cheungfun-core = { path = "../cheungfun-core" }
+cheungfun-indexing = { path = "../cheungfun-indexing" }
 
 # Core async and error handling
 tokio = { workspace = true }
@@ -56,6 +57,7 @@ tokio-test = "0.4"
 test-case = { workspace = true }
 chrono = { workspace = true }
 tracing-subscriber = { workspace = true }
+cheungfun-integrations = { path = "../cheungfun-integrations" }
 
 [features]
 # Default features - basic functionality without external dependencies

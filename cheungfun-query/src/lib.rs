@@ -55,6 +55,7 @@ pub mod advanced;
 pub mod engine;
 pub mod factory;
 pub mod generator;
+pub mod indices;
 pub mod memory;
 pub mod pipeline;
 pub mod retriever;
@@ -69,6 +70,7 @@ pub mod prelude {
     };
     pub use crate::factory::SiumaiLlmFactory;
     pub use crate::generator::{SiumaiGenerator, SiumaiGeneratorBuilder, SiumaiGeneratorConfig};
+    pub use crate::indices::{PropertyGraphIndex, PropertyGraphIndexConfig, PropertyGraphIndexStats};
     pub use crate::memory::{
         ApproximateTokenCounter, BaseMemory, ChatMemoryBuffer, ChatMemoryConfig, MemoryStats,
         TokenCounter,
