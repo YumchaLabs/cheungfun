@@ -3,8 +3,10 @@
 //! This module provides implementations of the unified `Transform` trait
 //! for various document processing tasks.
 
+pub mod entity_extractor;
 pub mod metadata_extractor;
 
+pub use entity_extractor::{EntityExtractor, EntityExtractionConfig, ExtractedEntity, ExtractedRelationship};
 pub use metadata_extractor::MetadataExtractor;
 
 /// Configuration for metadata extraction.

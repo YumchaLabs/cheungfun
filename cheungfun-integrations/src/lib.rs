@@ -8,6 +8,7 @@
 #![allow(clippy::module_name_repetitions)]
 
 pub mod embedders;
+pub mod graph_store;
 pub mod vector_stores;
 
 // Storage implementations
@@ -22,6 +23,7 @@ pub mod simd;
 pub mod gpu;
 
 // Re-export commonly used types
+pub use graph_store::SimplePropertyGraphStore;
 pub use vector_stores::InMemoryVectorStore;
 
 // Feature-gated embedder exports

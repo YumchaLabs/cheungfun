@@ -58,6 +58,7 @@ pub mod generator;
 pub mod memory;
 pub mod pipeline;
 pub mod retriever;
+pub mod retrievers;
 pub mod utils;
 
 /// Re-export commonly used types and traits.
@@ -77,6 +78,7 @@ pub mod prelude {
         RetrievalOptions,
     };
     pub use crate::retriever::{VectorRetriever, VectorRetrieverBuilder, VectorRetrieverConfig};
+    pub use crate::retrievers::{GraphRetriever, GraphRetrievalConfig, GraphRetrievalStrategy};
     pub use crate::utils::{
         CacheStats, QueryCache, QueryOptimizer, QueryOptimizerConfig, ResponsePostProcessor,
         ResponsePostProcessorConfig,

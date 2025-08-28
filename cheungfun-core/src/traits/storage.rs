@@ -13,6 +13,9 @@ use uuid::Uuid;
 
 use crate::{ChatMessage, Document, MessageRole, Node, Query, Result, ScoredNode};
 
+// Graph types for property graph storage
+pub use crate::types::graph::{ChunkNode, EntityNode, GraphQuery, LabelledNode, Relation, Triplet};
+
 /// Statistics for document store operations.
 #[derive(Debug, Clone, serde::Serialize, serde::Deserialize)]
 pub struct DocumentStoreStats {
@@ -986,17 +989,17 @@ pub trait ChatStore: Send + Sync + std::fmt::Debug {
 ///
 /// This structure provides a centralized way to manage different storage
 /// backends, following LlamaIndex's StorageContext pattern. It combines
-/// document storage, index storage, vector storage, and chat storage
+/// document storage, index storage, vector storage, graph storage, and chat storage
 /// into a single, cohesive interface.
 ///
 /// # Examples
 ///
 /// ```rust,no_run
-/// use cheungfun_core::traits::{StorageContext, DocumentStore, IndexStore, VectorStore, ChatStore};
+/// use cheungfun_core::traits::{StorageContext, DocumentStore, IndexStore, VectorStore, ChatStore, PropertyGraphStore};
 /// use std::sync::Arc;
 ///
 /// // Create storage context with default implementations
-/// let storage_context = StorageContext::from_defaults(None, None, None, None);
+/// let storage_context = StorageContext::from_defaults(None, None, None, None, None);
 ///
 /// // Or with custom implementations
 /// let storage_context = StorageContext::new(
@@ -1004,6 +1007,7 @@ pub trait ChatStore: Send + Sync + std::fmt::Debug {
 ///     Arc::new(my_index_store),
 ///     Arc::new(my_vector_store),
 ///     Some(Arc::new(my_chat_store)),
+///     Some(Arc::new(my_graph_store)),
 /// );
 /// ```
 #[derive(Debug)]
@@ -1017,12 +1021,18 @@ pub struct StorageContext {
     /// Vector stores for similarity search (can have multiple namespaces).
     pub vector_stores: HashMap<String, Arc<dyn VectorStore>>,
 
+    /// Property graph stores for graph-based retrieval (can have multiple namespaces).
+    pub graph_stores: HashMap<String, Arc<dyn PropertyGraphStore>>,
+
     /// Chat store for conversation history (optional).
     pub chat_store: Option<Arc<dyn ChatStore>>,
 }
 
 /// Default vector store namespace.
 pub const DEFAULT_VECTOR_STORE_NAMESPACE: &str = "default";
+
+/// Default graph store namespace.
+pub const DEFAULT_GRAPH_STORE_NAMESPACE: &str = "default";
 
 impl StorageContext {
     /// Create a new storage context with the provided stores.
@@ -1033,19 +1043,27 @@ impl StorageContext {
     /// * `index_store` - Index store implementation
     /// * `vector_store` - Primary vector store implementation
     /// * `chat_store` - Optional chat store implementation
+    /// * `graph_store` - Optional property graph store implementation
     pub fn new(
         doc_store: Arc<dyn DocumentStore>,
         index_store: Arc<dyn IndexStore>,
         vector_store: Arc<dyn VectorStore>,
         chat_store: Option<Arc<dyn ChatStore>>,
+        graph_store: Option<Arc<dyn PropertyGraphStore>>,
     ) -> Self {
         let mut vector_stores = HashMap::new();
         vector_stores.insert(DEFAULT_VECTOR_STORE_NAMESPACE.to_string(), vector_store);
+
+        let mut graph_stores = HashMap::new();
+        if let Some(store) = graph_store {
+            graph_stores.insert(DEFAULT_GRAPH_STORE_NAMESPACE.to_string(), store);
+        }
 
         Self {
             doc_store,
             index_store,
             vector_stores,
+            graph_stores,
             chat_store,
         }
     }
@@ -1061,11 +1079,13 @@ impl StorageContext {
     /// * `index_store` - Optional index store (will use KVIndexStore if None)
     /// * `vector_store` - Optional vector store (will use InMemoryVectorStore if None)
     /// * `chat_store` - Optional chat store (will use KVChatStore if None)
+    /// * `graph_store` - Optional property graph store (will use SimplePropertyGraphStore if None)
     pub async fn from_defaults(
         doc_store: Option<Arc<dyn DocumentStore>>,
         index_store: Option<Arc<dyn IndexStore>>,
         vector_store: Option<Arc<dyn VectorStore>>,
         chat_store: Option<Arc<dyn ChatStore>>,
+        graph_store: Option<Arc<dyn PropertyGraphStore>>,
     ) -> Result<Self> {
         // This will be implemented once we have the integrations module properly set up
         // For now, require explicit stores
@@ -1080,7 +1100,7 @@ impl StorageContext {
             message: "VectorStore is required - use InMemoryVectorStore".to_string(),
         })?;
 
-        Ok(Self::new(doc_store, index_store, vector_store, chat_store))
+        Ok(Self::new(doc_store, index_store, vector_store, chat_store, graph_store))
     }
 
     /// Persist all storage components to a directory.
@@ -1170,6 +1190,30 @@ impl StorageContext {
         self.vector_stores.get(namespace)
     }
 
+    /// Add a property graph store with a specific namespace.
+    ///
+    /// # Arguments
+    ///
+    /// * `namespace` - The namespace for the graph store
+    /// * `graph_store` - The property graph store implementation
+    pub fn add_graph_store(&mut self, namespace: String, graph_store: Arc<dyn PropertyGraphStore>) {
+        self.graph_stores.insert(namespace, graph_store);
+    }
+
+    /// Get a property graph store by namespace.
+    ///
+    /// # Arguments
+    ///
+    /// * `namespace` - The namespace of the graph store
+    pub fn get_graph_store(&self, namespace: &str) -> Option<&Arc<dyn PropertyGraphStore>> {
+        self.graph_stores.get(namespace)
+    }
+
+    /// Get the default property graph store.
+    pub fn graph_store(&self) -> Option<&Arc<dyn PropertyGraphStore>> {
+        self.graph_stores.get(DEFAULT_GRAPH_STORE_NAMESPACE)
+    }
+
     /// Check if all required stores are healthy.
     pub async fn health_check(&self) -> Result<()> {
         // Check vector store health
@@ -1219,6 +1263,258 @@ pub struct StorageContextConfig {
 
     /// When the configuration was created.
     pub created_at: chrono::DateTime<chrono::Utc>,
+}
+
+// ============================================================================
+// Graph Storage Traits (Property Graph Support)
+// ============================================================================
+
+/// Property graph storage trait for storing and querying graph data.
+///
+/// This trait provides a unified interface for property graph databases,
+/// following LlamaIndex's PropertyGraphStore pattern exactly. It supports both
+/// traditional graph operations and vector-based similarity search on entities.
+///
+/// # Examples
+///
+/// ```rust,no_run
+/// use cheungfun_core::traits::PropertyGraphStore;
+/// use cheungfun_core::types::graph::{EntityNode, ChunkNode, Relation, Triplet, LabelledNode};
+/// use async_trait::async_trait;
+/// use std::collections::HashMap;
+///
+/// struct SimplePropertyGraphStore {
+///     // Implementation details
+/// }
+///
+/// #[async_trait]
+/// impl PropertyGraphStore for SimplePropertyGraphStore {
+///     async fn upsert_nodes(&self, nodes: Vec<Box<dyn LabelledNode>>) -> Result<()> {
+///         // Implementation would store the nodes
+///         Ok(())
+///     }
+///
+///     async fn upsert_relations(&self, relations: Vec<Relation>) -> Result<()> {
+///         // Implementation would store the relations
+///         Ok(())
+///     }
+///
+///     async fn get_triplets(
+///         &self,
+///         entity_names: Option<Vec<String>>,
+///         relation_names: Option<Vec<String>>,
+///         properties: Option<HashMap<String, serde_json::Value>>,
+///         ids: Option<Vec<String>>,
+///     ) -> Result<Vec<Triplet>> {
+///         // Implementation would retrieve triplets
+///         Ok(vec![])
+///     }
+/// }
+/// ```
+#[async_trait]
+pub trait PropertyGraphStore: Send + Sync + std::fmt::Debug {
+    /// Check if this store supports structured queries (e.g., Cypher, SPARQL).
+    fn supports_structured_queries(&self) -> bool {
+        false
+    }
+
+    /// Check if this store supports vector queries.
+    fn supports_vector_queries(&self) -> bool {
+        false
+    }
+
+    /// Insert or update nodes in the graph.
+    ///
+    /// This method stores nodes (both EntityNode and ChunkNode) in the graph.
+    /// If nodes already exist, they should be updated.
+    ///
+    /// # Arguments
+    ///
+    /// * `nodes` - Vector of nodes to store
+    async fn upsert_nodes(&self, nodes: Vec<Box<dyn LabelledNode>>) -> Result<()>;
+
+    /// Insert or update relations in the graph.
+    ///
+    /// This method stores relations between nodes in the graph.
+    /// If relations already exist, they should be updated.
+    ///
+    /// # Arguments
+    ///
+    /// * `relations` - Vector of relations to store
+    async fn upsert_relations(&self, relations: Vec<Relation>) -> Result<()>;
+
+    /// Get triplets from the graph based on various filters.
+    ///
+    /// This is the core retrieval method that matches LlamaIndex's interface exactly.
+    /// If no filters are provided, returns an empty list.
+    ///
+    /// # Arguments
+    ///
+    /// * `entity_names` - Filter by entity names
+    /// * `relation_names` - Filter by relation labels
+    /// * `properties` - Filter by node properties
+    /// * `ids` - Filter by node IDs
+    ///
+    /// # Returns
+    ///
+    /// A vector of triplets matching the filter criteria.
+    async fn get_triplets(
+        &self,
+        entity_names: Option<Vec<String>>,
+        relation_names: Option<Vec<String>>,
+        properties: Option<HashMap<String, serde_json::Value>>,
+        ids: Option<Vec<String>>,
+    ) -> Result<Vec<Triplet>>;
+
+    /// Get nodes from the graph based on filters.
+    ///
+    /// # Arguments
+    ///
+    /// * `properties` - Filter by node properties
+    /// * `ids` - Filter by node IDs
+    ///
+    /// # Returns
+    ///
+    /// A vector of nodes matching the filter criteria.
+    async fn get(
+        &self,
+        properties: Option<HashMap<String, serde_json::Value>>,
+        ids: Option<Vec<String>>,
+    ) -> Result<Vec<Box<dyn LabelledNode>>>;
+
+    /// Get relation map for entities with specified depth.
+    ///
+    /// This method returns paths from the given entities up to the specified depth.
+    ///
+    /// # Arguments
+    ///
+    /// * `entity_ids` - Starting entity IDs
+    /// * `depth` - Maximum traversal depth
+    ///
+    /// # Returns
+    ///
+    /// A vector of relation paths.
+    async fn get_rel_map(
+        &self,
+        entity_ids: Vec<String>,
+        depth: usize,
+    ) -> Result<Vec<Vec<Box<dyn LabelledNode>>>>;
+
+    /// Delete nodes and their relations from the graph.
+    ///
+    /// # Arguments
+    ///
+    /// * `entity_ids` - IDs of entities to delete
+    /// * `relation_ids` - IDs of relations to delete
+    async fn delete(
+        &self,
+        entity_ids: Option<Vec<String>>,
+        relation_ids: Option<Vec<String>>,
+    ) -> Result<()>;
+
+    /// Perform vector similarity search on entities (if supported).
+    ///
+    /// This method searches for entities similar to the query embedding.
+    ///
+    /// # Arguments
+    ///
+    /// * `query` - Vector store query with embedding and filters
+    ///
+    /// # Returns
+    ///
+    /// A tuple of (entities, scores) sorted by similarity.
+    async fn vector_query(&self, query: &Query) -> Result<(Vec<Box<dyn LabelledNode>>, Vec<f32>)> {
+        let _ = query;
+        Err(crate::CheungfunError::Internal {
+            message: "Vector queries not supported by this store".to_string(),
+        })
+    }
+
+    /// Execute a structured query (e.g., Cypher, SPARQL) if supported.
+    ///
+    /// # Arguments
+    ///
+    /// * `query` - The structured query string
+    /// * `params` - Optional query parameters
+    ///
+    /// # Returns
+    ///
+    /// Query results as JSON value
+    async fn structured_query(
+        &self,
+        query: &str,
+        params: Option<HashMap<String, serde_json::Value>>,
+    ) -> Result<serde_json::Value> {
+        let _ = (query, params);
+        Err(crate::CheungfunError::Internal {
+            message: "Structured queries not supported by this store".to_string(),
+        })
+    }
+
+    /// Get the graph schema information.
+    ///
+    /// # Returns
+    ///
+    /// A string representation of the graph schema (entity types, relation types, etc.)
+    async fn get_schema(&self) -> Result<String> {
+        Ok("No schema information available".to_string())
+    }
+
+    /// Check if the graph store is healthy and accessible.
+    async fn health_check(&self) -> Result<()> {
+        Ok(())
+    }
+
+    /// Get statistics about the graph store.
+    async fn stats(&self) -> Result<GraphStoreStats> {
+        Ok(GraphStoreStats::default())
+    }
+
+    /// Clear all data from the graph store.
+    ///
+    /// # Warning
+    ///
+    /// This operation is destructive and cannot be undone.
+    async fn clear(&self) -> Result<()> {
+        Err(crate::CheungfunError::Internal {
+            message: "Clear operation not supported by this store".to_string(),
+        })
+    }
+
+    /// Persist the graph store to a file (if supported).
+    ///
+    /// # Arguments
+    ///
+    /// * `persist_path` - Path to save the graph data
+    async fn persist(&self, persist_path: &str) -> Result<()> {
+        let _ = persist_path;
+        Ok(())
+    }
+}
+
+/// Statistics for graph store operations.
+#[derive(Debug, Clone, Default, Serialize, Deserialize)]
+pub struct GraphStoreStats {
+    /// Total number of entities in the graph.
+    pub entity_count: usize,
+
+    /// Total number of relations in the graph.
+    pub relation_count: usize,
+
+    /// Total number of triplets in the graph.
+    pub triplet_count: usize,
+
+    /// Number of different entity labels.
+    pub entity_label_count: usize,
+
+    /// Number of different relation labels.
+    pub relation_label_count: usize,
+
+    /// Average degree (connections per entity).
+    pub avg_degree: f64,
+
+    /// Additional store-specific statistics.
+    pub additional_stats: HashMap<String, serde_json::Value>,
 }
 
 /// Statistics for the entire storage context.
