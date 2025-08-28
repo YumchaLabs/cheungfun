@@ -993,6 +993,7 @@ impl PipelineCache for FileCache {
         let index = self.index.read().await;
 
         let total_entries = index.total_entries();
+        #[allow(clippy::cast_precision_loss)]
         let usage_ratio = (total_entries as f64 / (self.config.max_entries * 3) as f64).min(1.0);
 
         // Determine health status

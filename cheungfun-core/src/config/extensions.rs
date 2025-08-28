@@ -4,6 +4,8 @@
 //! to support JSON loading, validation, and backward compatibility.
 
 use crate::{CheungfunError, Result};
+#[cfg(feature = "config-manager")]
+use crate::config::ConfigManager;
 use serde::{Deserialize, Serialize};
 use std::path::Path;
 

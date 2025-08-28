@@ -379,6 +379,7 @@ impl Default for QueryPipelineBuilder {
 
 /// Information about the query builder state.
 #[derive(Debug, Clone)]
+#[allow(clippy::struct_excessive_bools)]
 pub struct QueryBuilderInfo {
     /// Whether an embedder is set.
     pub has_embedder: bool,

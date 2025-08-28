@@ -12,8 +12,11 @@ use std::path::{Path, PathBuf};
 use std::sync::{Arc, RwLock};
 
 use serde::{Deserialize, Serialize};
-
+#[cfg(feature = "hot-reload")]
+use tokio::sync::mpsc;
 use tracing::{debug, info};
+#[cfg(feature = "hot-reload")]
+use tracing::error;
 
 use crate::{CheungfunError, Result};
 
@@ -77,6 +80,7 @@ struct ConfigState {
 
 /// Metadata about a configuration file.
 #[derive(Debug, Clone)]
+#[allow(dead_code)]
 struct FileMetadata {
     /// Last modification time.
     last_modified: std::time::SystemTime,
@@ -409,7 +413,7 @@ impl ConfigManager {
 
         let (tx, mut rx) = mpsc::channel(100);
         let config_clone = Arc::clone(&self.config);
-        let config_dir_clone = config_dir.clone();
+        let _config_dir_clone = config_dir.clone();
 
         // Create file watcher
         let mut watcher = notify::recommended_watcher(move |res: notify::Result<Event>| {
@@ -439,7 +443,7 @@ impl ConfigManager {
                                 info!("Configuration file changed: {}", path.display());
 
                                 // Reload the file with a small delay to ensure write is complete
-                                tokio::time::sleep(Duration::from_millis(100)).await;
+                                tokio::time::sleep(tokio::time::Duration::from_millis(100)).await;
 
                                 if let Err(e) = Self::reload_file(&config_clone, &path).await {
                                     error!(

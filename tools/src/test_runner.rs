@@ -62,8 +62,8 @@ pub fn run_test_suites(test_suites: &[TestSuite]) {
     println!("📊 Test Summary");
     println!("===============");
     println!("Total suites: {}", test_suites.len());
-    println!("Passed: {}", total_passed);
-    println!("Failed: {}", total_failed);
+    println!("Passed: {total_passed}");
+    println!("Failed: {total_failed}");
     println!("Duration: {:.2}s", total_duration.as_secs_f64());
 
     if total_failed > 0 {
@@ -75,6 +75,10 @@ pub fn run_test_suites(test_suites: &[TestSuite]) {
 }
 
 /// Run a single test suite.
+///
+/// # Errors
+///
+/// Returns an error if the test execution fails or if the tests fail.
 pub fn run_test_suite(suite: &TestSuite) -> Result<(), String> {
     let mut cmd = Command::new("cargo");
     cmd.arg("test");
@@ -112,7 +116,7 @@ pub fn run_test_suite(suite: &TestSuite) -> Result<(), String> {
     // Execute the command
     let output = cmd
         .output()
-        .map_err(|e| format!("Failed to execute cargo test: {}", e))?;
+        .map_err(|e| format!("Failed to execute cargo test: {e}"))?;
 
     if output.status.success() {
         Ok(())
@@ -120,13 +124,13 @@ pub fn run_test_suite(suite: &TestSuite) -> Result<(), String> {
         let stderr = String::from_utf8_lossy(&output.stderr);
         let stdout = String::from_utf8_lossy(&output.stdout);
         Err(format!(
-            "Test failed:\nSTDOUT:\n{}\nSTDERR:\n{}",
-            stdout, stderr
+            "Test failed:\nSTDOUT:\n{stdout}\nSTDERR:\n{stderr}"
         ))
     }
 }
 
 /// Get default test suites.
+#[must_use]
 pub fn get_default_test_suites() -> Vec<TestSuite> {
     vec![
         TestSuite {
@@ -154,6 +158,7 @@ pub fn get_default_test_suites() -> Vec<TestSuite> {
 }
 
 /// Get unit test suites.
+#[must_use]
 pub fn get_unit_test_suites() -> Vec<TestSuite> {
     vec![
         TestSuite {
@@ -188,6 +193,7 @@ pub fn get_unit_test_suites() -> Vec<TestSuite> {
 }
 
 /// Get integration test suites.
+#[must_use]
 pub fn get_integration_test_suites() -> Vec<TestSuite> {
     vec![
         TestSuite {
@@ -215,6 +221,7 @@ pub fn get_integration_test_suites() -> Vec<TestSuite> {
 }
 
 /// Get performance test suites.
+#[must_use]
 pub fn get_performance_test_suites() -> Vec<TestSuite> {
     vec![
         TestSuite {
@@ -242,6 +249,7 @@ pub fn get_performance_test_suites() -> Vec<TestSuite> {
 }
 
 /// Get storage-specific test suites.
+#[must_use]
 pub fn get_storage_test_suites() -> Vec<TestSuite> {
     vec![TestSuite {
         name: "Storage Integration Tests",
@@ -253,6 +261,7 @@ pub fn get_storage_test_suites() -> Vec<TestSuite> {
 }
 
 /// Get memory-specific test suites.
+#[must_use]
 pub fn get_memory_test_suites() -> Vec<TestSuite> {
     vec![TestSuite {
         name: "Memory Integration Tests",
@@ -264,6 +273,7 @@ pub fn get_memory_test_suites() -> Vec<TestSuite> {
 }
 
 /// Get config-specific test suites.
+#[must_use]
 pub fn get_config_test_suites() -> Vec<TestSuite> {
     vec![TestSuite {
         name: "Config Integration Tests",

@@ -214,7 +214,7 @@ impl From<anyhow::Error> for CheungfunError {
 #[cfg(feature = "storage")]
 impl From<sqlx::Error> for CheungfunError {
     fn from(error: sqlx::Error) -> Self {
-        Self::Storage(format!("Database error: {}", error))
+        Self::Storage(format!("Database error: {error}"))
     }
 }
 

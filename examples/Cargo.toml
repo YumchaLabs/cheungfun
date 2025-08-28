@@ -33,10 +33,12 @@ tempfile = "3.20"
 chrono = { version = "0.4", features = ["serde"] }
 thiserror = "1.0"
 ctrlc = "3.4"
-clap = "4.0"
+clap = { version = "4.0", features = ["derive"] }
 futures = "0.3"
 rand = "0.8"
 unicode-segmentation = "1.12"
+env_logger = "0.11"
+log = "0.4"
 
 # Performance testing dependencies
 criterion = { version = "0.5", optional = true }
@@ -65,6 +67,41 @@ gpu = ["cheungfun-integrations/gpu-cuda", "cheungfun-integrations/gpu-metal"]
 
 # Full feature set
 full = ["code-analysis", "document-analysis", "intelligent-assistant", "knowledge-base", "gpu", "benchmarks"]
+
+# === New RAG Technique Examples ===
+# Foundational examples
+[[bin]]
+name = "simple_rag"
+path = "01_foundational/simple_rag.rs"
+
+[[bin]]
+name = "csv_rag"
+path = "01_foundational/csv_rag.rs"
+
+[[bin]]
+name = "reliable_rag"
+path = "01_foundational/reliable_rag.rs"
+
+[[bin]]
+name = "chunk_size_optimization"
+path = "01_foundational/chunk_size_optimization.rs"
+
+[[bin]]
+name = "query_transformations"
+path = "02_query_enhancement/query_transformations.rs"
+
+[[bin]]
+name = "hyde"
+path = "02_query_enhancement/hyde.rs"
+
+[[bin]]
+name = "fusion_retrieval"
+path = "03_retrieval_optimization/fusion_retrieval.rs"
+
+[[bin]]
+name = "proposition_chunking"
+path = "01_foundational/proposition_chunking.rs"
+required-features = ["fastembed"]
 
 # === Application Examples ===
 [[bin]]

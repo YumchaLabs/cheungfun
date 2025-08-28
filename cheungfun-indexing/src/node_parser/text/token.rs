@@ -204,7 +204,7 @@ impl NodeParser for TokenTextSplitter {
     async fn parse_nodes(
         &self,
         documents: &[Document],
-        show_progress: bool,
+        _show_progress: bool,
     ) -> CoreResult<Vec<Node>> {
         let mut all_nodes = Vec::new();
 

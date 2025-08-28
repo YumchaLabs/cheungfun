@@ -17,17 +17,33 @@ use cheungfun_indexing::node_parser::text::SentenceSplitter;
 async fn main() -> Result<(), Box<dyn std::error::Error>> {
     // Create a sentence splitter
     let splitter = SentenceSplitter::from_defaults(300, 75)?;
-    
+
     // Create a document
     let document = Document::new("This is the first sentence. This is the second sentence. This is the third sentence.");
-    
-    // Use the unified Transform interface
+
+    // Use parse_nodes() for direct parsing
+    let nodes = splitter.parse_nodes(&[document], false).await?;
+
+    // Alternative: Use the unified Transform interface
     let input = cheungfun_core::traits::TransformInput::Documents(vec![document]);
     let nodes = splitter.transform(input).await?;
-    
+
     println!("Generated {} nodes", nodes.len());
     Ok(())
 }
+```
+
+### 🎯 Async-First Design
+
+Cheungfun follows an **async-first design pattern** where all parsing operations are asynchronous. This provides better performance and composability:
+
+```rust
+// ✅ Async context (recommended)
+let nodes = splitter.parse_nodes(&documents, false).await?;
+
+// ✅ Sync context (requires manual runtime)
+let rt = tokio::runtime::Runtime::new()?;
+let nodes = rt.block_on(splitter.parse_nodes(&documents, false))?;
 ````
 
 ## 📚 Supported Parser Types
@@ -72,6 +88,61 @@ let splitter = TokenTextSplitter::new()
 #### 3. MarkdownNodeParser
 
 **Usage**: Hierarchical document splitting based on Markdown header structure.
+
+#### 4. HierarchicalNodeParser
+
+**Usage**: Multi-level hierarchical chunking with parent-child relationships for advanced retrieval patterns.
+
+```rust
+use cheungfun_indexing::node_parser::relational::HierarchicalNodeParser;
+
+// Create 3-level hierarchy: 2048 -> 512 -> 128 tokens
+let parser = HierarchicalNodeParser::from_defaults(vec![2048, 512, 128])?;
+
+// Advanced configuration
+let parser = HierarchicalNodeParser::new(
+    HierarchicalConfig::new(vec![1024, 256, 64])
+        .with_chunk_overlap(50)
+        .with_hierarchy_metadata(true)
+)?;
+```
+
+## 🗂️ File Format Parsers
+
+### HTMLNodeParser
+
+**Usage**: Extract structured text from HTML documents while preserving tag information.
+
+```rust
+use cheungfun_indexing::node_parser::file::HTMLNodeParser;
+
+// Basic usage with default tags
+let parser = HTMLNodeParser::new();
+
+// Custom tags
+let parser = HTMLNodeParser::with_tags(vec![
+    "h1".to_string(), "h2".to_string(), "p".to_string()
+]);
+```
+
+### JSONNodeParser
+
+**Usage**: Parse JSON documents into structured nodes with hierarchical metadata.
+
+```rust
+use cheungfun_indexing::node_parser::file::JSONNodeParser;
+
+// Basic usage
+let parser = JSONNodeParser::new();
+
+// Custom configuration
+let parser = JSONNodeParser::with_config(
+    JSONConfig::default()
+        .with_create_object_nodes(true)
+        .with_include_paths(true)
+        .with_max_depth(5)
+);
+```
 
 ```rust
 use cheungfun_indexing::node_parser::text::MarkdownNodeParser;
@@ -126,9 +197,9 @@ let splitter = SemanticSplitter::new(embedder)
 
 ### 💻 Code Parsers
 
-#### CodeSplitter - AST-Enhanced Code Splitter
+#### CodeSplitter - AST-Enhanced Code Splitter with SweepAI Optimization
 
-**Usage**: Intelligent code splitting based on Abstract Syntax Trees (AST) to maintain code structural integrity.
+**Usage**: Intelligent code splitting based on Abstract Syntax Trees (AST) to maintain code structural integrity. Uses SweepAI-enhanced chunking algorithm for optimal code analysis.
 
 ```rust
 use cheungfun_indexing::node_parser::text::CodeSplitter;

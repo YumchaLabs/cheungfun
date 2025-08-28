@@ -1096,7 +1096,7 @@ impl StorageContext {
 
         // Create persist directory
         fs::create_dir_all(persist_dir).map_err(|e| {
-            crate::CheungfunError::Storage(format!("Failed to create persist directory: {}", e))
+            crate::CheungfunError::Storage(format!("Failed to create persist directory: {e}"))
         })?;
 
         // Create storage context configuration
@@ -1114,7 +1114,7 @@ impl StorageContext {
         let config_json = serde_json::to_string_pretty(&config)
             .map_err(|e| crate::CheungfunError::Serialization(e))?;
         fs::write(config_path, config_json).map_err(|e| {
-            crate::CheungfunError::Storage(format!("Failed to write config: {}", e))
+            crate::CheungfunError::Storage(format!("Failed to write config: {e}"))
         })?;
 
         // TODO: Delegate persistence to individual stores if they support it
@@ -1134,7 +1134,7 @@ impl StorageContext {
     pub async fn from_persist_dir(persist_dir: &Path) -> Result<Self> {
         let config_path = persist_dir.join("storage_context.json");
         let config_json = std::fs::read_to_string(config_path)
-            .map_err(|e| crate::CheungfunError::Storage(format!("Failed to read config: {}", e)))?;
+            .map_err(|e| crate::CheungfunError::Storage(format!("Failed to read config: {e}")))?;
         let _config: StorageContextConfig = serde_json::from_str(&config_json)
             .map_err(|e| crate::CheungfunError::Serialization(e))?;
 

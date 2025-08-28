@@ -323,6 +323,7 @@ impl Default for IndexingPipelineBuilder {
 
 /// Information about the builder state.
 #[derive(Debug, Clone)]
+#[allow(clippy::struct_excessive_bools)]
 pub struct BuilderInfo {
     /// Whether a loader is set.
     pub has_loader: bool,

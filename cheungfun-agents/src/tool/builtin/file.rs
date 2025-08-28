@@ -451,10 +451,14 @@ mod tests {
         let tool = FileTool::new();
         let context = ToolContext::new();
 
+        // Create a temporary directory for testing
+        let temp_dir = tempdir().unwrap();
+        let test_file = temp_dir.path().join("test.txt");
+
         // Test that write operations are rejected
         let args = serde_json::json!({
             "operation": "write",
-            "path": "/tmp/test.txt",
+            "path": test_file.to_string_lossy(),
             "content": "test"
         });
 

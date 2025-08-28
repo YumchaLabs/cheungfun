@@ -377,6 +377,10 @@ where
     }
 
     /// Start the monitoring system.
+    ///
+    /// # Errors
+    ///
+    /// Returns an error if the monitoring system fails to start.
     pub async fn start_monitoring(&self) -> Result<(), CheungfunError> {
         info!("Starting cache monitoring system");
 
@@ -562,7 +566,7 @@ where
         // Check hit rate
         let hit_rate = sample.cache_stats.hit_rate();
         if hit_rate < thresholds.min_hit_rate {
-            let alert_id = format!("hit_rate_{}", timestamp);
+            let alert_id = format!("hit_rate_{timestamp}");
             if !manager.active_alerts.contains_key(&alert_id) {
                 let alert = Alert {
                     id: alert_id.clone(),
@@ -587,7 +591,7 @@ where
         // Check response time
         let response_time = sample.response_times.avg_response_time;
         if response_time > thresholds.max_response_time as f64 {
-            let alert_id = format!("response_time_{}", timestamp);
+            let alert_id = format!("response_time_{timestamp}");
             if !manager.active_alerts.contains_key(&alert_id) {
                 let alert = Alert {
                     id: alert_id.clone(),
@@ -614,7 +618,7 @@ where
 
         // Check cache health
         if sample.cache_health.status == HealthStatus::Critical {
-            let alert_id = format!("health_critical_{}", timestamp);
+            let alert_id = format!("health_critical_{timestamp}");
             if !manager.active_alerts.contains_key(&alert_id) {
                 let alert = Alert {
                     id: alert_id.clone(),

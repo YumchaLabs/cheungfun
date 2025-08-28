@@ -75,3 +75,5 @@ approx = "0.5"
 default = []
 hot-reload = ["notify"]
 storage = ["sqlx"]
+config-manager = []
+tiktoken = []

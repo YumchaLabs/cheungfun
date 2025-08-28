@@ -22,6 +22,8 @@
 
 pub mod callbacks;
 pub mod config;
+pub mod file;
+pub mod relational;
 pub mod text;
 pub mod utils;
 
@@ -92,18 +94,7 @@ pub trait NodeParser: Send + Sync + Debug {
         self.parse_nodes(documents, show_progress).await
     }
 
-    /// Get nodes from documents (convenience method).
-    ///
-    /// This is a synchronous wrapper around `parse_nodes` for compatibility.
-    fn get_nodes_from_documents(
-        &self,
-        documents: &[Document],
-        show_progress: bool,
-    ) -> CoreResult<Vec<Node>> {
-        // Use tokio runtime to run async method
-        let rt = tokio::runtime::Runtime::new()?;
-        rt.block_on(self.parse_nodes(documents, show_progress))
-    }
+
 }
 
 /// Text splitter trait for splitting text into chunks.
@@ -176,7 +167,7 @@ pub trait TextSplitter: NodeParser {
     async fn parse_nodes(
         &self,
         documents: &[Document],
-        show_progress: bool,
+        _show_progress: bool,
     ) -> CoreResult<Vec<Node>> {
         let mut all_nodes = Vec::new();
 
@@ -270,7 +261,7 @@ pub trait MetadataAwareTextSplitter: TextSplitter {
     async fn parse_nodes_metadata_aware(
         &self,
         documents: &[Document],
-        show_progress: bool,
+        _show_progress: bool,
     ) -> CoreResult<Vec<Node>> {
         let mut all_nodes = Vec::new();
 
@@ -324,4 +315,10 @@ pub trait HierarchicalNodeParser: NodeParser {
 pub use callbacks::*;
 /// Re-export commonly used types and traits.
 pub use config::*;
+pub use file::{HTMLNodeParser, JSONNodeParser};
+// pub use relational::HierarchicalNodeParser; // Commented out to avoid name conflict
+pub use text::{
+    CodeSplitter, MarkdownNodeParser, SemanticSplitter, SentenceSplitter, SentenceWindowNodeParser,
+    TokenTextSplitter,
+};
 pub use utils::*;

@@ -150,7 +150,8 @@ impl Tool for WikipediaTool {
             .map_err(|e| AgentError::tool(&self.name, format!("Invalid arguments: {e}")))?;
 
         if args.max_results > 10 || args.max_results == 0 {
-            return Ok(ToolResult::error("max_results must be between 1 and 10"));
+            let error_msg = "max_results must be between 1 and 10";
+            return Ok(ToolResult::error_with_content(error_msg, error_msg));
         }
 
         // In a real implementation, you would make HTTP requests to Wikipedia API

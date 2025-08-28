@@ -439,8 +439,9 @@ impl Default for CodeSplitterConfig {
 /// Predefined chunking strategies for different use cases
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum ChunkingStrategy {
-    /// Optimal strategy for RAG applications (40 lines, 15 overlap, 1500 chars)
+    /// Optimal strategy for RAG applications using SweepAI-enhanced AST chunking (40 lines, 15 overlap, 1500 chars)
     /// Best for: General code analysis, knowledge retrieval, documentation
+    /// Note: This strategy uses the SweepAI algorithm for intelligent code splitting
     Optimal,
     /// Fine-grained strategy (15 lines, 5 overlap, 800 chars)
     /// Best for: Detailed code analysis, function-level processing
@@ -475,7 +476,7 @@ impl ChunkingStrategy {
     /// Get a description of this strategy
     pub fn description(self) -> &'static str {
         match self {
-            ChunkingStrategy::Optimal => "Optimal for general RAG applications",
+            ChunkingStrategy::Optimal => "Optimal for general RAG applications (SweepAI-enhanced)",
             ChunkingStrategy::Fine => "Fine-grained for detailed code analysis",
             ChunkingStrategy::Balanced => "Balanced for most general use cases",
             ChunkingStrategy::Coarse => "Coarse for high-level code overview",
@@ -650,6 +651,73 @@ pub struct MarkdownConfig {
     /// Sections shorter than this will be merged with adjacent sections.
     pub min_section_length: usize,
 }
+
+/// Configuration for hierarchical node parser.
+///
+/// This configuration defines multiple levels of chunking with different sizes,
+/// creating a hierarchy where larger chunks contain smaller chunks as children.
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
+pub struct HierarchicalConfig {
+    /// Base node parser configuration.
+    pub base: NodeParserConfig,
+
+    /// Chunk sizes for each hierarchy level (ordered from largest to smallest).
+    /// For example: [2048, 512, 128] creates 3 levels of hierarchy.
+    pub chunk_sizes: Vec<usize>,
+
+    /// Overlap between chunks at each level.
+    pub chunk_overlap: usize,
+
+    /// Whether to include metadata about hierarchy level.
+    pub include_hierarchy_metadata: bool,
+
+    /// Maximum depth of hierarchy to create.
+    pub max_depth: Option<usize>,
+}
+
+impl Default for HierarchicalConfig {
+    fn default() -> Self {
+        Self {
+            base: NodeParserConfig::default(),
+            chunk_sizes: vec![2048, 512, 128], // Default 3-level hierarchy
+            chunk_overlap: 20,
+            include_hierarchy_metadata: true,
+            max_depth: None,
+        }
+    }
+}
+
+impl HierarchicalConfig {
+    /// Create a new hierarchical configuration with the given chunk sizes.
+    pub fn new(chunk_sizes: Vec<usize>) -> Self {
+        Self {
+            chunk_sizes,
+            ..Default::default()
+        }
+    }
+
+    /// Set the chunk overlap for all levels.
+    pub fn with_chunk_overlap(mut self, overlap: usize) -> Self {
+        self.chunk_overlap = overlap;
+        self
+    }
+
+    /// Set whether to include hierarchy metadata.
+    pub fn with_hierarchy_metadata(mut self, include: bool) -> Self {
+        self.include_hierarchy_metadata = include;
+        self
+    }
+
+    /// Set the maximum hierarchy depth.
+    pub fn with_max_depth(mut self, max_depth: usize) -> Self {
+        self.max_depth = Some(max_depth);
+        self
+    }
+}
+
+
+
+
 
 impl Default for MarkdownConfig {
     fn default() -> Self {
