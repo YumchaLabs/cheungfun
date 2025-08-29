@@ -70,7 +70,9 @@ pub mod prelude {
     };
     pub use crate::factory::SiumaiLlmFactory;
     pub use crate::generator::{SiumaiGenerator, SiumaiGeneratorBuilder, SiumaiGeneratorConfig};
-    pub use crate::indices::{PropertyGraphIndex, PropertyGraphIndexConfig, PropertyGraphIndexStats};
+    pub use crate::indices::{
+        PropertyGraphIndex, PropertyGraphIndexConfig, PropertyGraphIndexStats,
+    };
     pub use crate::memory::{
         ApproximateTokenCounter, BaseMemory, ChatMemoryBuffer, ChatMemoryConfig, MemoryStats,
         TokenCounter,
@@ -80,7 +82,7 @@ pub mod prelude {
         RetrievalOptions,
     };
     pub use crate::retriever::{VectorRetriever, VectorRetrieverBuilder, VectorRetrieverConfig};
-    pub use crate::retrievers::{GraphRetriever, GraphRetrievalConfig, GraphRetrievalStrategy};
+    pub use crate::retrievers::{GraphRetrievalConfig, GraphRetrievalStrategy, GraphRetriever};
     pub use crate::utils::{
         CacheStats, QueryCache, QueryOptimizer, QueryOptimizerConfig, ResponsePostProcessor,
         ResponsePostProcessorConfig,

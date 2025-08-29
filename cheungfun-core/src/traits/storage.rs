@@ -1100,7 +1100,13 @@ impl StorageContext {
             message: "VectorStore is required - use InMemoryVectorStore".to_string(),
         })?;
 
-        Ok(Self::new(doc_store, index_store, vector_store, chat_store, graph_store))
+        Ok(Self::new(
+            doc_store,
+            index_store,
+            vector_store,
+            chat_store,
+            graph_store,
+        ))
     }
 
     /// Persist all storage components to a directory.

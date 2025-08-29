@@ -22,22 +22,22 @@ use cheungfun_core::{
 pub struct EntityExtractionConfig {
     /// Confidence threshold for accepting entity predictions (0.0 to 1.0).
     pub prediction_threshold: f32,
-    
+
     /// Whether to include entity type labels in the output.
     pub label_entities: bool,
-    
+
     /// Separator used to join multi-word entity spans.
     pub span_joiner: String,
-    
+
     /// Maximum number of entities to extract per node.
     pub max_entities_per_node: Option<usize>,
-    
+
     /// Entity types to extract (if None, extract all types).
     pub entity_types: Option<HashSet<String>>,
-    
+
     /// Whether to extract relationships between entities.
     pub extract_relationships: bool,
-    
+
     /// Maximum length of text to process (longer texts will be truncated).
     pub max_text_length: usize,
 }
@@ -61,19 +61,19 @@ impl Default for EntityExtractionConfig {
 pub struct ExtractedEntity {
     /// The entity text/name.
     pub text: String,
-    
+
     /// The entity type/label (e.g., "PERSON", "ORG", "LOC").
     pub label: String,
-    
+
     /// Confidence score (0.0 to 1.0).
     pub confidence: f32,
-    
+
     /// Start position in the original text.
     pub start_pos: usize,
-    
+
     /// End position in the original text.
     pub end_pos: usize,
-    
+
     /// Additional properties for this entity.
     pub properties: HashMap<String, serde_json::Value>,
 }
@@ -83,16 +83,16 @@ pub struct ExtractedEntity {
 pub struct ExtractedRelationship {
     /// Source entity text.
     pub source: String,
-    
+
     /// Target entity text.
     pub target: String,
-    
+
     /// Relationship type/label.
     pub relation_type: String,
-    
+
     /// Confidence score (0.0 to 1.0).
     pub confidence: f32,
-    
+
     /// Additional properties for this relationship.
     pub properties: HashMap<String, serde_json::Value>,
 }
@@ -150,7 +150,7 @@ pub struct ExtractedRelationship {
 pub struct EntityExtractor {
     /// Configuration for entity extraction.
     config: EntityExtractionConfig,
-    
+
     /// Compiled patterns for entity recognition.
     patterns: EntityPatterns,
 }
@@ -160,25 +160,25 @@ pub struct EntityExtractor {
 struct EntityPatterns {
     /// Pattern for person names (simple heuristic).
     person: regex::Regex,
-    
+
     /// Pattern for organizations.
     organization: regex::Regex,
-    
+
     /// Pattern for locations.
     location: regex::Regex,
-    
+
     /// Pattern for dates.
     date: regex::Regex,
-    
+
     /// Pattern for monetary amounts.
     money: regex::Regex,
-    
+
     /// Pattern for email addresses.
     email: regex::Regex,
-    
+
     /// Pattern for phone numbers.
     phone: regex::Regex,
-    
+
     /// Pattern for URLs.
     url: regex::Regex,
 }
@@ -188,25 +188,25 @@ impl Default for EntityPatterns {
         Self {
             // Simple person name pattern (capitalized words)
             person: regex::Regex::new(r"\b[A-Z][a-z]+ [A-Z][a-z]+\b").unwrap(),
-            
+
             // Organization patterns (common suffixes)
             organization: regex::Regex::new(r"\b[A-Z][A-Za-z\s]+ (?:Inc|Corp|LLC|Ltd|Company|Corporation|Group|Systems|Technologies|Solutions)\b").unwrap(),
-            
+
             // Location patterns (capitalized place names)
             location: regex::Regex::new(r"\b(?:in|at|from|to) ([A-Z][a-z]+(?:\s[A-Z][a-z]+)*)\b").unwrap(),
-            
+
             // Date patterns
             date: regex::Regex::new(r"\b(?:\d{1,2}[/-]\d{1,2}[/-]\d{2,4}|\d{4}[/-]\d{1,2}[/-]\d{1,2}|(?:Jan|Feb|Mar|Apr|May|Jun|Jul|Aug|Sep|Oct|Nov|Dec)[a-z]* \d{1,2},? \d{4})\b").unwrap(),
-            
+
             // Money patterns
             money: regex::Regex::new(r"\$[\d,]+(?:\.\d{2})?|\b\d+(?:,\d{3})*(?:\.\d{2})? (?:dollars?|USD|euros?|EUR)\b").unwrap(),
-            
+
             // Email pattern
             email: regex::Regex::new(r"\b[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Z|a-z]{2,}\b").unwrap(),
-            
+
             // Phone pattern
             phone: regex::Regex::new(r"\b(?:\+?1[-.\s]?)?\(?[0-9]{3}\)?[-.\s]?[0-9]{3}[-.\s]?[0-9]{4}\b").unwrap(),
-            
+
             // URL pattern
             url: regex::Regex::new(r"\bhttps?://[^\s]+\b").unwrap(),
         }
@@ -218,7 +218,7 @@ impl EntityExtractor {
     pub fn new() -> Self {
         Self::with_config(EntityExtractionConfig::default())
     }
-    
+
     /// Create a new entity extractor with custom configuration.
     pub fn with_config(config: EntityExtractionConfig) -> Self {
         Self {
@@ -226,23 +226,26 @@ impl EntityExtractor {
             patterns: EntityPatterns::default(),
         }
     }
-    
+
     /// Extract entities from text content.
     ///
     /// This method performs the core entity extraction logic using pattern matching
     /// and heuristics to identify different types of entities in the text.
     fn extract_entities(&self, text: &str) -> Vec<ExtractedEntity> {
         let mut entities = Vec::new();
-        
+
         // Truncate text if it's too long
         let text = if text.len() > self.config.max_text_length {
-            warn!("Text length {} exceeds maximum {}, truncating", 
-                  text.len(), self.config.max_text_length);
+            warn!(
+                "Text length {} exceeds maximum {}, truncating",
+                text.len(),
+                self.config.max_text_length
+            );
             &text[..self.config.max_text_length]
         } else {
             text
         };
-        
+
         // Extract different types of entities
         self.extract_entities_by_pattern(&mut entities, text, &self.patterns.person, "PERSON");
         self.extract_entities_by_pattern(&mut entities, text, &self.patterns.organization, "ORG");
@@ -251,7 +254,7 @@ impl EntityExtractor {
         self.extract_entities_by_pattern(&mut entities, text, &self.patterns.email, "EMAIL");
         self.extract_entities_by_pattern(&mut entities, text, &self.patterns.phone, "PHONE");
         self.extract_entities_by_pattern(&mut entities, text, &self.patterns.url, "URL");
-        
+
         // Extract locations (special handling for capture groups)
         for cap in self.patterns.location.captures_iter(text) {
             if let Some(location_match) = cap.get(1) {
@@ -268,20 +271,20 @@ impl EntityExtractor {
                 }
             }
         }
-        
+
         // Remove duplicates and sort by position
         entities.sort_by_key(|e| e.start_pos);
         entities.dedup_by(|a, b| a.text == b.text && a.label == b.label);
-        
+
         // Apply max entities limit
         if let Some(max_entities) = self.config.max_entities_per_node {
             entities.truncate(max_entities);
         }
-        
+
         debug!("Extracted {} entities from text", entities.len());
         entities
     }
-    
+
     /// Extract entities using a specific pattern and label.
     fn extract_entities_by_pattern(
         &self,
@@ -304,7 +307,7 @@ impl EntityExtractor {
             }
         }
     }
-    
+
     /// Check if an entity should be included based on configuration.
     fn should_include_entity(&self, entity_text: &str, label: &str) -> bool {
         // Check entity type filter
@@ -313,18 +316,20 @@ impl EntityExtractor {
                 return false;
             }
         }
-        
+
         // Basic quality filters
         if entity_text.len() < 2 || entity_text.len() > 100 {
             return false;
         }
-        
+
         // Skip common stop words and noise
-        let stop_words = ["the", "and", "or", "but", "in", "on", "at", "to", "for", "of", "with", "by"];
+        let stop_words = [
+            "the", "and", "or", "but", "in", "on", "at", "to", "for", "of", "with", "by",
+        ];
         if stop_words.contains(&entity_text.to_lowercase().as_str()) {
             return false;
         }
-        
+
         true
     }
 
@@ -332,7 +337,11 @@ impl EntityExtractor {
     ///
     /// This method identifies potential relationships between extracted entities
     /// using simple heuristics and patterns.
-    fn extract_relationships(&self, text: &str, entities: &[ExtractedEntity]) -> Vec<ExtractedRelationship> {
+    fn extract_relationships(
+        &self,
+        text: &str,
+        entities: &[ExtractedEntity],
+    ) -> Vec<ExtractedRelationship> {
         let mut relationships = Vec::new();
 
         if !self.config.extract_relationships || entities.len() < 2 {
@@ -359,7 +368,9 @@ impl EntityExtractor {
                         let target_text = target.as_str().trim();
 
                         // Check if both entities were extracted
-                        if self.entity_exists(source_text, entities) && self.entity_exists(target_text, entities) {
+                        if self.entity_exists(source_text, entities)
+                            && self.entity_exists(target_text, entities)
+                        {
                             relationships.push(ExtractedRelationship {
                                 source: source_text.to_string(),
                                 target: target_text.to_string(),
@@ -381,7 +392,9 @@ impl EntityExtractor {
                         let source_text = source.as_str().trim();
                         let target_text = target.as_str().trim();
 
-                        if self.entity_exists(source_text, entities) && self.entity_exists(target_text, entities) {
+                        if self.entity_exists(source_text, entities)
+                            && self.entity_exists(target_text, entities)
+                        {
                             relationships.push(ExtractedRelationship {
                                 source: source_text.to_string(),
                                 target: target_text.to_string(),
@@ -401,11 +414,16 @@ impl EntityExtractor {
 
     /// Check if an entity exists in the extracted entities list.
     fn entity_exists(&self, entity_text: &str, entities: &[ExtractedEntity]) -> bool {
-        entities.iter().any(|e| e.text.to_lowercase() == entity_text.to_lowercase())
+        entities
+            .iter()
+            .any(|e| e.text.to_lowercase() == entity_text.to_lowercase())
     }
 
     /// Convert extracted entities to metadata format.
-    fn entities_to_metadata(&self, entities: &[ExtractedEntity]) -> HashMap<String, serde_json::Value> {
+    fn entities_to_metadata(
+        &self,
+        entities: &[ExtractedEntity],
+    ) -> HashMap<String, serde_json::Value> {
         let mut metadata = HashMap::new();
 
         if entities.is_empty() {
@@ -428,11 +446,15 @@ impl EntityExtractor {
             // Add each entity type as a separate metadata field
             for (label, entity_list) in entities_by_label {
                 let label_key = label.to_lowercase();
-                metadata.insert(label_key, serde_json::Value::Array(
-                    entity_list.into_iter()
-                        .map(serde_json::Value::String)
-                        .collect()
-                ));
+                metadata.insert(
+                    label_key,
+                    serde_json::Value::Array(
+                        entity_list
+                            .into_iter()
+                            .map(serde_json::Value::String)
+                            .collect(),
+                    ),
+                );
             }
         } else {
             // All entities in a single "entities" field
@@ -443,11 +465,15 @@ impl EntityExtractor {
                 .collect();
 
             if !entity_list.is_empty() {
-                metadata.insert("entities".to_string(), serde_json::Value::Array(
-                    entity_list.into_iter()
-                        .map(serde_json::Value::String)
-                        .collect()
-                ));
+                metadata.insert(
+                    "entities".to_string(),
+                    serde_json::Value::Array(
+                        entity_list
+                            .into_iter()
+                            .map(serde_json::Value::String)
+                            .collect(),
+                    ),
+                );
             }
         }
 
@@ -455,7 +481,10 @@ impl EntityExtractor {
     }
 
     /// Convert extracted relationships to metadata format.
-    fn relationships_to_metadata(&self, relationships: &[ExtractedRelationship]) -> HashMap<String, serde_json::Value> {
+    fn relationships_to_metadata(
+        &self,
+        relationships: &[ExtractedRelationship],
+    ) -> HashMap<String, serde_json::Value> {
         let mut metadata = HashMap::new();
 
         if relationships.is_empty() {
@@ -465,16 +494,21 @@ impl EntityExtractor {
         let relationship_list: Vec<serde_json::Value> = relationships
             .iter()
             .filter(|r| r.confidence >= self.config.prediction_threshold)
-            .map(|r| serde_json::json!({
-                "source": r.source,
-                "target": r.target,
-                "relation": r.relation_type,
-                "confidence": r.confidence
-            }))
+            .map(|r| {
+                serde_json::json!({
+                    "source": r.source,
+                    "target": r.target,
+                    "relation": r.relation_type,
+                    "confidence": r.confidence
+                })
+            })
             .collect();
 
         if !relationship_list.is_empty() {
-            metadata.insert("relationships".to_string(), serde_json::Value::Array(relationship_list));
+            metadata.insert(
+                "relationships".to_string(),
+                serde_json::Value::Array(relationship_list),
+            );
         }
 
         metadata
@@ -485,7 +519,10 @@ impl EntityExtractor {
         debug!("Processing node {} for entity extraction", node.id);
 
         let (entities, relationships) = if node.content.is_empty() {
-            warn!("Node {} has empty content, skipping entity extraction", node.id);
+            warn!(
+                "Node {} has empty content, skipping entity extraction",
+                node.id
+            );
             (Vec::new(), Vec::new())
         } else {
             // Extract entities
@@ -496,7 +533,6 @@ impl EntityExtractor {
 
             (entities, relationships)
         };
-
 
         // Convert to metadata
         let entity_metadata = self.entities_to_metadata(&entities);
@@ -518,7 +554,7 @@ impl EntityExtractor {
                 "total_entities": entities.len(),
                 "total_relationships": relationships.len(),
                 "prediction_threshold": self.config.prediction_threshold
-            })
+            }),
         );
 
         info!(
@@ -597,7 +633,10 @@ mod tests {
         let extractor = EntityExtractor::new();
         let node = create_test_node("Alice Smith works at Microsoft in Seattle.");
 
-        let result = extractor.transform(TransformInput::Node(node)).await.unwrap();
+        let result = extractor
+            .transform(TransformInput::Node(node))
+            .await
+            .unwrap();
         assert_eq!(result.len(), 1);
 
         let processed_node = &result[0];
@@ -606,7 +645,9 @@ mod tests {
         assert!(processed_node.metadata.contains_key("entities"));
 
         // Check extraction stats
-        assert!(processed_node.metadata.contains_key("entity_extraction_stats"));
+        assert!(processed_node
+            .metadata
+            .contains_key("entity_extraction_stats"));
     }
 
     #[tokio::test]
@@ -616,20 +657,34 @@ mod tests {
             ..Default::default()
         };
         let extractor = EntityExtractor::with_config(config);
-        let node = create_test_node("John Doe works at Apple Inc in Cupertino. Contact: john@apple.com or (555) 123-4567.");
+        let node = create_test_node(
+            "John Doe works at Apple Inc in Cupertino. Contact: john@apple.com or (555) 123-4567.",
+        );
 
-        let result = extractor.transform(TransformInput::Node(node)).await.unwrap();
+        let result = extractor
+            .transform(TransformInput::Node(node))
+            .await
+            .unwrap();
         let processed_node = &result[0];
 
         // Check that different entity types are separated
         if processed_node.metadata.contains_key("person") {
-            println!("Found person entities: {:?}", processed_node.metadata.get("person"));
+            println!(
+                "Found person entities: {:?}",
+                processed_node.metadata.get("person")
+            );
         }
         if processed_node.metadata.contains_key("org") {
-            println!("Found org entities: {:?}", processed_node.metadata.get("org"));
+            println!(
+                "Found org entities: {:?}",
+                processed_node.metadata.get("org")
+            );
         }
         if processed_node.metadata.contains_key("email") {
-            println!("Found email entities: {:?}", processed_node.metadata.get("email"));
+            println!(
+                "Found email entities: {:?}",
+                processed_node.metadata.get("email")
+            );
         }
     }
 
@@ -640,14 +695,21 @@ mod tests {
             ..Default::default()
         };
         let extractor = EntityExtractor::with_config(config);
-        let node = create_test_node("Alice Smith works at Microsoft. Microsoft is located in Seattle.");
+        let node =
+            create_test_node("Alice Smith works at Microsoft. Microsoft is located in Seattle.");
 
-        let result = extractor.transform(TransformInput::Node(node)).await.unwrap();
+        let result = extractor
+            .transform(TransformInput::Node(node))
+            .await
+            .unwrap();
         let processed_node = &result[0];
 
         // Check that relationships were extracted
         if processed_node.metadata.contains_key("relationships") {
-            println!("Found relationships: {:?}", processed_node.metadata.get("relationships"));
+            println!(
+                "Found relationships: {:?}",
+                processed_node.metadata.get("relationships")
+            );
         }
     }
 
@@ -660,7 +722,10 @@ mod tests {
             create_test_node("Microsoft was founded in 1975."),
         ];
 
-        let result = extractor.transform(TransformInput::Nodes(nodes)).await.unwrap();
+        let result = extractor
+            .transform(TransformInput::Nodes(nodes))
+            .await
+            .unwrap();
         assert_eq!(result.len(), 3);
 
         // Each node should have been processed
@@ -674,12 +739,17 @@ mod tests {
         let extractor = EntityExtractor::new();
         let node = create_test_node("");
 
-        let result = extractor.transform(TransformInput::Node(node)).await.unwrap();
+        let result = extractor
+            .transform(TransformInput::Node(node))
+            .await
+            .unwrap();
         assert_eq!(result.len(), 1);
 
         let processed_node = &result[0];
         // Should not have entities but should have stats
-        assert!(processed_node.metadata.contains_key("entity_extraction_stats"));
+        assert!(processed_node
+            .metadata
+            .contains_key("entity_extraction_stats"));
     }
 
     #[tokio::test]
@@ -687,7 +757,9 @@ mod tests {
         let extractor = EntityExtractor::new();
         let document = cheungfun_core::Document::new("test content".to_string());
 
-        let result = extractor.transform(TransformInput::Document(document)).await;
+        let result = extractor
+            .transform(TransformInput::Document(document))
+            .await;
         assert!(result.is_err());
 
         if let Err(e) = result {
@@ -704,7 +776,10 @@ mod tests {
         let extractor = EntityExtractor::with_config(config);
         let node = create_test_node("Alice Smith works at Microsoft.");
 
-        let result = extractor.transform(TransformInput::Node(node)).await.unwrap();
+        let result = extractor
+            .transform(TransformInput::Node(node))
+            .await
+            .unwrap();
         let processed_node = &result[0];
 
         // With high threshold, fewer entities should pass
@@ -721,13 +796,21 @@ mod tests {
 
         // Test person pattern
         let text = "Alice Smith and Bob Johnson are here.";
-        let matches: Vec<_> = patterns.person.find_iter(text).map(|m| m.as_str()).collect();
+        let matches: Vec<_> = patterns
+            .person
+            .find_iter(text)
+            .map(|m| m.as_str())
+            .collect();
         assert!(matches.contains(&"Alice Smith"));
         assert!(matches.contains(&"Bob Johnson"));
 
         // Test organization pattern
         let text = "Microsoft Corporation and Apple Inc are competitors.";
-        let matches: Vec<_> = patterns.organization.find_iter(text).map(|m| m.as_str()).collect();
+        let matches: Vec<_> = patterns
+            .organization
+            .find_iter(text)
+            .map(|m| m.as_str())
+            .collect();
         assert!(matches.len() > 0);
 
         // Test email pattern

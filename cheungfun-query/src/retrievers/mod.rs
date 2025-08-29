@@ -5,6 +5,4 @@
 
 pub mod graph_retriever;
 
-pub use graph_retriever::{
-    GraphRetriever, GraphRetrievalConfig, GraphRetrievalStrategy,
-};
+pub use graph_retriever::{GraphRetrievalConfig, GraphRetrievalStrategy, GraphRetriever};

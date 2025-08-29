@@ -156,7 +156,7 @@ impl LabelledPropertyGraph {
         rel_id: Option<&str>,
     ) -> String {
         if let Some(rel) = relation {
-            format!("{}_{}_{}",rel.source_id, rel.label, rel.target_id)
+            format!("{}_{}_{}", rel.source_id, rel.label, rel.target_id)
         } else if let (Some(subj), Some(obj), Some(rel)) = (subj_id, obj_id, rel_id) {
             format!("{}_{}_{}", subj, rel, obj)
         } else {
@@ -182,18 +182,19 @@ impl LabelledPropertyGraph {
         let mut triplets = Vec::new();
 
         for (subj_id, rel_id, obj_id) in &self.triplets {
-            if let (Some(subj_node), Some(obj_node)) = (
-                self.nodes.get(subj_id),
-                self.nodes.get(obj_id),
-            ) {
+            if let (Some(subj_node), Some(obj_node)) =
+                (self.nodes.get(subj_id), self.nodes.get(obj_id))
+            {
                 // We need to find the relation by matching the triplet components
                 // Since we store relations by {source_id}_{label}_{target_id}, we need to find the matching relation
-                let rel_key = self.relations.keys()
+                let rel_key = self
+                    .relations
+                    .keys()
                     .find(|key| {
                         if let Some(relation) = self.relations.get(*key) {
-                            relation.source_id == *subj_id &&
-                            relation.target_id == *obj_id &&
-                            relation.id == *rel_id
+                            relation.source_id == *subj_id
+                                && relation.target_id == *obj_id
+                                && relation.id == *rel_id
                         } else {
                             false
                         }
@@ -201,17 +202,17 @@ impl LabelledPropertyGraph {
                     .cloned();
                 if let Some(rel_key) = rel_key {
                     if let Some(relation) = self.relations.get(&rel_key) {
-                    // Convert nodes to EntityNodes for triplet creation
-                    if let (Some(source_entity), Some(target_entity)) = (
-                        self.node_to_entity(subj_node),
-                        self.node_to_entity(obj_node),
-                    ) {
-                        triplets.push(Triplet::new(
-                            source_entity,
-                            relation.clone(),
-                            target_entity,
-                        ));
-                    }
+                        // Convert nodes to EntityNodes for triplet creation
+                        if let (Some(source_entity), Some(target_entity)) = (
+                            self.node_to_entity(subj_node),
+                            self.node_to_entity(obj_node),
+                        ) {
+                            triplets.push(Triplet::new(
+                                source_entity,
+                                relation.clone(),
+                                target_entity,
+                            ));
+                        }
                     }
                 }
             }
@@ -229,7 +230,10 @@ impl LabelledPropertyGraph {
             LabelledNodeType::Chunk(chunk) => {
                 // Convert ChunkNode to EntityNode representation
                 let mut properties = chunk.properties.clone();
-                properties.insert("text".to_string(), serde_json::Value::String(chunk.text.clone()));
+                properties.insert(
+                    "text".to_string(),
+                    serde_json::Value::String(chunk.text.clone()),
+                );
 
                 Some(EntityNode::with_id(
                     chunk.id(),
@@ -248,23 +252,29 @@ impl LabelledPropertyGraph {
         let subj_id = triplet.source.id();
         let obj_id = triplet.target.id();
         let rel_id = triplet.relation.id.clone();
-        
+
         // Check if triplet already exists
-        if self.triplets.contains(&(subj_id.clone(), rel_id.clone(), obj_id.clone())) {
+        if self
+            .triplets
+            .contains(&(subj_id.clone(), rel_id.clone(), obj_id.clone()))
+        {
             return Ok(());
         }
-        
+
         // Add the triplet
-        self.triplets.insert((subj_id.clone(), rel_id.clone(), obj_id.clone()));
-        
+        self.triplets
+            .insert((subj_id.clone(), rel_id.clone(), obj_id.clone()));
+
         // Add nodes
-        self.nodes.insert(subj_id, LabelledNodeType::Entity(triplet.source));
-        self.nodes.insert(obj_id, LabelledNodeType::Entity(triplet.target));
-        
+        self.nodes
+            .insert(subj_id, LabelledNodeType::Entity(triplet.source));
+        self.nodes
+            .insert(obj_id, LabelledNodeType::Entity(triplet.target));
+
         // Add relation
         let rel_key = self.get_relation_key(Some(&triplet.relation), None, None, None);
         self.relations.insert(rel_key, triplet.relation);
-        
+
         Ok(())
     }
 
@@ -291,7 +301,9 @@ impl LabelledPropertyGraph {
     /// The nodes must exist for the relation to be meaningful.
     pub fn add_relation(&mut self, relation: Relation) -> Result<()> {
         // Check if both nodes exist
-        if !self.nodes.contains_key(&relation.source_id) || !self.nodes.contains_key(&relation.target_id) {
+        if !self.nodes.contains_key(&relation.source_id)
+            || !self.nodes.contains_key(&relation.target_id)
+        {
             return Err(crate::CheungfunError::Internal {
                 message: format!(
                     "Cannot add relation: source '{}' or target '{}' node not found",
@@ -299,18 +311,18 @@ impl LabelledPropertyGraph {
                 ),
             });
         }
-        
+
         let subj_id = relation.source_id.clone();
         let obj_id = relation.target_id.clone();
         let rel_id = relation.id.clone();
-        
+
         // Add to triplets set
         self.triplets.insert((subj_id, rel_id, obj_id));
-        
+
         // Add to relations map
         let rel_key = self.get_relation_key(Some(&relation), None, None, None);
         self.relations.insert(rel_key, relation);
-        
+
         Ok(())
     }
 
@@ -319,20 +331,23 @@ impl LabelledPropertyGraph {
         let subj_id = triplet.source.id();
         let obj_id = triplet.target.id();
         let rel_id = triplet.relation.id.clone();
-        
+
         // Remove from triplets set
-        if !self.triplets.remove(&(subj_id.clone(), rel_id.clone(), obj_id.clone())) {
+        if !self
+            .triplets
+            .remove(&(subj_id.clone(), rel_id.clone(), obj_id.clone()))
+        {
             return Ok(()); // Triplet didn't exist
         }
-        
+
         // Remove nodes (following LlamaIndex's aggressive deletion pattern)
         self.nodes.remove(&subj_id);
         self.nodes.remove(&obj_id);
-        
+
         // Remove relation
         let rel_key = self.get_relation_key(Some(&triplet.relation), None, None, None);
         self.relations.remove(&rel_key);
-        
+
         Ok(())
     }
 
@@ -407,13 +422,13 @@ mod tests {
     #[test]
     fn test_add_nodes() {
         let mut graph = LabelledPropertyGraph::new();
-        
+
         let entity1 = EntityNode::new("Alice".to_string(), "Person".to_string(), HashMap::new());
         let entity2 = EntityNode::new("Bob".to_string(), "Person".to_string(), HashMap::new());
-        
+
         graph.add_node(Box::new(entity1)).unwrap();
         graph.add_node(Box::new(entity2)).unwrap();
-        
+
         assert_eq!(graph.node_count(), 2);
         assert!(!graph.is_empty());
     }
@@ -421,15 +436,15 @@ mod tests {
     #[test]
     fn test_add_relation() {
         let mut graph = LabelledPropertyGraph::new();
-        
+
         let entity1 = EntityNode::new("Alice".to_string(), "Person".to_string(), HashMap::new());
         let entity2 = EntityNode::new("Bob".to_string(), "Person".to_string(), HashMap::new());
         let entity1_id = entity1.id();
         let entity2_id = entity2.id();
-        
+
         graph.add_node(Box::new(entity1)).unwrap();
         graph.add_node(Box::new(entity2)).unwrap();
-        
+
         let relation = Relation::new(
             "rel_1".to_string(),
             "knows".to_string(),
@@ -437,9 +452,9 @@ mod tests {
             entity2_id,
             HashMap::new(),
         );
-        
+
         graph.add_relation(relation).unwrap();
-        
+
         assert_eq!(graph.relation_count(), 1);
         assert_eq!(graph.triplet_count(), 1);
     }

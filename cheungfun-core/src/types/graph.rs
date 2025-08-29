@@ -89,7 +89,11 @@ impl EntityNode {
         label: String,
         mut properties: HashMap<String, serde_json::Value>,
     ) -> Self {
-        let label = if label.is_empty() { "__Entity__".to_string() } else { label };
+        let label = if label.is_empty() {
+            "__Entity__".to_string()
+        } else {
+            label
+        };
 
         // Store name in properties for trait object compatibility
         properties.insert("name".to_string(), serde_json::Value::String(name.clone()));
@@ -110,7 +114,11 @@ impl EntityNode {
         label: String,
         mut properties: HashMap<String, serde_json::Value>,
     ) -> Self {
-        let label = if label.is_empty() { "__Entity__".to_string() } else { label };
+        let label = if label.is_empty() {
+            "__Entity__".to_string()
+        } else {
+            label
+        };
 
         // Store name in properties for trait object compatibility
         properties.insert("name".to_string(), serde_json::Value::String(name.clone()));
@@ -131,7 +139,11 @@ impl EntityNode {
         mut properties: HashMap<String, serde_json::Value>,
         embedding: Vec<f32>,
     ) -> Self {
-        let label = if label.is_empty() { "__Entity__".to_string() } else { label };
+        let label = if label.is_empty() {
+            "__Entity__".to_string()
+        } else {
+            label
+        };
 
         // Store name in properties for trait object compatibility
         properties.insert("name".to_string(), serde_json::Value::String(name.clone()));
@@ -323,19 +335,19 @@ impl std::fmt::Display for ChunkNode {
 pub struct Relation {
     /// Unique identifier for this relation.
     pub id: String,
-    
+
     /// Label/type of the relation (e.g., "works_at", "located_in").
     pub label: String,
-    
+
     /// ID of the source entity.
     pub source_id: String,
-    
+
     /// ID of the target entity.
     pub target_id: String,
-    
+
     /// Additional properties/metadata for this relation.
     pub properties: HashMap<String, serde_json::Value>,
-    
+
     /// Source document ID that this relation was extracted from.
     pub source_doc_id: Option<Uuid>,
 }
@@ -441,10 +453,10 @@ impl Relation {
 pub struct Triplet {
     /// The source entity.
     pub source: EntityNode,
-    
+
     /// The relation connecting source and target.
     pub relation: Relation,
-    
+
     /// The target entity.
     pub target: EntityNode,
 }
@@ -484,9 +496,7 @@ impl Triplet {
     pub fn to_string(&self) -> String {
         format!(
             "({}) -[{}]-> ({})",
-            self.source.name,
-            self.relation.label,
-            self.target.name
+            self.source.name, self.relation.label, self.target.name
         )
     }
 
@@ -506,22 +516,22 @@ impl Triplet {
 pub struct GraphQuery {
     /// Starting entity IDs for traversal.
     pub start_entities: Vec<String>,
-    
+
     /// Relation labels to follow (empty means all relations).
     pub relation_labels: Vec<String>,
-    
+
     /// Entity labels to include (empty means all entities).
     pub entity_labels: Vec<String>,
-    
+
     /// Maximum traversal depth.
     pub max_depth: usize,
-    
+
     /// Maximum number of results to return.
     pub limit: Option<usize>,
-    
+
     /// Additional filters on entity properties.
     pub entity_filters: HashMap<String, serde_json::Value>,
-    
+
     /// Additional filters on relation properties.
     pub relation_filters: HashMap<String, serde_json::Value>,
 }
@@ -584,7 +594,10 @@ mod tests {
         assert_eq!(entity.id, "test_id");
         assert_eq!(entity.name, "Test Entity");
         assert_eq!(entity.label, "TestType");
-        assert_eq!(entity.get_property("age"), Some(&serde_json::Value::Number(30.into())));
+        assert_eq!(
+            entity.get_property("age"),
+            Some(&serde_json::Value::Number(30.into()))
+        );
         assert!(!entity.has_embedding());
     }
 

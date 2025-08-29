@@ -80,6 +80,17 @@ pub enum IndexingError {
     #[error("Core error: {0}")]
     Core(#[from] cheungfun_core::error::CheungfunError),
 
+    /// Parsing error during data processing.
+    #[error("Parse error: {message}")]
+    ParseError {
+        /// Error message describing the parsing issue.
+        message: String,
+    },
+
+    /// JSON serialization/deserialization error.
+    #[error("JSON error: {0}")]
+    Json(#[from] serde_json::Error),
+
     /// Generic error with custom message.
     #[error("Indexing error: {message}")]
     Generic {
@@ -147,6 +158,13 @@ impl IndexingError {
     /// Create a new pipeline error.
     pub fn pipeline<S: Into<String>>(message: S) -> Self {
         Self::Pipeline {
+            message: message.into(),
+        }
+    }
+
+    /// Create a new parse error.
+    pub fn parse_error<S: Into<String>>(message: S) -> Self {
+        Self::ParseError {
             message: message.into(),
         }
     }

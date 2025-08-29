@@ -7,14 +7,13 @@
 use std::sync::Arc;
 
 use cheungfun_core::{
-    traits::{PropertyGraphStore, VectorStore},
+    traits::{PropertyGraphStore, Transform, TransformInput, VectorStore},
     types::{Document, Node},
-    Result, ChunkInfo,
+    ChunkInfo, Result,
 };
-// TODO: Add entity extraction support
-// use cheungfun_indexing::transformers::EntityExtractor;
+use cheungfun_indexing::transformers::LlmExtractor;
 
-use crate::retrievers::{GraphRetriever, GraphRetrievalConfig};
+use crate::retrievers::{GraphRetrievalConfig, GraphRetriever};
 
 /// Configuration for PropertyGraphIndex.
 #[derive(Debug, Clone)]
@@ -25,6 +24,8 @@ pub struct PropertyGraphIndexConfig {
     pub show_progress: bool,
     /// Maximum number of workers for parallel processing
     pub num_workers: usize,
+    /// Whether to enable LLM-based entity extraction
+    pub enable_llm_extraction: bool,
 }
 
 impl Default for PropertyGraphIndexConfig {
@@ -33,6 +34,7 @@ impl Default for PropertyGraphIndexConfig {
             embed_kg_nodes: true,
             show_progress: false,
             num_workers: 4,
+            enable_llm_extraction: false, // Disabled by default for backward compatibility
         }
     }
 }
@@ -87,6 +89,8 @@ pub struct PropertyGraphIndex {
     property_graph_store: Arc<dyn PropertyGraphStore>,
     /// Vector store for semantic search
     vector_store: Option<Arc<dyn VectorStore>>,
+    /// LLM extractor for knowledge graph construction
+    llm_extractor: Option<Arc<LlmExtractor>>,
     /// Configuration
     config: PropertyGraphIndexConfig,
 }
@@ -117,6 +121,7 @@ impl PropertyGraphIndex {
         Self {
             property_graph_store,
             vector_store,
+            llm_extractor: None,
             config: PropertyGraphIndexConfig::default(),
         }
     }
@@ -130,6 +135,25 @@ impl PropertyGraphIndex {
         Self {
             property_graph_store,
             vector_store,
+            llm_extractor: None,
+            config,
+        }
+    }
+
+    /// Create a PropertyGraphIndex with LLM extractor.
+    pub fn with_llm_extractor(
+        property_graph_store: Arc<dyn PropertyGraphStore>,
+        vector_store: Option<Arc<dyn VectorStore>>,
+        llm_extractor: Arc<LlmExtractor>,
+        config: Option<PropertyGraphIndexConfig>,
+    ) -> Self {
+        let mut config = config.unwrap_or_default();
+        config.enable_llm_extraction = true;
+
+        Self {
+            property_graph_store,
+            vector_store,
+            llm_extractor: Some(llm_extractor),
             config,
         }
     }
@@ -155,7 +179,7 @@ impl PropertyGraphIndex {
             vector_store,
             config.unwrap_or_default(),
         );
-        
+
         index.insert_documents(documents).await?;
         Ok(index)
     }
@@ -178,32 +202,85 @@ impl PropertyGraphIndex {
     /// Insert documents into the index.
     ///
     /// This method processes documents and stores them in both the graph store
-    /// and vector store (if available). Entity extraction will be implemented
-    /// in a future version.
+    /// and vector store (if available). If LLM extraction is enabled, it will
+    /// extract entities and relationships from the documents.
     pub async fn insert_documents(&mut self, documents: Vec<Document>) -> Result<()> {
         if self.config.show_progress {
             println!("Indexing {} documents...", documents.len());
         }
 
-        for (i, document) in documents.iter().enumerate() {
-            if self.config.show_progress {
-                println!("Processing document {}/{}", i + 1, documents.len());
-            }
-
-            // TODO: Implement entity and relation extraction
-            // For now, we'll just store the document in the vector store
-
-            // Store in vector store if available and configured
-            if let Some(ref vector_store) = self.vector_store {
-                if self.config.embed_kg_nodes {
-                    // Create a node from the document
-                    let node = Node::new(
-                        document.content.clone(),
-                        document.id,
-                        ChunkInfo::new(0, document.content.len(), 0),
-                    );
-                    vector_store.add(vec![node]).await?;
+        // Perform LLM extraction if enabled
+        let processed_nodes = if self.config.enable_llm_extraction {
+            if let Some(ref llm_extractor) = self.llm_extractor {
+                if self.config.show_progress {
+                    println!("Extracting entities and relationships using LLM...");
                 }
+
+                let input = TransformInput::Documents(documents.clone());
+                llm_extractor.transform(input).await?
+            } else {
+                // Convert documents to nodes without extraction
+                documents
+                    .iter()
+                    .map(|doc| {
+                        Node::new(
+                            doc.content.clone(),
+                            doc.id,
+                            ChunkInfo::new(0, doc.content.len(), 0),
+                        )
+                    })
+                    .collect()
+            }
+        } else {
+            // Convert documents to nodes without extraction
+            documents
+                .iter()
+                .map(|doc| {
+                    Node::new(
+                        doc.content.clone(),
+                        doc.id,
+                        ChunkInfo::new(0, doc.content.len(), 0),
+                    )
+                })
+                .collect()
+        };
+
+        // Process extracted triplets and store in graph store
+        for node in &processed_nodes {
+            if let Some(triplets_value) = node.metadata.get("extracted_triplets") {
+                if let Ok(triplets) = serde_json::from_value::<
+                    Vec<cheungfun_core::types::graph::Triplet>,
+                >(triplets_value.clone())
+                {
+                    // Collect entities and relations from triplets
+                    let mut entities: Vec<Box<dyn cheungfun_core::traits::LabelledNode>> =
+                        Vec::new();
+                    let mut relations: Vec<cheungfun_core::types::graph::Relation> = Vec::new();
+
+                    for triplet in triplets {
+                        // Add source and target entities
+                        entities.push(Box::new(triplet.source));
+                        entities.push(Box::new(triplet.target));
+                        relations.push(triplet.relation);
+                    }
+
+                    // Store entities and relations in the graph store
+                    if !entities.is_empty() {
+                        self.property_graph_store.upsert_nodes(entities).await?;
+                    }
+                    if !relations.is_empty() {
+                        self.property_graph_store
+                            .upsert_relations(relations)
+                            .await?;
+                    }
+                }
+            }
+        }
+
+        // Store in vector store if available and configured
+        if let Some(ref vector_store) = self.vector_store {
+            if self.config.embed_kg_nodes {
+                vector_store.add(processed_nodes).await?;
             }
         }
 
@@ -238,7 +315,7 @@ impl PropertyGraphIndex {
     /// Get index statistics.
     pub async fn stats(&self) -> Result<PropertyGraphIndexStats> {
         let graph_stats = self.property_graph_store.stats().await?;
-        
+
         let vector_stats = if let Some(ref vector_store) = self.vector_store {
             Some(vector_store.stats().await?)
         } else {
@@ -271,7 +348,7 @@ mod tests {
     async fn test_property_graph_index_creation() {
         let graph_store = Arc::new(SimplePropertyGraphStore::new());
         let index = PropertyGraphIndex::new(graph_store, None);
-        
+
         assert!(index.vector_store().is_none());
         assert!(index.property_graph_store().supports_structured_queries() == false);
     }
@@ -284,12 +361,9 @@ mod tests {
             Document::new("Bob lives in Seattle."),
         ];
 
-        let index = PropertyGraphIndex::from_documents(
-            documents,
-            graph_store,
-            None,
-            None,
-        ).await.unwrap();
+        let index = PropertyGraphIndex::from_documents(documents, graph_store, None, None)
+            .await
+            .unwrap();
 
         let stats = index.stats().await.unwrap();
         // TODO: Enable this assertion when entity extraction is implemented

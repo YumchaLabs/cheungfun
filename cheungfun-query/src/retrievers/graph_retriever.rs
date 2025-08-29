@@ -24,31 +24,31 @@ use cheungfun_core::{
 pub struct GraphRetrievalConfig {
     /// Maximum number of nodes to return.
     pub top_k: usize,
-    
+
     /// Maximum depth for graph traversal.
     pub max_depth: usize,
-    
+
     /// Whether to include entity information in results.
     pub include_entities: bool,
-    
+
     /// Whether to include relationship information in results.
     pub include_relationships: bool,
-    
+
     /// Minimum confidence score for entity/relationship matching.
     pub min_confidence: f32,
-    
+
     /// Whether to use fuzzy matching for entity names.
     pub fuzzy_matching: bool,
-    
+
     /// Maximum number of entities to extract from query.
     pub max_query_entities: usize,
-    
+
     /// Weight for entity-based scoring.
     pub entity_weight: f32,
-    
+
     /// Weight for relationship-based scoring.
     pub relationship_weight: f32,
-    
+
     /// Weight for text similarity scoring.
     pub text_weight: f32,
 }
@@ -75,13 +75,13 @@ impl Default for GraphRetrievalConfig {
 pub enum GraphRetrievalStrategy {
     /// Entity-based retrieval: find nodes related to entities in the query.
     Entity,
-    
+
     /// Relationship-based retrieval: find nodes through relationship traversal.
     Relationship,
-    
+
     /// Hybrid retrieval: combine entity and relationship-based approaches.
     Hybrid,
-    
+
     /// Custom retrieval with specific entity and relationship filters.
     Custom {
         entity_names: Option<Vec<String>>,
@@ -147,27 +147,24 @@ impl Default for GraphRetrievalStrategy {
 pub struct GraphRetriever {
     /// The property graph store to query.
     graph_store: Arc<dyn PropertyGraphStore>,
-    
+
     /// Configuration for retrieval behavior.
     config: GraphRetrievalConfig,
-    
+
     /// Retrieval strategy to use.
     strategy: GraphRetrievalStrategy,
 }
 
 impl GraphRetriever {
     /// Create a new graph retriever with default configuration.
-    pub fn new(
-        graph_store: Arc<dyn PropertyGraphStore>,
-        config: GraphRetrievalConfig,
-    ) -> Self {
+    pub fn new(graph_store: Arc<dyn PropertyGraphStore>, config: GraphRetrievalConfig) -> Self {
         Self {
             graph_store,
             config,
             strategy: GraphRetrievalStrategy::default(),
         }
     }
-    
+
     /// Create a new graph retriever with custom strategy.
     pub fn with_strategy(
         graph_store: Arc<dyn PropertyGraphStore>,
@@ -180,7 +177,7 @@ impl GraphRetriever {
             strategy,
         }
     }
-    
+
     /// Extract entities from query text.
     ///
     /// This is a simple entity extraction that looks for capitalized words
@@ -188,40 +185,49 @@ impl GraphRetriever {
     /// the EntityExtractor transformer.
     fn extract_query_entities(&self, query_text: &str) -> Vec<String> {
         let mut entities = Vec::new();
-        
+
         // Simple pattern-based entity extraction
         let words: Vec<&str> = query_text.split_whitespace().collect();
-        
+
         for window in words.windows(2) {
             let combined = format!("{} {}", window[0], window[1]);
-            
+
             // Check if it looks like a person name (two capitalized words)
-            if window[0].chars().next().unwrap_or('a').is_uppercase() 
-                && window[1].chars().next().unwrap_or('a').is_uppercase() 
-                && window[0].len() > 1 
-                && window[1].len() > 1 {
+            if window[0].chars().next().unwrap_or('a').is_uppercase()
+                && window[1].chars().next().unwrap_or('a').is_uppercase()
+                && window[0].len() > 1
+                && window[1].len() > 1
+            {
                 entities.push(combined);
             }
         }
-        
+
         // Also add individual capitalized words
         for word in words {
-            if word.chars().next().unwrap_or('a').is_uppercase() 
-                && word.len() > 2 
-                && !["What", "Where", "When", "Who", "Why", "How", "The", "A", "An"].contains(&word) {
+            if word.chars().next().unwrap_or('a').is_uppercase()
+                && word.len() > 2
+                && ![
+                    "What", "Where", "When", "Who", "Why", "How", "The", "A", "An",
+                ]
+                .contains(&word)
+            {
                 entities.push(word.to_string());
             }
         }
-        
+
         // Remove duplicates and limit
         entities.sort();
         entities.dedup();
         entities.truncate(self.config.max_query_entities);
-        
-        debug!("Extracted {} entities from query: {:?}", entities.len(), entities);
+
+        debug!(
+            "Extracted {} entities from query: {:?}",
+            entities.len(),
+            entities
+        );
         entities
     }
-    
+
     /// Retrieve triplets based on the current strategy.
     async fn retrieve_triplets(&self, query: &Query) -> Result<Vec<Triplet>> {
         match &self.strategy {
@@ -230,62 +236,72 @@ impl GraphRetriever {
                 if entities.is_empty() {
                     return Ok(Vec::new());
                 }
-                
-                self.graph_store.get_triplets(
-                    Some(entities),
-                    None,
-                    None,
-                    None,
-                ).await
+
+                self.graph_store
+                    .get_triplets(Some(entities), None, None, None)
+                    .await
             }
-            
+
             GraphRetrievalStrategy::Relationship => {
                 // For relationship-based retrieval, we look for relationship keywords in the query
                 let relation_keywords = self.extract_relation_keywords(&query.text);
                 if relation_keywords.is_empty() {
                     return Ok(Vec::new());
                 }
-                
-                self.graph_store.get_triplets(
-                    None,
-                    Some(relation_keywords),
-                    None,
-                    None,
-                ).await
+
+                self.graph_store
+                    .get_triplets(None, Some(relation_keywords), None, None)
+                    .await
             }
-            
+
             GraphRetrievalStrategy::Hybrid => {
                 let entities = self.extract_query_entities(&query.text);
                 let relations = self.extract_relation_keywords(&query.text);
-                
+
                 if entities.is_empty() && relations.is_empty() {
                     return Ok(Vec::new());
                 }
-                
-                self.graph_store.get_triplets(
-                    if entities.is_empty() { None } else { Some(entities) },
-                    if relations.is_empty() { None } else { Some(relations) },
-                    None,
-                    None,
-                ).await
+
+                self.graph_store
+                    .get_triplets(
+                        if entities.is_empty() {
+                            None
+                        } else {
+                            Some(entities)
+                        },
+                        if relations.is_empty() {
+                            None
+                        } else {
+                            Some(relations)
+                        },
+                        None,
+                        None,
+                    )
+                    .await
             }
-            
-            GraphRetrievalStrategy::Custom { entity_names, relation_names, properties } => {
-                self.graph_store.get_triplets(
-                    entity_names.clone(),
-                    relation_names.clone(),
-                    properties.clone(),
-                    None,
-                ).await
+
+            GraphRetrievalStrategy::Custom {
+                entity_names,
+                relation_names,
+                properties,
+            } => {
+                self.graph_store
+                    .get_triplets(
+                        entity_names.clone(),
+                        relation_names.clone(),
+                        properties.clone(),
+                        None,
+                    )
+                    .await
             }
         }
     }
-    
+
     /// Extract relationship keywords from query text.
     fn extract_relation_keywords(&self, query_text: &str) -> Vec<String> {
         let mut relations = Vec::new();
         let lower_query = query_text.to_lowercase();
-        
+
         // Common relationship patterns
         let relation_patterns = [
             ("work", "WORKS_AT"),
@@ -304,17 +320,21 @@ impl GraphRetriever {
             ("manage", "MANAGES"),
             ("lead", "LEADS"),
         ];
-        
+
         for (keyword, relation) in &relation_patterns {
             if lower_query.contains(keyword) {
                 relations.push(relation.to_string());
             }
         }
-        
+
         relations.sort();
         relations.dedup();
-        
-        debug!("Extracted {} relations from query: {:?}", relations.len(), relations);
+
+        debug!(
+            "Extracted {} relations from query: {:?}",
+            relations.len(),
+            relations
+        );
         relations
     }
 
@@ -347,12 +367,13 @@ impl GraphRetriever {
             } else if self.config.include_relationships {
                 format!(
                     "Relationship: {} -[{}]-> {}",
-                    triplet.source.name,
-                    triplet.relation.label,
-                    triplet.target.name
+                    triplet.source.name, triplet.relation.label, triplet.target.name
                 )
             } else {
-                format!("{} {} {}", triplet.source.name, triplet.relation.label, triplet.target.name)
+                format!(
+                    "{} {} {}",
+                    triplet.source.name, triplet.relation.label, triplet.target.name
+                )
             };
 
             // Skip duplicates
@@ -367,13 +388,34 @@ impl GraphRetriever {
             if score >= self.config.min_confidence {
                 // Create metadata
                 let mut metadata = HashMap::new();
-                metadata.insert("source_entity".to_string(), serde_json::Value::String(triplet.source.name.clone()));
-                metadata.insert("source_label".to_string(), serde_json::Value::String(triplet.source.label.clone()));
-                metadata.insert("target_entity".to_string(), serde_json::Value::String(triplet.target.name.clone()));
-                metadata.insert("target_label".to_string(), serde_json::Value::String(triplet.target.label.clone()));
-                metadata.insert("relation".to_string(), serde_json::Value::String(triplet.relation.label.clone()));
-                metadata.insert("relation_id".to_string(), serde_json::Value::String(triplet.relation.id.clone()));
-                metadata.insert("retrieval_type".to_string(), serde_json::Value::String("graph".to_string()));
+                metadata.insert(
+                    "source_entity".to_string(),
+                    serde_json::Value::String(triplet.source.name.clone()),
+                );
+                metadata.insert(
+                    "source_label".to_string(),
+                    serde_json::Value::String(triplet.source.label.clone()),
+                );
+                metadata.insert(
+                    "target_entity".to_string(),
+                    serde_json::Value::String(triplet.target.name.clone()),
+                );
+                metadata.insert(
+                    "target_label".to_string(),
+                    serde_json::Value::String(triplet.target.label.clone()),
+                );
+                metadata.insert(
+                    "relation".to_string(),
+                    serde_json::Value::String(triplet.relation.label.clone()),
+                );
+                metadata.insert(
+                    "relation_id".to_string(),
+                    serde_json::Value::String(triplet.relation.id.clone()),
+                );
+                metadata.insert(
+                    "retrieval_type".to_string(),
+                    serde_json::Value::String("graph".to_string()),
+                );
 
                 // Create node
                 let node = Node::new(
@@ -397,7 +439,11 @@ impl GraphRetriever {
         }
 
         // Sort by score (highest first) and limit results
-        scored_nodes.sort_by(|a, b| b.score.partial_cmp(&a.score).unwrap_or(std::cmp::Ordering::Equal));
+        scored_nodes.sort_by(|a, b| {
+            b.score
+                .partial_cmp(&a.score)
+                .unwrap_or(std::cmp::Ordering::Equal)
+        });
         scored_nodes.truncate(self.config.top_k);
 
         scored_nodes
@@ -410,8 +456,16 @@ impl GraphRetriever {
 
         // Entity matching score
         let entity_score = {
-            let source_match = if query_lower.contains(&triplet.source.name.to_lowercase()) { 1.0 } else { 0.0 };
-            let target_match = if query_lower.contains(&triplet.target.name.to_lowercase()) { 1.0 } else { 0.0 };
+            let source_match = if query_lower.contains(&triplet.source.name.to_lowercase()) {
+                1.0
+            } else {
+                0.0
+            };
+            let target_match = if query_lower.contains(&triplet.target.name.to_lowercase()) {
+                1.0
+            } else {
+                0.0
+            };
             (source_match + target_match) / 2.0
         };
 
@@ -438,7 +492,8 @@ impl GraphRetriever {
                 .map(|w| w.to_string())
                 .collect();
 
-            let triplet_text = format!("{} {} {}",
+            let triplet_text = format!(
+                "{} {} {}",
                 triplet.source.name.to_lowercase(),
                 triplet.relation.label.to_lowercase(),
                 triplet.target.name.to_lowercase()
@@ -469,7 +524,11 @@ impl GraphRetriever {
     }
 
     /// Perform graph traversal to find connected information.
-    async fn traverse_graph(&self, _initial_entities: &[String], _depth: usize) -> Result<Vec<Triplet>> {
+    async fn traverse_graph(
+        &self,
+        _initial_entities: &[String],
+        _depth: usize,
+    ) -> Result<Vec<Triplet>> {
         // TODO: Implement multi-hop graph traversal
         // This would involve:
         // 1. Starting from initial entities
@@ -531,8 +590,13 @@ mod tests {
             // Create test data
             let alice = EntityNode::new("Alice".to_string(), "Person".to_string(), HashMap::new());
             let bob = EntityNode::new("Bob".to_string(), "Person".to_string(), HashMap::new());
-            let microsoft = EntityNode::new("Microsoft".to_string(), "Company".to_string(), HashMap::new());
-            let seattle = EntityNode::new("Seattle".to_string(), "City".to_string(), HashMap::new());
+            let microsoft = EntityNode::new(
+                "Microsoft".to_string(),
+                "Company".to_string(),
+                HashMap::new(),
+            );
+            let seattle =
+                EntityNode::new("Seattle".to_string(), "City".to_string(), HashMap::new());
 
             let triplets = vec![
                 Triplet {
@@ -584,7 +648,10 @@ mod tests {
             false
         }
 
-        async fn upsert_nodes(&self, _nodes: Vec<Box<dyn cheungfun_core::traits::LabelledNode>>) -> Result<()> {
+        async fn upsert_nodes(
+            &self,
+            _nodes: Vec<Box<dyn cheungfun_core::traits::LabelledNode>>,
+        ) -> Result<()> {
             Ok(())
         }
 
@@ -607,8 +674,10 @@ mod tests {
                     .into_iter()
                     .filter(|t| {
                         // Check both entity names and entity IDs
-                        names.contains(&t.source.name) || names.contains(&t.target.name) ||
-                        names.contains(&t.source.id()) || names.contains(&t.target.id())
+                        names.contains(&t.source.name)
+                            || names.contains(&t.target.name)
+                            || names.contains(&t.source.id())
+                            || names.contains(&t.target.id())
                     })
                     .collect();
             }
@@ -672,11 +741,8 @@ mod tests {
     async fn test_graph_retriever_entity_strategy() {
         let store = create_test_graph_store().await;
         let config = GraphRetrievalConfig::default();
-        let retriever = GraphRetriever::with_strategy(
-            store.clone(),
-            config,
-            GraphRetrievalStrategy::Entity,
-        );
+        let retriever =
+            GraphRetriever::with_strategy(store.clone(), config, GraphRetrievalStrategy::Entity);
 
         let query = Query::new("Alice works at Microsoft".to_string());
 
@@ -692,11 +758,17 @@ mod tests {
             let all_triplets = store.get_triplets(None, None, None, None).await.unwrap();
             println!("Available triplets: {}", all_triplets.len());
             for triplet in &all_triplets {
-                println!("  {} -[{}]-> {}", triplet.source.name, triplet.relation.label, triplet.target.name);
+                println!(
+                    "  {} -[{}]-> {}",
+                    triplet.source.name, triplet.relation.label, triplet.target.name
+                );
             }
         }
 
-        assert!(!results.is_empty(), "Expected to find results for entity strategy");
+        assert!(
+            !results.is_empty(),
+            "Expected to find results for entity strategy"
+        );
         assert!(results[0].score > 0.0);
 
         // Check that the result contains relevant information
@@ -708,11 +780,8 @@ mod tests {
     async fn test_graph_retriever_relationship_strategy() {
         let store = create_test_graph_store().await;
         let config = GraphRetrievalConfig::default();
-        let retriever = GraphRetriever::with_strategy(
-            store,
-            config,
-            GraphRetrievalStrategy::Relationship,
-        );
+        let retriever =
+            GraphRetriever::with_strategy(store, config, GraphRetrievalStrategy::Relationship);
 
         let query = Query::new("Who works at companies?".to_string());
         let results = retriever.retrieve(&query).await.unwrap();
@@ -728,11 +797,8 @@ mod tests {
     async fn test_graph_retriever_hybrid_strategy() {
         let store = create_test_graph_store().await;
         let config = GraphRetrievalConfig::default();
-        let retriever = GraphRetriever::with_strategy(
-            store,
-            config,
-            GraphRetrievalStrategy::Hybrid,
-        );
+        let retriever =
+            GraphRetriever::with_strategy(store, config, GraphRetrievalStrategy::Hybrid);
 
         let query = Query::new("Where does Alice work?".to_string());
         let results = retriever.retrieve(&query).await.unwrap();
@@ -750,9 +816,13 @@ mod tests {
         let config = GraphRetrievalConfig::default();
         let retriever = GraphRetriever::new(store, config);
 
-        let entities = retriever.extract_query_entities("Alice Smith works at Microsoft Corporation");
+        let entities =
+            retriever.extract_query_entities("Alice Smith works at Microsoft Corporation");
 
-        assert!(entities.contains(&"Alice Smith".to_string()) || entities.contains(&"Alice".to_string()));
+        assert!(
+            entities.contains(&"Alice Smith".to_string())
+                || entities.contains(&"Alice".to_string())
+        );
         assert!(entities.contains(&"Microsoft".to_string()));
     }
 
@@ -825,7 +895,7 @@ mod tests {
 
             // Results should be sorted by score (highest first)
             for i in 1..results.len() {
-                assert!(results[i-1].score >= results[i].score);
+                assert!(results[i - 1].score >= results[i].score);
             }
         }
     }

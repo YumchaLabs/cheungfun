@@ -1089,6 +1089,7 @@ dependencies = [
  "scraper",
  "serde",
  "serde_json",
+ "siumai 0.9.1",
  "temp-dir",
  "tempfile",
  "test-case",

@@ -5,4 +5,6 @@
 
 pub mod property_graph_index;
 
-pub use property_graph_index::{PropertyGraphIndex, PropertyGraphIndexConfig, PropertyGraphIndexStats};
+pub use property_graph_index::{
+    PropertyGraphIndex, PropertyGraphIndexConfig, PropertyGraphIndexStats,
+};

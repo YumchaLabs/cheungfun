@@ -4,9 +4,13 @@
 //! for various document processing tasks.
 
 pub mod entity_extractor;
+pub mod llm_extractor;
 pub mod metadata_extractor;
 
-pub use entity_extractor::{EntityExtractor, EntityExtractionConfig, ExtractedEntity, ExtractedRelationship};
+pub use entity_extractor::{
+    EntityExtractionConfig, EntityExtractor, ExtractedEntity, ExtractedRelationship,
+};
+pub use llm_extractor::{LlmExtractionConfig, LlmExtractor};
 pub use metadata_extractor::MetadataExtractor;
 
 /// Configuration for metadata extraction.

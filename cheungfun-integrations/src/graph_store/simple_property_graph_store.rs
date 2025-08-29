@@ -10,10 +10,10 @@ use std::collections::HashMap;
 use std::sync::{Arc, RwLock};
 
 use cheungfun_core::{
-    traits::{PropertyGraphStore, GraphStoreStats},
+    traits::{GraphStoreStats, PropertyGraphStore},
     types::{
-        ChunkNode, EntityNode, GraphQuery, LabelledNode, LabelledNodeType, 
-        LabelledPropertyGraph, Query, Relation, Triplet
+        ChunkNode, EntityNode, GraphQuery, LabelledNode, LabelledNodeType, LabelledPropertyGraph,
+        Query, Relation, Triplet,
     },
     Result,
 };
@@ -93,18 +93,17 @@ impl SimplePropertyGraphStore {
     /// * `graph` - The labelled property graph to use
     pub fn with_graph(graph: LabelledPropertyGraph) -> Self {
         Self {
-            graph: Arc::new(RwLock::new(graph))
+            graph: Arc::new(RwLock::new(graph)),
         }
     }
 
     /// Get a clone of the underlying graph for read operations.
     pub fn graph(&self) -> Result<LabelledPropertyGraph> {
-        self.graph
-            .read()
-            .map(|guard| guard.clone())
-            .map_err(|_| cheungfun_core::CheungfunError::Internal {
+        self.graph.read().map(|guard| guard.clone()).map_err(|_| {
+            cheungfun_core::CheungfunError::Internal {
                 message: "Failed to acquire read lock on graph".to_string(),
-            })
+            }
+        })
     }
 
     /// Convert a Box<dyn LabelledNode> to LabelledNodeType.
@@ -114,11 +113,11 @@ impl SimplePropertyGraphStore {
     fn convert_node(node: Box<dyn LabelledNode>) -> Result<LabelledNodeType> {
         // We need to determine the node type and convert accordingly
         // This is a limitation of working with trait objects
-        
+
         let node_id = node.node_id();
         let node_label = node.node_label().to_string();
         let node_properties = node.node_properties().clone();
-        
+
         // Try to determine if it's an EntityNode or ChunkNode based on properties
         if let Some(text_value) = node_properties.get("text") {
             if let Some(text) = text_value.as_str() {
@@ -127,14 +126,14 @@ impl SimplePropertyGraphStore {
                 return Ok(LabelledNodeType::Chunk(chunk));
             }
         }
-        
+
         // Try to get name from properties or use ID as fallback
         let name = node_properties
             .get("name")
             .and_then(|v| v.as_str())
             .unwrap_or(&node_id)
             .to_string();
-            
+
         // Default to EntityNode
         let entity = EntityNode::with_id(node_id, name, node_label, node_properties);
         Ok(LabelledNodeType::Entity(entity))
@@ -157,9 +156,7 @@ impl SimplePropertyGraphStore {
         if let Some(names) = entity_names {
             filtered = filtered
                 .into_iter()
-                .filter(|t| {
-                    names.contains(&t.source.id()) || names.contains(&t.target.id())
-                })
+                .filter(|t| names.contains(&t.source.id()) || names.contains(&t.target.id()))
                 .collect();
         }
 
@@ -175,9 +172,7 @@ impl SimplePropertyGraphStore {
         if let Some(node_ids) = ids {
             filtered = filtered
                 .into_iter()
-                .filter(|t| {
-                    node_ids.contains(&t.source.id()) || node_ids.contains(&t.target.id())
-                })
+                .filter(|t| node_ids.contains(&t.source.id()) || node_ids.contains(&t.target.id()))
                 .collect();
         }
 
@@ -216,11 +211,12 @@ impl PropertyGraphStore for SimplePropertyGraphStore {
     }
 
     async fn upsert_nodes(&self, nodes: Vec<Box<dyn LabelledNode>>) -> Result<()> {
-        let mut graph = self.graph
-            .write()
-            .map_err(|_| cheungfun_core::CheungfunError::Internal {
-                message: "Failed to acquire write lock on graph".to_string(),
-            })?;
+        let mut graph =
+            self.graph
+                .write()
+                .map_err(|_| cheungfun_core::CheungfunError::Internal {
+                    message: "Failed to acquire write lock on graph".to_string(),
+                })?;
 
         // Convert trait objects to concrete types and add to graph
         for node in nodes {
@@ -232,11 +228,12 @@ impl PropertyGraphStore for SimplePropertyGraphStore {
     }
 
     async fn upsert_relations(&self, relations: Vec<Relation>) -> Result<()> {
-        let mut graph = self.graph
-            .write()
-            .map_err(|_| cheungfun_core::CheungfunError::Internal {
-                message: "Failed to acquire write lock on graph".to_string(),
-            })?;
+        let mut graph =
+            self.graph
+                .write()
+                .map_err(|_| cheungfun_core::CheungfunError::Internal {
+                    message: "Failed to acquire write lock on graph".to_string(),
+                })?;
 
         // Add relations to graph
         for relation in relations {
@@ -254,18 +251,24 @@ impl PropertyGraphStore for SimplePropertyGraphStore {
         ids: Option<Vec<String>>,
     ) -> Result<Vec<Triplet>> {
         // If no filters are provided, return empty list (following LlamaIndex behavior)
-        if entity_names.is_none() && relation_names.is_none() && properties.is_none() && ids.is_none() {
+        if entity_names.is_none()
+            && relation_names.is_none()
+            && properties.is_none()
+            && ids.is_none()
+        {
             return Ok(vec![]);
         }
 
-        let graph = self.graph
+        let graph = self
+            .graph
             .read()
             .map_err(|_| cheungfun_core::CheungfunError::Internal {
                 message: "Failed to acquire read lock on graph".to_string(),
             })?;
 
         let all_triplets = graph.get_triplets();
-        let filtered = self.filter_triplets(all_triplets, entity_names, relation_names, properties, ids);
+        let filtered =
+            self.filter_triplets(all_triplets, entity_names, relation_names, properties, ids);
         Ok(filtered)
     }
 
@@ -288,7 +291,8 @@ impl PropertyGraphStore for SimplePropertyGraphStore {
     ) -> Result<Vec<Vec<Box<dyn LabelledNode>>>> {
         // This method also has the trait object issue
         Err(cheungfun_core::CheungfunError::Internal {
-            message: "get_rel_map method not implemented due to trait object limitations".to_string(),
+            message: "get_rel_map method not implemented due to trait object limitations"
+                .to_string(),
         })
     }
 
@@ -308,7 +312,8 @@ impl PropertyGraphStore for SimplePropertyGraphStore {
     }
 
     async fn stats(&self) -> Result<GraphStoreStats> {
-        let graph = self.graph
+        let graph = self
+            .graph
             .read()
             .map_err(|_| cheungfun_core::CheungfunError::Internal {
                 message: "Failed to acquire read lock on graph".to_string(),
@@ -318,9 +323,9 @@ impl PropertyGraphStore for SimplePropertyGraphStore {
             entity_count: graph.node_count(),
             relation_count: graph.relation_count(),
             triplet_count: graph.triplet_count(),
-            entity_label_count: 0, // We'd need to calculate this
+            entity_label_count: 0,   // We'd need to calculate this
             relation_label_count: 0, // We'd need to calculate this
-            avg_degree: 0.0, // We'd need to calculate this
+            avg_degree: 0.0,         // We'd need to calculate this
             additional_stats: HashMap::new(),
         })
     }
@@ -350,10 +355,7 @@ mod tests {
         let entity2 = EntityNode::new("Bob".to_string(), "Person".to_string(), HashMap::new());
 
         // Convert to trait objects
-        let nodes: Vec<Box<dyn LabelledNode>> = vec![
-            Box::new(entity1),
-            Box::new(entity2),
-        ];
+        let nodes: Vec<Box<dyn LabelledNode>> = vec![Box::new(entity1), Box::new(entity2)];
 
         // Upsert nodes
         store.upsert_nodes(nodes).await.unwrap();
@@ -374,10 +376,7 @@ mod tests {
         let entity2_id = entity2.id();
 
         // Add nodes first
-        let nodes: Vec<Box<dyn LabelledNode>> = vec![
-            Box::new(entity1),
-            Box::new(entity2),
-        ];
+        let nodes: Vec<Box<dyn LabelledNode>> = vec![Box::new(entity1), Box::new(entity2)];
         store.upsert_nodes(nodes).await.unwrap();
 
         // Create relation
@@ -415,10 +414,7 @@ mod tests {
         let entity1_id_for_query = entity1_id.clone();
 
         // Add nodes
-        let nodes: Vec<Box<dyn LabelledNode>> = vec![
-            Box::new(entity1),
-            Box::new(entity2),
-        ];
+        let nodes: Vec<Box<dyn LabelledNode>> = vec![Box::new(entity1), Box::new(entity2)];
         store.upsert_nodes(nodes).await.unwrap();
 
         // Add relation
@@ -438,32 +434,42 @@ mod tests {
 
         // Debug: check what's in the graph first
         let graph = store.graph().unwrap();
-        println!("Graph has {} nodes, {} relations, {} triplets",
-                 graph.node_count(), graph.relation_count(), graph.triplet_count());
+        println!(
+            "Graph has {} nodes, {} relations, {} triplets",
+            graph.node_count(),
+            graph.relation_count(),
+            graph.triplet_count()
+        );
 
         let all_triplets = graph.get_triplets();
         println!("All triplets in graph:");
         for (i, triplet) in all_triplets.iter().enumerate() {
-            println!("  Triplet {}: {} (id: {}) -[{}]-> {} (id: {})",
-                     i, triplet.source.name, triplet.source.id(),
-                     triplet.relation.label,
-                     triplet.target.name, triplet.target.id());
+            println!(
+                "  Triplet {}: {} (id: {}) -[{}]-> {} (id: {})",
+                i,
+                triplet.source.name,
+                triplet.source.id(),
+                triplet.relation.label,
+                triplet.target.name,
+                triplet.target.id()
+            );
         }
 
         println!("Looking for entity with ID: {}", entity1_id_for_query);
 
         // Test get_triplets with entity ID filter (not name)
-        let triplets = store.get_triplets(
-            Some(vec![entity1_id_for_query]),
-            None,
-            None,
-            None,
-        ).await.unwrap();
+        let triplets = store
+            .get_triplets(Some(vec![entity1_id_for_query]), None, None, None)
+            .await
+            .unwrap();
 
         // Debug: print the triplets to see what we get
         println!("Found {} triplets", triplets.len());
         for (i, triplet) in triplets.iter().enumerate() {
-            println!("Triplet {}: {} -[{}]-> {}", i, triplet.source.name, triplet.relation.label, triplet.target.name);
+            println!(
+                "Triplet {}: {} -[{}]-> {}",
+                i, triplet.source.name, triplet.relation.label, triplet.target.name
+            );
         }
 
         assert_eq!(triplets.len(), 1);
