@@ -55,9 +55,12 @@ pub mod advanced;
 pub mod engine;
 pub mod factory;
 pub mod generator;
+/// Hierarchical retrieval system integration.
+pub mod hierarchical;
 pub mod indices;
 pub mod memory;
 pub mod pipeline;
+pub mod postprocessor;
 pub mod retriever;
 pub mod retrievers;
 pub mod utils;
@@ -86,6 +89,17 @@ pub mod prelude {
     pub use crate::utils::{
         CacheStats, QueryCache, QueryOptimizer, QueryOptimizerConfig, ResponsePostProcessor,
         ResponsePostProcessorConfig,
+    };
+
+    // Hierarchical retrieval exports
+    pub use crate::engine::router::{
+        PerformanceProfile, QueryEngineMetadata, QueryEngineWrapper, QueryType, RouterQueryEngine,
+        RouterQueryEngineBuilder,
+    };
+    pub use crate::engine::selectors::{LLMQuerySelector, RuleBasedQuerySelector};
+    pub use crate::hierarchical::{HierarchicalSystemBuilder, LayeredIndices};
+    pub use crate::retrievers::hierarchical::{
+        HierarchicalRetriever, HierarchicalRetrieverBuilder, StorageContext,
     };
 
     // Re-export core types

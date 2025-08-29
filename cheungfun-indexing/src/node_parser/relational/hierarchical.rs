@@ -7,6 +7,7 @@
 use crate::node_parser::{config::HierarchicalConfig, NodeParser, TextSplitter};
 use async_trait::async_trait;
 use cheungfun_core::{
+    relationships::{utils::add_parent_child_relationship, NodeRelationship, RelatedNodeInfo},
     traits::{Transform, TransformInput},
     Document, Node, Result as CoreResult,
 };
@@ -102,11 +103,37 @@ impl HierarchicalNodeParser {
                         TextSplitter::parse_nodes(&**splitter, &[parent_doc], false).await?;
 
                     // Set up parent-child relationships
+                    let child_count = child_nodes.len();
                     for mut child in child_nodes {
+                        // Use the new relationship management system
+                        // **Reference**: LlamaIndex _add_parent_child_relationship
+                        // - File: hierarchical.py L186-L191
+
+                        // Add structured parent-child relationship
+                        let _parent_info =
+                            RelatedNodeInfo::with_type(parent.id, "TextNode".to_string());
+                        child.relationships.insert("parent".to_string(), parent.id);
+
+                        // Also store in metadata for backward compatibility
                         child
                             .metadata
                             .insert("parent_id".to_string(), parent.id.to_string().into());
+
+                        // Store child count in parent metadata for auto-merging
+                        let _child_count = parent
+                            .metadata
+                            .get("child_count")
+                            .and_then(|v| v.as_u64())
+                            .unwrap_or(0)
+                            + 1;
+
                         all_nodes.push(child);
+                    }
+
+                    // Update parent's child count metadata
+                    if child_count > 0 {
+                        // This would require mutable access to parent,
+                        // which we'll handle in a post-processing step
                     }
                 }
                 all_nodes
@@ -129,6 +156,66 @@ impl HierarchicalNodeParser {
             Ok(all_nodes)
         })
     }
+
+    /// Finalize hierarchical relationships and add metadata.
+    ///
+    /// **Reference**: LlamaIndex hierarchical relationship finalization
+    fn finalize_hierarchical_relationships(&self, nodes: &mut [Node]) -> CoreResult<()> {
+        // Create a map of parent ID to child count
+        let mut parent_child_counts: HashMap<Uuid, usize> = HashMap::new();
+
+        // Count children for each parent
+        for node in nodes.iter() {
+            if let Some(parent_id_value) = node.metadata.get("parent_id") {
+                if let Some(parent_id_str) = parent_id_value.as_str() {
+                    if let Ok(parent_id) = parent_id_str.parse::<Uuid>() {
+                        *parent_child_counts.entry(parent_id).or_insert(0) += 1;
+                    }
+                }
+            }
+        }
+
+        // Create child ID lists first to avoid borrowing conflicts
+        let mut parent_child_id_map: HashMap<Uuid, Vec<String>> = HashMap::new();
+        for node in nodes.iter() {
+            if let Some(parent_id_value) = node.metadata.get("parent_id") {
+                if let Some(parent_id_str) = parent_id_value.as_str() {
+                    if let Ok(parent_id) = parent_id_str.parse::<Uuid>() {
+                        parent_child_id_map
+                            .entry(parent_id)
+                            .or_insert_with(Vec::new)
+                            .push(node.id.to_string());
+                    }
+                }
+            }
+        }
+
+        // Add child count metadata to parent nodes
+        for node in nodes.iter_mut() {
+            if let Some(&child_count) = parent_child_counts.get(&node.id) {
+                node.metadata.insert(
+                    "child_count".to_string(),
+                    serde_json::Value::Number(serde_json::Number::from(child_count)),
+                );
+
+                // Add child IDs list for auto-merging
+                if let Some(child_ids) = parent_child_id_map.get(&node.id) {
+                    if !child_ids.is_empty() {
+                        node.metadata.insert(
+                            "child_ids".to_string(),
+                            serde_json::Value::String(child_ids.join(",")),
+                        );
+                    }
+                }
+            }
+        }
+
+        debug!(
+            "Finalized hierarchical relationships for {} nodes",
+            nodes.len()
+        );
+        Ok(())
+    }
 }
 
 #[async_trait]
@@ -145,7 +232,10 @@ impl NodeParser for HierarchicalNodeParser {
             );
         }
 
-        let nodes = self.create_hierarchical_nodes(documents, 0, None).await?;
+        let mut nodes = self.create_hierarchical_nodes(documents, 0, None).await?;
+
+        // Post-process to add child count metadata and finalize relationships
+        self.finalize_hierarchical_relationships(&mut nodes)?;
 
         if show_progress {
             info!(

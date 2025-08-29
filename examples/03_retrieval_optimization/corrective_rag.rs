@@ -201,7 +201,10 @@ async fn build_indexing_pipeline(
         .map_err(|e| ExampleError::Cheungfun(e))?;
     let indexing_time = indexing_timer.finish();
 
-    println!("✅ Indexing completed in {:.2}s", indexing_time);
+    println!(
+        "✅ Indexing completed in {:.2}s",
+        indexing_time.as_secs_f64()
+    );
     println!("📊 Indexed {} nodes", index_result.nodes_created);
 
     let siumai_client = create_siumai_client().await?;
@@ -264,7 +267,7 @@ async fn perform_corrective_rag(
                 corrections_applied,
                 confidence_progression,
                 correction_actions,
-                total_time: total_timer.finish(),
+                total_time: total_timer.finish().as_secs_f64(),
             });
         }
 
@@ -308,7 +311,7 @@ async fn perform_corrective_rag(
         corrections_applied,
         confidence_progression,
         correction_actions,
-        total_time: total_timer.finish(),
+        total_time: total_timer.finish().as_secs_f64(),
     })
 }
 
@@ -508,7 +511,7 @@ async fn compare_corrective_vs_standard(
         let corrective_result =
             perform_corrective_rag(vector_store, query_engine, query, args).await?;
 
-        println!("   📏 Standard RAG: {:.2}s", standard_time);
+        println!("   📏 Standard RAG: {:.2}s", standard_time.as_secs_f64());
         println!(
             "   🔧 Corrective RAG: {:.2}s, {} corrections",
             corrective_result.total_time, corrective_result.corrections_applied

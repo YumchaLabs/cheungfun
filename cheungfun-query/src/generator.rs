@@ -125,6 +125,15 @@ impl SiumaiGenerator {
         SiumaiGeneratorBuilder::new()
     }
 
+    /// Get the underlying Siumai client.
+    ///
+    /// This is useful for accessing provider-specific functionality
+    /// or using the client for other purposes like query selection.
+    #[must_use]
+    pub fn client(&self) -> &Siumai {
+        &self.client
+    }
+
     /// Build the prompt from query and context nodes.
     fn build_prompt(
         &self,

@@ -128,9 +128,7 @@ path = "03_context_enrichment/relevant_segment_extraction.rs"
 name = "context_window_enhancement"
 path = "03_context_enrichment/context_window_enhancement.rs"
 
-[[bin]]
-name = "contextual_compression"
-path = "03_context_enrichment/contextual_compression.rs"
+
 
 [[bin]]
 name = "document_augmentation"

@@ -24,10 +24,14 @@
 //! ```
 
 use cheungfun::prelude::*;
-use cheungfun_query::advanced::fusion::DistributionBasedFusion;
+use cheungfun_integrations::FastEmbedder;
+use cheungfun_query::{
+    advanced::fusion::DistributionBasedFusion,
+    postprocessor::{DocumentCompressor, SentenceEmbeddingConfig, SentenceEmbeddingOptimizer},
+};
 use clap::Parser;
 use siumai::{prelude::*, ChatMessage as SiumaiChatMessage};
-use std::{collections::HashSet, time::Instant};
+use std::{collections::HashSet, sync::Arc, time::Instant};
 use tracing::{debug, info};
 
 #[derive(Parser, Debug)]
@@ -38,8 +42,8 @@ struct Args {
     #[arg(long, default_value = "machine learning algorithms")]
     query: String,
 
-    /// Compression method: llm_based, keyword_based, similarity_based, hybrid
-    #[arg(long, default_value = "keyword_based")]
+    /// Compression method: llm_based, keyword_based, similarity_based, hybrid, sentence_embedding
+    #[arg(long, default_value = "sentence_embedding")]
     compression_method: String,
 
     /// Target compression ratio (0.0-1.0, lower = more compression)
@@ -460,6 +464,44 @@ fn create_sample_long_documents() -> Vec<ScoredNode> {
     ]
 }
 
+/// Demonstrate sentence embedding-based compression using our new components.
+async fn demonstrate_sentence_embedding_compression(
+    nodes: Vec<ScoredNode>,
+    query: &str,
+    target_ratio: f32,
+) -> std::result::Result<Vec<ScoredNode>, ExampleError> {
+    println!("🧠 Using Sentence Embedding Optimization (LlamaIndex-style)");
+
+    // Create FastEmbed embedder for real embeddings
+
+    let embedder = Arc::new(
+        FastEmbedder::new()
+            .await
+            .map_err(|e| ExampleError::Other(format!("FastEmbed initialization failed: {}", e)))?,
+    );
+
+    println!("✅ FastEmbed embedder initialized: {}", embedder.name());
+
+    let config = SentenceEmbeddingConfig {
+        percentile_cutoff: Some(target_ratio),
+        threshold_cutoff: Some(0.3),
+        context_before: Some(1),
+        context_after: Some(1),
+        max_sentences_per_node: Some(20),
+    };
+
+    let optimizer = SentenceEmbeddingOptimizer::new(embedder, config);
+
+    // Apply compression
+    let compressed_nodes = optimizer
+        .compress(nodes, query)
+        .await
+        .map_err(|e| ExampleError::Other(format!("Compression failed: {}", e)))?;
+
+    println!("✅ Sentence embedding compression completed");
+    Ok(compressed_nodes)
+}
+
 #[tokio::main]
 async fn main() -> std::result::Result<(), ExampleError> {
     // Initialize tracing
@@ -523,6 +565,13 @@ async fn main() -> std::result::Result<(), ExampleError> {
             threshold: 0.5,
             max_chunks: (original_nodes.len() as f32 * args.compression_ratio) as usize,
         },
+        "sentence_embedding" => {
+            // This will be handled separately using our new components
+            CompressionStrategy::SimilarityBased {
+                threshold: 0.5,
+                max_chunks: original_nodes.len(),
+            }
+        }
         "hybrid" => {
             let client = Siumai::builder().openai().build().await?;
             let primary = Box::new(CompressionStrategy::LlmBased {
@@ -553,11 +602,22 @@ async fn main() -> std::result::Result<(), ExampleError> {
     };
 
     // Apply compression
-    let compressor = ContextualCompressor::new(strategy);
     let compression_timer = Instant::now();
-    let compressed_nodes = compressor
-        .compress(original_nodes.clone(), &args.query)
-        .await?;
+    let compressed_nodes = if args.compression_method == "sentence_embedding" {
+        // Use our new sentence embedding optimizer
+        demonstrate_sentence_embedding_compression(
+            original_nodes.clone(),
+            &args.query,
+            args.compression_ratio,
+        )
+        .await?
+    } else {
+        // Use the existing compressor
+        let compressor = ContextualCompressor::new(strategy);
+        compressor
+            .compress(original_nodes.clone(), &args.query)
+            .await?
+    };
     let compression_time = compression_timer.elapsed();
 
     println!("🗜️  Compression Results:");
