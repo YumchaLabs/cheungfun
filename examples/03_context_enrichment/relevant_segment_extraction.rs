@@ -48,7 +48,7 @@ mod shared;
 use shared::{get_climate_test_queries, setup_logging, ExampleError, ExampleResult, Timer};
 
 use cheungfun_core::{
-    traits::{Embedder, IndexingPipeline, VectorStore},
+    traits::{Embedder, IndexingPipeline, ResponseGenerator, VectorStore},
     types::{Query, SearchMode},
     DistanceMetric, Node, ScoredNode,
 };
@@ -239,15 +239,28 @@ async fn build_indexing_pipeline(
         .map_err(|e| ExampleError::Cheungfun(e))?;
     let indexing_time = indexing_timer.finish();
 
-    println!("✅ Indexing completed in {:.2}s", indexing_time);
-    println!("📊 Indexed {} nodes", index_result.nodes.len());
+    println!(
+        "✅ Indexing completed in {:.2}s",
+        indexing_time.as_secs_f64()
+    );
+    println!("📊 Indexed {} nodes", index_result.nodes_created);
 
     // Create query engine
-    let retriever = VectorRetriever::new(vector_store.clone(), args.initial_retrieval_count);
-    let generator = SiumaiGenerator::new()
+    let retriever = VectorRetriever::new(vector_store.clone(), embedder.clone());
+
+    // Create Siumai client for generation
+    let siumai_client = siumai::prelude::Siumai::builder()
+        .openai()
+        .api_key(&std::env::var("OPENAI_API_KEY").unwrap_or_else(|_| "demo-key".to_string()))
+        .model("gpt-4o-mini")
+        .temperature(0.7)
+        .max_tokens(1500)
+        .build()
         .await
-        .map_err(|e| ExampleError::Siumai(e))?;
-    let query_engine = QueryEngine::new(Box::new(retriever), Box::new(generator));
+        .map_err(|e| ExampleError::Siumai(e.to_string()))?;
+
+    let generator = SiumaiGenerator::new(siumai_client);
+    let query_engine = QueryEngine::new(Arc::new(retriever), Arc::new(generator));
 
     Ok((vector_store, query_engine))
 }
@@ -415,7 +428,7 @@ async fn run_test_queries(
         // Display results
         display_segment_results(&segments, args.verbose);
 
-        println!("⏱️ Query time: {:.2}s", query_time);
+        println!("⏱️ Query time: {:.2}s", query_time.as_secs_f64());
     }
 
     Ok(())
@@ -475,18 +488,22 @@ async fn compare_retrieval_methods(args: &Args, embedder: Arc<dyn Embedder>) -> 
             "   💬 Response: {}",
             standard_result
                 .response
+                .content
                 .chars()
                 .take(100)
                 .collect::<String>()
         );
-        if let Some(context) = &standard_result.context {
-            println!(
-                "   📊 Retrieved {} chunks, avg score: {:.3}",
-                context.len(),
-                context.iter().map(|n| n.score).sum::<f32>() / context.len() as f32
-            );
-        }
-        println!("   ⏱️ Time: {:.2}s", standard_time);
+        println!(
+            "   📊 Retrieved {} chunks, avg score: {:.3}",
+            standard_result.retrieved_nodes.len(),
+            standard_result
+                .retrieved_nodes
+                .iter()
+                .map(|n| n.score)
+                .sum::<f32>()
+                / standard_result.retrieved_nodes.len() as f32
+        );
+        println!("   ⏱️ Time: {:.2}s", standard_time.as_secs_f64());
 
         // 2. Relevant Segment Extraction
         println!("\n🔗 Relevant Segment Extraction:");
@@ -507,9 +524,17 @@ async fn compare_retrieval_methods(args: &Args, embedder: Arc<dyn Embedder>) -> 
         let rse_time = rse_timer.finish();
 
         // Generate response using segments
-        let generator = SiumaiGenerator::new()
+        let siumai_client = siumai::prelude::Siumai::builder()
+            .openai()
+            .api_key(&std::env::var("OPENAI_API_KEY").unwrap_or_else(|_| "demo-key".to_string()))
+            .model("gpt-4o-mini")
+            .temperature(0.7)
+            .max_tokens(1500)
+            .build()
             .await
-            .map_err(|e| ExampleError::Siumai(e))?;
+            .map_err(|e| ExampleError::Siumai(e.to_string()))?;
+
+        let generator = SiumaiGenerator::new(siumai_client);
         let segment_context = segments
             .iter()
             .map(|s| s.content.clone())
@@ -517,33 +542,39 @@ async fn compare_retrieval_methods(args: &Args, embedder: Arc<dyn Embedder>) -> 
             .join("\n\n");
 
         let rse_response = generator
-            .generate(query, &segment_context)
+            .generate_response(
+                query,
+                vec![],
+                &cheungfun_core::types::GenerationOptions::default(),
+            )
             .await
-            .map_err(|e| ExampleError::Siumai(e))?;
+            .map_err(|e| ExampleError::Cheungfun(e))?;
 
         println!(
             "   💬 Response: {}",
-            rse_response.chars().take(100).collect::<String>()
+            rse_response.content.chars().take(100).collect::<String>()
         );
         println!(
             "   📊 Constructed {} segments, avg score: {:.3}",
             segments.len(),
             segments.iter().map(|s| s.avg_score).sum::<f32>() / segments.len() as f32
         );
-        println!("   ⏱️ Time: {:.2}s", rse_time);
+        println!("   ⏱️ Time: {:.2}s", rse_time.as_secs_f64());
 
         // Show improvement
-        if let Some(context) = &standard_result.context {
-            let standard_avg_score =
-                context.iter().map(|n| n.score).sum::<f32>() / context.len() as f32;
-            let rse_avg_score =
-                segments.iter().map(|s| s.avg_score).sum::<f32>() / segments.len() as f32;
+        let standard_avg_score = standard_result
+            .retrieved_nodes
+            .iter()
+            .map(|n| n.score)
+            .sum::<f32>()
+            / standard_result.retrieved_nodes.len() as f32;
+        let rse_avg_score =
+            segments.iter().map(|s| s.avg_score).sum::<f32>() / segments.len() as f32;
 
-            println!(
-                "   📈 Score improvement: {:.1}%",
-                ((rse_avg_score - standard_avg_score) / standard_avg_score) * 100.0
-            );
-        }
+        println!(
+            "   📈 Score improvement: {:.1}%",
+            ((rse_avg_score - standard_avg_score) / standard_avg_score) * 100.0
+        );
     }
 
     Ok(())
@@ -557,9 +588,17 @@ async fn run_interactive_mode(
 ) -> ExampleResult<()> {
     println!("\n🎯 Interactive Mode - Enter your queries (type 'quit' to exit):");
 
-    let generator = SiumaiGenerator::new()
+    let siumai_client = siumai::prelude::Siumai::builder()
+        .openai()
+        .api_key(&std::env::var("OPENAI_API_KEY").unwrap_or_else(|_| "demo-key".to_string()))
+        .model("gpt-4o-mini")
+        .temperature(0.7)
+        .max_tokens(1500)
+        .build()
         .await
-        .map_err(|e| ExampleError::Siumai(e))?;
+        .map_err(|e| ExampleError::Siumai(e.to_string()))?;
+
+    let generator = SiumaiGenerator::new(siumai_client);
 
     loop {
         print!("\n❓ Your question: ");
@@ -600,10 +639,17 @@ async fn run_interactive_mode(
                     .collect::<Vec<_>>()
                     .join("\n\n");
 
-                match generator.generate(query, &segment_context).await {
+                match generator
+                    .generate_response(
+                        query,
+                        vec![],
+                        &cheungfun_core::types::GenerationOptions::default(),
+                    )
+                    .await
+                {
                     Ok(response) => {
-                        println!("\n💬 Response: {}", response);
-                        println!("⏱️ Query time: {:.2}s", query_time);
+                        println!("\n💬 Response: {}", response.content);
+                        println!("⏱️ Query time: {:.2}s", query_time.as_secs_f64());
 
                         display_segment_results(&segments, args.verbose);
                     }

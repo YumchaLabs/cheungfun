@@ -281,7 +281,10 @@ async fn build_semantic_pipeline(
         .map_err(|e| ExampleError::Cheungfun(e))?;
     let indexing_time = indexing_timer.finish();
 
-    println!("✅ Semantic indexing completed in {:.2}s", indexing_time);
+    println!(
+        "✅ Semantic indexing completed in {:.2}s",
+        indexing_time.as_secs_f64()
+    );
     println!("📊 Indexed {} nodes", index_result.nodes_created);
 
     if args.verbose {
@@ -332,11 +335,19 @@ async fn compare_chunking_methods(args: &Args, embedder: Arc<dyn Embedder>) -> E
 
     // 4. Show indexing time comparison
     println!("\n⏱️ 4. Indexing Time Comparison:");
-    println!("   🧠 Semantic Chunking: {:.2}s", semantic_time);
-    println!("   📏 Traditional Chunking: {:.2}s", traditional_time);
+    println!(
+        "   🧠 Semantic Chunking: {:.2}s",
+        semantic_time.as_secs_f64()
+    );
+    println!(
+        "   📏 Traditional Chunking: {:.2}s",
+        traditional_time.as_secs_f64()
+    );
     println!(
         "   📊 Semantic Overhead: {:.1}%",
-        ((semantic_time - traditional_time) / traditional_time) * 100.0
+        ((semantic_time.as_secs_f64() - traditional_time.as_secs_f64())
+            / traditional_time.as_secs_f64())
+            * 100.0
     );
 
     Ok(())
@@ -404,8 +415,8 @@ async fn compare_retrieval_performance(
 
     println!("🔍 Testing {} queries...", test_queries.len());
 
-    let mut semantic_total_time = 0.0;
-    let mut traditional_total_time = 0.0;
+    let mut semantic_total_time = std::time::Duration::ZERO;
+    let mut traditional_total_time = std::time::Duration::ZERO;
     let mut semantic_scores = Vec::new();
     let mut traditional_scores = Vec::new();
 
@@ -453,7 +464,8 @@ async fn compare_retrieval_performance(
 
         println!(
             "   ⏱️ Semantic time: {:.2}s, Traditional time: {:.2}s",
-            semantic_time, traditional_time
+            semantic_time.as_secs_f64(),
+            traditional_time.as_secs_f64()
         );
 
         // Calculate average similarity scores (if available)
@@ -483,11 +495,11 @@ async fn compare_retrieval_performance(
     println!("   ⏱️ Average query time:");
     println!(
         "      🧠 Semantic: {:.2}s",
-        semantic_total_time / test_queries.len() as f64
+        semantic_total_time.as_secs_f64() / test_queries.len() as f64
     );
     println!(
         "      📏 Traditional: {:.2}s",
-        traditional_total_time / test_queries.len() as f64
+        traditional_total_time.as_secs_f64() / test_queries.len() as f64
     );
 
     if !semantic_scores.is_empty() && !traditional_scores.is_empty() {
@@ -546,7 +558,7 @@ async fn run_test_queries(query_engine: &QueryEngine, verbose: bool) -> ExampleR
             }
         }
 
-        println!("⏱️ Query time: {:.2}s", query_time);
+        println!("⏱️ Query time: {:.2}s", query_time.as_secs_f64());
     }
 
     Ok(())
@@ -579,7 +591,7 @@ async fn run_interactive_mode(query_engine: &QueryEngine) -> ExampleResult<()> {
             Ok(result) => {
                 let query_time = timer.finish();
                 println!("\n💬 Response: {}", result.response.content);
-                println!("⏱️ Query time: {:.2}s", query_time);
+                println!("⏱️ Query time: {:.2}s", query_time.as_secs_f64());
 
                 if !result.retrieved_nodes.is_empty() {
                     println!(

@@ -172,19 +172,16 @@ async fn main() -> ExampleResult<()> {
             }
         }))
         .await?;
-    let indexing_time_secs = timer.finish();
+    let indexing_time = timer.finish();
 
-    metrics.record_indexing_time(Duration::from_secs_f64(indexing_time_secs));
+    metrics.record_indexing_time(indexing_time);
     metrics.total_documents = indexing_stats.documents_processed;
     metrics.total_nodes = indexing_stats.nodes_created;
 
     println!("📊 Indexing completed:");
     println!("  📚 Documents: {}", indexing_stats.documents_processed);
     println!("  🔗 Nodes: {}", indexing_stats.nodes_created);
-    println!(
-        "  ⏱️  Time: {:.2?}",
-        Duration::from_secs_f64(indexing_time_secs)
-    );
+    println!("  ⏱️  Time: {:.2?}", indexing_time);
 
     // Step 4: Create query engine
     let retriever = Arc::new(VectorRetriever::new(vector_store, embedder));
@@ -294,8 +291,8 @@ async fn run_demo_queries(
             .await
             .map_err(|e| ExampleError::Cheungfun(e))?;
 
-        let query_time_secs = timer.finish();
-        metrics.record_query(Duration::from_secs_f64(query_time_secs));
+        let query_time = timer.finish();
+        metrics.record_query(query_time);
 
         print_query_results(query, &response);
     }
@@ -330,8 +327,8 @@ async fn run_interactive_mode(
 
         match query_engine.query(query).await {
             Ok(response) => {
-                let query_time_secs = timer.finish();
-                metrics.record_query(Duration::from_secs_f64(query_time_secs));
+                let query_time = timer.finish();
+                metrics.record_query(query_time);
                 print_query_results(query, &response);
             }
             Err(e) => {

@@ -517,7 +517,7 @@ async fn run_chunk_size_experiment(
         let chunk_ids: Vec<String> = response
             .retrieved_nodes
             .iter()
-            .map(|node| node.node.id.clone())
+            .map(|node| node.node.id.to_string())
             .collect();
         all_retrieved_chunks.push(chunk_ids);
     }
@@ -566,11 +566,7 @@ async fn create_query_engine_for_chunk_size(
     let loader = Arc::new(DirectoryLoader::new(data_dir)?);
 
     // Create text splitter with specific chunk size
-    let splitter_config = SentenceSplitterConfig {
-        chunk_size,
-        chunk_overlap: overlap_size,
-        ..Default::default()
-    };
+    let splitter_config = SentenceSplitterConfig::new(chunk_size, overlap_size);
     let splitter = Arc::new(SentenceSplitter::new(splitter_config)?);
     let metadata_extractor = Arc::new(MetadataExtractor::new());
 

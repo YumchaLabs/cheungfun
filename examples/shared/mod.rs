@@ -97,11 +97,11 @@ impl Timer {
         }
     }
 
-    pub fn finish(self) -> f64 {
+    pub fn finish(self) -> Duration {
         let duration = self.start.elapsed();
         let seconds = duration.as_secs_f64();
         println!("⏱️  {}: {:.2}s", self.name, seconds);
-        seconds
+        duration
     }
 }
 
