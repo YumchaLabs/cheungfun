@@ -45,7 +45,7 @@ impl std::fmt::Display for NodeRelationship {
 /// **Reference**: LlamaIndex RelatedNodeInfo class
 /// - File: `llama-index-core/llama_index/core/schema.py`
 /// - Lines: L248-L256
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
 pub struct RelatedNodeInfo {
     /// ID of the related node.
     pub node_id: Uuid,
@@ -78,6 +78,12 @@ impl RelatedNodeInfo {
         }
     }
 
+    /// Add type to existing RelatedNodeInfo (builder pattern).
+    pub fn set_type(mut self, node_type: String) -> Self {
+        self.node_type = Some(node_type);
+        self
+    }
+
     /// Add metadata to the relationship.
     pub fn with_metadata(mut self, key: String, value: serde_json::Value) -> Self {
         self.metadata.insert(key, value);
@@ -96,7 +102,7 @@ impl RelatedNodeInfo {
 /// **Reference**: LlamaIndex RelatedNodeType
 /// - File: `llama-index-core/llama_index/core/schema.py`
 /// - Line: L259
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
 pub enum RelatedNodeType {
     /// Single related node.
     Single(RelatedNodeInfo),
@@ -151,7 +157,7 @@ impl RelatedNodeType {
 /// **Reference**: LlamaIndex BaseNode.relationships field
 /// - File: `llama-index-core/llama_index/core/schema.py`
 /// - Lines: L301-L307
-#[derive(Debug, Clone, Default, Serialize, Deserialize)]
+#[derive(Debug, Clone, Default, Serialize, Deserialize, PartialEq)]
 pub struct NodeRelationships {
     relationships: HashMap<NodeRelationship, RelatedNodeType>,
 }
@@ -246,19 +252,22 @@ impl NodeRelationships {
 /// - File: `llama-index-core/llama_index/core/node_parser/relational/hierarchical.py`
 /// - Lines: L14-L22
 pub mod utils {
-    use super::*;
+    use super::{NodeRelationship, RelatedNodeInfo};
     use crate::Node;
 
     /// Add parent-child relationship between nodes.
     ///
     /// **Reference**: LlamaIndex _add_parent_child_relationship
     pub fn add_parent_child_relationship(parent: &mut Node, child: &mut Node) {
-        // For now, use the existing relationships HashMap
-        // Add parent relationship to child
-        child.relationships.insert("parent".to_string(), parent.id);
+        // Add child to parent's children list
+        let child_info = RelatedNodeInfo::new(child.id).set_type("TextNode".to_string());
+        parent.relationships.add_child(child_info);
 
-        // Add child relationship to parent (we'll use metadata for child list)
-        parent.relationships.insert("child".to_string(), child.id);
+        // Add parent to child's parent
+        let parent_info = RelatedNodeInfo::new(parent.id).set_type("TextNode".to_string());
+        child
+            .relationships
+            .set_single(NodeRelationship::Parent, parent_info);
 
         // Store parent_id in child metadata for backward compatibility
         child.metadata.insert(
@@ -269,11 +278,15 @@ pub mod utils {
 
     /// Add previous-next relationship between nodes.
     pub fn add_prev_next_relationship(prev: &mut Node, next: &mut Node) {
-        // Add next relationship to previous node
-        prev.relationships.insert("next".to_string(), next.id);
+        // Add next to previous node
+        let next_info = RelatedNodeInfo::new(next.id).set_type("TextNode".to_string());
+        prev.relationships
+            .set_single(NodeRelationship::Next, next_info);
 
-        // Add previous relationship to next node
-        next.relationships.insert("previous".to_string(), prev.id);
+        // Add previous to next node
+        let prev_info = RelatedNodeInfo::new(prev.id).set_type("TextNode".to_string());
+        next.relationships
+            .set_single(NodeRelationship::Previous, prev_info);
     }
 
     /// Get leaf nodes (nodes without children).
@@ -284,7 +297,11 @@ pub mod utils {
     pub fn get_leaf_nodes(nodes: &[Node]) -> Vec<&Node> {
         nodes
             .iter()
-            .filter(|node| !node.relationships.contains_key("child"))
+            .filter(|node| {
+                !node
+                    .relationships
+                    .has_relationship(&NodeRelationship::Child)
+            })
             .collect()
     }
 
@@ -292,7 +309,11 @@ pub mod utils {
     pub fn get_root_nodes(nodes: &[Node]) -> Vec<&Node> {
         nodes
             .iter()
-            .filter(|node| !node.relationships.contains_key("parent"))
+            .filter(|node| {
+                !node
+                    .relationships
+                    .has_relationship(&NodeRelationship::Parent)
+            })
             .collect()
     }
 }

@@ -564,7 +564,7 @@ impl Transform for LlmExtractor {
 
                 for document in documents {
                     // Create a text node from the document
-                    let chunk_info = ChunkInfo::new(0, document.content.len(), 0);
+                    let chunk_info = ChunkInfo::with_char_indices(0, document.content.len(), 0);
                     let mut node = Node::new(document.content.clone(), document.id, chunk_info);
                     node.metadata = document.metadata.clone();
 

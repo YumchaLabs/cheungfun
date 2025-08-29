@@ -24,6 +24,9 @@ serde_json = { workspace = true }
 uuid = { workspace = true }
 bincode = { workspace = true }
 
+# Cryptography
+sha2 = "0.10"
+
 # Streaming and futures
 futures = { workspace = true }
 futures-util = { workspace = true }

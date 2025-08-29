@@ -196,7 +196,11 @@ impl SentenceWindowNodeParser {
                 let start_offset = sentences[..i].iter().map(|s| s.len() + 1).sum::<usize>();
                 let end_offset = start_offset + sentence.len();
 
-                let chunk_info = cheungfun_core::types::ChunkInfo::new(start_offset, end_offset, i);
+                let chunk_info = cheungfun_core::types::ChunkInfo::with_char_indices(
+                    start_offset,
+                    end_offset,
+                    i,
+                );
 
                 let mut node = Node::new(sentence.clone(), document.id, chunk_info);
 

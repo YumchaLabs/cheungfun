@@ -110,9 +110,11 @@ impl HierarchicalNodeParser {
                         // - File: hierarchical.py L186-L191
 
                         // Add structured parent-child relationship
-                        let _parent_info =
+                        let parent_info =
                             RelatedNodeInfo::with_type(parent.id, "TextNode".to_string());
-                        child.relationships.insert("parent".to_string(), parent.id);
+                        child
+                            .relationships
+                            .set_single(NodeRelationship::Parent, parent_info);
 
                         // Also store in metadata for backward compatibility
                         child

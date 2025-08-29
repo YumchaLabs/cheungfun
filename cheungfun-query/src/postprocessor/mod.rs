@@ -114,7 +114,6 @@ impl Default for CompressionStrategy {
 
 /// Utility functions for postprocessing.
 pub mod utils {
-    use super::*;
     use std::collections::HashSet;
 
     /// Extract keywords from a query string.

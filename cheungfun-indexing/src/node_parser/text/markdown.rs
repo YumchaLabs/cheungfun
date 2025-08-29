@@ -280,8 +280,11 @@ impl MarkdownNodeParser {
         let mut nodes = Vec::new();
 
         for (i, section) in sections.into_iter().enumerate() {
-            let chunk_info =
-                cheungfun_core::types::ChunkInfo::new(section.start_pos, section.end_pos, i);
+            let chunk_info = cheungfun_core::types::ChunkInfo::with_char_indices(
+                section.start_pos,
+                section.end_pos,
+                i,
+            );
 
             let mut node = Node::new(section.content, document.id, chunk_info);
 

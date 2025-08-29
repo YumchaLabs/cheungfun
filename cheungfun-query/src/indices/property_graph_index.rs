@@ -226,7 +226,7 @@ impl PropertyGraphIndex {
                         Node::new(
                             doc.content.clone(),
                             doc.id,
-                            ChunkInfo::new(0, doc.content.len(), 0),
+                            ChunkInfo::with_char_indices(0, doc.content.len(), 0),
                         )
                     })
                     .collect()
@@ -239,7 +239,7 @@ impl PropertyGraphIndex {
                     Node::new(
                         doc.content.clone(),
                         doc.id,
-                        ChunkInfo::new(0, doc.content.len(), 0),
+                        ChunkInfo::with_char_indices(0, doc.content.len(), 0),
                     )
                 })
                 .collect()

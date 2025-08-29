@@ -15,10 +15,9 @@ use tracing::{info, instrument};
 
 use crate::{
     engine::{
-        LLMQuerySelector, PerformanceProfile, QueryEngineBuilder, QueryEngineMetadata, QueryType,
-        RouterQueryEngine, RouterQueryEngineBuilder,
+        PerformanceProfile, QueryEngineBuilder, QueryEngineMetadata, QueryType, RouterQueryEngine,
+        RouterQueryEngineBuilder,
     },
-    generator::SiumaiGenerator,
     retriever::VectorRetriever,
     retrievers::hierarchical::{HierarchicalRetriever, StorageContext},
 };

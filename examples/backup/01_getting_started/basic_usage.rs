@@ -34,13 +34,14 @@ async fn main() -> Result<()> {
 
     // 2. Create nodes from the document
     println!("\n🔗 Creating nodes from document...");
-    let chunk_info = ChunkInfo::new(0, doc.content.len(), 0);
+    let chunk_info = ChunkInfo::with_char_indices(0, doc.content.len(), 0);
     let node = Node::builder()
         .content(doc.content.clone())
         .source_document_id(doc.id)
         .chunk_info(chunk_info)
         .metadata("word_count", doc.content.split_whitespace().count())
-        .build();
+        .build()
+        .expect("Failed to build node");
 
     println!("✅ Node created:");
     println!("   ID: {}", node.id);
@@ -66,7 +67,7 @@ async fn main() -> Result<()> {
 
     // 4. Create scored nodes (simulating search results)
     println!("\n🎯 Creating scored search results...");
-    let scored_node = ScoredNode::new(node, 0.95);
+    let scored_node = ScoredNode::new(node.expect("Failed to get node"), 0.95);
     println!(
         "✅ Scored node created with similarity: {}",
         scored_node.score

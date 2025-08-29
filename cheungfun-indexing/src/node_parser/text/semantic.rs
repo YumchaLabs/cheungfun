@@ -376,7 +376,7 @@ impl NodeParser for SemanticSplitter {
             let chunks = self.split_text_async(&text).await?;
 
             for (i, chunk) in chunks.into_iter().enumerate() {
-                let chunk_info = cheungfun_core::types::ChunkInfo::new(
+                let chunk_info = cheungfun_core::types::ChunkInfo::with_char_indices(
                     0,           // start_offset - would need to calculate actual positions
                     chunk.len(), // end_offset
                     i,           // chunk_index

@@ -421,11 +421,7 @@ impl GraphRetriever {
                 let node = Node::new(
                     content,
                     uuid::Uuid::new_v4(),
-                    cheungfun_core::types::ChunkInfo {
-                        start_offset: 0,
-                        end_offset: 0,
-                        chunk_index: 0,
-                    },
+                    cheungfun_core::types::ChunkInfo::with_char_indices(0, 0, 0),
                 );
 
                 let mut node_with_metadata = node;

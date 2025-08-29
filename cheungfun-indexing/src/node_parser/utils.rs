@@ -5,9 +5,12 @@
 //! the patterns established in LlamaIndex while leveraging Rust's type system.
 
 use crate::utils::metadata::add_chunk_metadata;
-use cheungfun_core::{ChunkInfo, Document, Node, Result as CoreResult};
+use cheungfun_core::{
+    relationships::{NodeRelationship, RelatedNodeInfo},
+    ChunkInfo, Document, Node, Result as CoreResult,
+};
 use std::collections::HashMap;
-use tracing::{debug, warn};
+use tracing::debug;
 use unicode_segmentation::UnicodeSegmentation;
 use uuid::Uuid;
 
@@ -121,20 +124,10 @@ pub fn build_nodes_from_splits(
         let mut metadata = document.metadata.clone();
         add_chunk_metadata(&mut metadata, i, &text_chunk, start_offset, end_offset);
 
-        let node = Node {
-            id: node_id,
-            content: text_chunk,
-            metadata,
-            embedding: None,
-            sparse_embedding: None,
-            relationships,
-            source_document_id: document.id,
-            chunk_info: ChunkInfo {
-                start_offset,
-                end_offset,
-                chunk_index: i,
-            },
-        };
+        let chunk_info = ChunkInfo::with_char_indices(start_offset, end_offset, i);
+        let mut node = Node::new(text_chunk, document.id, chunk_info);
+        node.id = node_id;
+        node.metadata = metadata;
 
         nodes.push(node);
     }
@@ -156,16 +149,18 @@ fn add_prev_next_relationships(nodes: &mut [Node]) -> CoreResult<()> {
     for i in 0..nodes.len() {
         // Add previous relationship
         if i > 0 {
+            let prev_info = RelatedNodeInfo::with_type(nodes[i - 1].id, "TextNode".to_string());
             nodes[i]
                 .relationships
-                .insert("previous".to_string(), nodes[i - 1].id);
+                .set_single(NodeRelationship::Previous, prev_info);
         }
 
         // Add next relationship
         if i < nodes.len() - 1 {
+            let next_info = RelatedNodeInfo::with_type(nodes[i + 1].id, "TextNode".to_string());
             nodes[i]
                 .relationships
-                .insert("next".to_string(), nodes[i + 1].id);
+                .set_single(NodeRelationship::Next, next_info);
         }
     }
     Ok(())

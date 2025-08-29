@@ -169,7 +169,8 @@ impl JSONNodeParser {
                 continue;
             }
 
-            let chunk_info = cheungfun_core::types::ChunkInfo::new(0, content.len(), i);
+            let chunk_info =
+                cheungfun_core::types::ChunkInfo::with_char_indices(0, content.len(), i);
             let mut node = Node::new(content, document.id, chunk_info);
 
             // Copy metadata from document

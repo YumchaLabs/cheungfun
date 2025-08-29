@@ -10,13 +10,10 @@
 use std::sync::Arc;
 
 use async_trait::async_trait;
-use tracing::{debug, info, instrument, warn};
+use tracing::{info, instrument};
 
 use crate::engine::QueryEngine;
-use cheungfun_core::{
-    types::{Query, QueryResponse},
-    Result,
-};
+use cheungfun_core::{types::QueryResponse, Result};
 
 /// Query type classification for routing decisions.
 ///
