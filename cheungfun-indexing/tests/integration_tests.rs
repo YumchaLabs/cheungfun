@@ -101,11 +101,7 @@ async fn test_metadata_extractor() {
     let node = Node::new(
         content.to_string(),
         uuid::Uuid::new_v4(),
-        ChunkInfo {
-            start_offset: 0,
-            end_offset: content.len(),
-            chunk_index: 0,
-        },
+        ChunkInfo::with_char_indices(0, content.len(), 0),
     );
 
     let extractor = MetadataExtractor::new();

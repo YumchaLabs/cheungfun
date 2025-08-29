@@ -259,28 +259,14 @@ async fn demo_cache_performance() -> Result<(), Box<dyn std::error::Error>> {
 /// Create a sample node for testing.
 fn create_sample_node(id: &str, content: &str) -> Node {
     let source_doc_id = Uuid::new_v4();
-    let chunk_info = ChunkInfo {
-        start_offset: 0,
-        end_offset: content.len(),
-        chunk_index: 0,
-    };
+    let chunk_info = ChunkInfo::with_char_indices(0, content.len(), 0);
 
-    Node {
-        id: Uuid::new_v4(),
-        content: content.to_string(),
-        embedding: None,
-        sparse_embedding: None,
-        relationships: HashMap::new(),
-        source_document_id: source_doc_id,
-        chunk_info,
-        metadata: {
-            let mut meta = HashMap::new();
-            meta.insert("id".to_string(), serde_json::Value::String(id.to_string()));
-            meta.insert(
-                "type".to_string(),
-                serde_json::Value::String("demo".to_string()),
-            );
-            meta
-        },
-    }
+    Node::builder()
+        .content(content)
+        .source_document_id(source_doc_id)
+        .chunk_info(chunk_info)
+        .metadata("id", id)
+        .metadata("type", "demo")
+        .build()
+        .expect("Failed to create sample node")
 }

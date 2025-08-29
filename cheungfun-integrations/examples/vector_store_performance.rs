@@ -127,33 +127,22 @@ fn generate_test_nodes(count: usize, dimension: usize) -> Vec<Node> {
     for i in 0..count {
         let embedding: Vec<f32> = (0..dimension).map(|_| rng.gen_range(-1.0..1.0)).collect();
 
-        let mut metadata = HashMap::new();
-        metadata.insert(
-            "doc_id".to_string(),
-            serde_json::Value::Number(serde_json::Number::from(i)),
-        );
-        metadata.insert(
-            "category".to_string(),
-            serde_json::Value::String(format!("category_{}", i % 5)),
-        );
-
-        nodes.push(Node {
-            id: Uuid::new_v4(),
-            content: format!(
+        let node = Node::builder()
+            .content(format!(
                 "This is test document number {} with some sample content for testing purposes.",
                 i
-            ),
-            metadata,
-            embedding: Some(embedding),
-            sparse_embedding: None,
-            relationships: HashMap::new(),
-            source_document_id: Uuid::new_v4(),
-            chunk_info: cheungfun_core::types::ChunkInfo {
-                start_offset: 0,
-                end_offset: 100,
-                chunk_index: 0,
-            },
-        });
+            ))
+            .source_document_id(Uuid::new_v4())
+            .chunk_info(cheungfun_core::types::ChunkInfo::with_char_indices(
+                0, 100, 0,
+            ))
+            .metadata("doc_id", i)
+            .metadata("category", format!("category_{}", i % 5))
+            .embedding(embedding)
+            .build()
+            .expect("Failed to build node");
+
+        nodes.push(node);
     }
 
     nodes

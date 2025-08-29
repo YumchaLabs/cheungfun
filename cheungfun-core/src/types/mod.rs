@@ -7,7 +7,6 @@ pub mod document;
 pub mod graph;
 pub mod labelled_property_graph;
 pub mod node;
-pub mod node_migration;
 pub mod query;
 pub mod response;
 
@@ -16,6 +15,5 @@ pub use document::*;
 pub use graph::*;
 pub use labelled_property_graph::*;
 pub use node::*;
-pub use node_migration::*;
 pub use query::*;
 pub use response::*;

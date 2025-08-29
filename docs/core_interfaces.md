@@ -28,7 +28,7 @@ pub struct Document {
 
 ### Node
 ```rust
-/// Represents a processed chunk of a document
+/// Enhanced Node structure based on LlamaIndex BaseNode
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
 pub struct Node {
     /// Unique identifier for the node
@@ -41,12 +41,26 @@ pub struct Node {
     pub embedding: Option<Vec<f32>>,
     /// Sparse vector embedding (for hybrid search)
     pub sparse_embedding: Option<HashMap<u32, f32>>,
-    /// Relationships to other nodes/documents
-    pub relationships: HashMap<String, Uuid>,
+    /// Structured relationships to other nodes
+    pub relationships: NodeRelationships,
     /// Original document reference
     pub source_document_id: Uuid,
     /// Chunk position info
     pub chunk_info: ChunkInfo,
+    /// Content hash for deduplication and caching
+    pub hash: Option<String>,
+    /// MIME type of the node content
+    pub mimetype: String,
+    /// Metadata keys to exclude from embeddings
+    pub excluded_embed_metadata_keys: HashSet<String>,
+    /// Metadata keys to exclude from LLM
+    pub excluded_llm_metadata_keys: HashSet<String>,
+    /// Template for formatting content with metadata
+    pub text_template: String,
+    /// Separator for metadata entries
+    pub metadata_separator: String,
+    /// Template for individual metadata entries
+    pub metadata_template: String,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]

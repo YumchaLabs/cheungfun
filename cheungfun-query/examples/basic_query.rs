@@ -88,42 +88,22 @@ impl MockVectorStore {
 
     fn add_sample_data(&self) -> Result<()> {
         let sample_nodes = vec![
-            Node {
-                id: uuid::Uuid::new_v4(),
-                content: "Machine learning is a subset of artificial intelligence that focuses on algorithms that can learn from data.".to_string(),
-                metadata: {
-                    let mut meta = HashMap::new();
-                    meta.insert("source".to_string(), serde_json::Value::String("ml_basics.txt".to_string()));
-                    meta
-                },
-                embedding: Some(vec![0.1; 384]),
-                sparse_embedding: None,
-                relationships: HashMap::new(),
-                source_document_id: uuid::Uuid::new_v4(),
-                chunk_info: cheungfun_core::types::ChunkInfo {
-                    start_offset: 0,
-                    end_offset: 100,
-                    chunk_index: 0,
-                },
-            },
-            Node {
-                id: uuid::Uuid::new_v4(),
-                content: "Deep learning uses neural networks with multiple layers to model and understand complex patterns in data.".to_string(),
-                metadata: {
-                    let mut meta = HashMap::new();
-                    meta.insert("source".to_string(), serde_json::Value::String("deep_learning.txt".to_string()));
-                    meta
-                },
-                embedding: Some(vec![0.2; 384]),
-                sparse_embedding: None,
-                relationships: HashMap::new(),
-                source_document_id: uuid::Uuid::new_v4(),
-                chunk_info: cheungfun_core::types::ChunkInfo {
-                    start_offset: 0,
-                    end_offset: 100,
-                    chunk_index: 0,
-                },
-            },
+            Node::builder()
+                .content("Machine learning is a subset of artificial intelligence that focuses on algorithms that can learn from data.")
+                .source_document_id(uuid::Uuid::new_v4())
+                .chunk_info(cheungfun_core::types::ChunkInfo::with_char_indices(0, 100, 0))
+                .metadata("source", "ml_basics.txt")
+                .embedding(vec![0.1; 384])
+                .build()
+                .expect("Failed to build node"),
+            Node::builder()
+                .content("Deep learning uses neural networks with multiple layers to model and understand complex patterns in data.")
+                .source_document_id(uuid::Uuid::new_v4())
+                .chunk_info(cheungfun_core::types::ChunkInfo::with_char_indices(0, 100, 0))
+                .metadata("source", "deep_learning.txt")
+                .embedding(vec![0.2; 384])
+                .build()
+                .expect("Failed to build node"),
         ];
 
         if let Ok(mut nodes) = self.nodes.write() {

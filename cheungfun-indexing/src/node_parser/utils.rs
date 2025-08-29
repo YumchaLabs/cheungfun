@@ -100,10 +100,6 @@ pub fn build_nodes_from_splits(
 
     debug!("Building {} nodes from splits", text_splits.len());
 
-    // Create base relationships (source document)
-    let mut base_relationships = HashMap::new();
-    base_relationships.insert("source".to_string(), document.id);
-
     // Calculate character offsets for each chunk
     let offsets = calculate_chunk_offsets(&document.content, &text_splits);
 
@@ -117,9 +113,6 @@ pub fn build_nodes_from_splits(
         let node_id = id_func.generate_id(i, document)?;
         let (start_offset, end_offset) = offsets.get(i).copied().unwrap_or((0, 0));
 
-        // Clone base relationships for this node
-        let mut relationships = base_relationships.clone();
-
         // Create enhanced metadata
         let mut metadata = document.metadata.clone();
         add_chunk_metadata(&mut metadata, i, &text_chunk, start_offset, end_offset);
@@ -128,6 +121,11 @@ pub fn build_nodes_from_splits(
         let mut node = Node::new(text_chunk, document.id, chunk_info);
         node.id = node_id;
         node.metadata = metadata;
+
+        // Add source document relationship
+        let source_info = RelatedNodeInfo::with_type(document.id, "Document".to_string());
+        node.relationships
+            .set_single(NodeRelationship::Source, source_info);
 
         nodes.push(node);
     }
@@ -338,10 +336,30 @@ mod tests {
         assert_eq!(nodes[1].content, "document with some content.");
 
         // Check relationships
-        assert!(nodes[0].relationships.contains_key("next"));
-        assert!(nodes[1].relationships.contains_key("previous"));
-        assert_eq!(nodes[0].relationships["next"], nodes[1].id);
-        assert_eq!(nodes[1].relationships["previous"], nodes[0].id);
+        assert!(nodes[0]
+            .relationships
+            .get_single(NodeRelationship::Next)
+            .is_some());
+        assert!(nodes[1]
+            .relationships
+            .get_single(NodeRelationship::Previous)
+            .is_some());
+        assert_eq!(
+            nodes[0]
+                .relationships
+                .get_single(NodeRelationship::Next)
+                .unwrap()
+                .node_id,
+            nodes[1].id
+        );
+        assert_eq!(
+            nodes[1]
+                .relationships
+                .get_single(NodeRelationship::Previous)
+                .unwrap()
+                .node_id,
+            nodes[0].id
+        );
     }
 
     #[test]
