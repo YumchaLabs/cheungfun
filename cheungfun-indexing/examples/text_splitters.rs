@@ -3,7 +3,10 @@
 //! This example showcases different text splitting strategies in cheungfun-indexing.
 //! Compare sentence-based, token-based, and semantic splitting approaches.
 
-use cheungfun_core::{traits::Transform, types::TransformInput, Document};
+use cheungfun_core::{
+    traits::{Transform, TransformInput},
+    Document,
+};
 use cheungfun_indexing::{
     node_parser::{
         config::{SentenceSplitterConfig, TokenTextSplitterConfig},
@@ -49,15 +52,11 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
 
     // Test 1: Sentence Splitter
     println!("🔤 Sentence Splitter (1000 chars, 200 overlap)");
-    println!("-".repeat(50));
+    println!("{}", "-".repeat(50));
 
-    let sentence_config = SentenceSplitterConfig {
-        chunk_size: 1000,
-        chunk_overlap: 200,
-        ..Default::default()
-    };
+    let sentence_config = SentenceSplitterConfig::new(1000, 200);
 
-    let sentence_splitter = SentenceSplitter::from_config(sentence_config)?;
+    let sentence_splitter = SentenceSplitter::new(sentence_config)?;
     let input = TransformInput::Documents(vec![document.clone()]);
     let sentence_nodes = sentence_splitter.transform(input).await?;
 
@@ -73,15 +72,11 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
 
     // Test 2: Token Text Splitter
     println!("🎯 Token Text Splitter (200 tokens, 50 overlap)");
-    println!("-".repeat(50));
+    println!("{}", "-".repeat(50));
 
-    let token_config = TokenTextSplitterConfig {
-        chunk_size: 200,
-        chunk_overlap: 50,
-        ..Default::default()
-    };
+    let token_config = TokenTextSplitterConfig::new(200, 50);
 
-    let token_splitter = TokenTextSplitter::from_config(token_config)?;
+    let token_splitter = TokenTextSplitter::new(token_config)?;
     let input = TransformInput::Documents(vec![document.clone()]);
     let token_nodes = token_splitter.transform(input).await?;
 
@@ -97,7 +92,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
 
     // Test 3: Performance comparison
     println!("⏱️  Performance Comparison");
-    println!("-".repeat(50));
+    println!("{}", "-".repeat(50));
 
     let start = std::time::Instant::now();
     let _ = sentence_splitter

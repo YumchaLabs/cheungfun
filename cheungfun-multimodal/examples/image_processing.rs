@@ -113,7 +113,7 @@ async fn main() -> Result<()> {
 
     // Example 5: Create multimodal node
     println!("\n🔗 Example 5: Creating multimodal node");
-    let chunk_info = cheungfun_core::types::ChunkInfo::new(0, 18, 0); // "Image node content" is 18 chars
+    let chunk_info = cheungfun_core::types::ChunkInfo::new(Some(0), Some(18), 0); // "Image node content" is 18 chars
     let base_node = Node::new("Image node content", uuid::Uuid::new_v4(), chunk_info);
     let multimodal_node =
         MultimodalNode::with_media(base_node, ModalityType::Image, image_content.clone())

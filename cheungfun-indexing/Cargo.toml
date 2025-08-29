@@ -95,4 +95,5 @@ test-case = { workspace = true }
 tempfile = { workspace = true }
 
 [features]
-default = []
+default = ["tree-sitter"]
+tree-sitter = []

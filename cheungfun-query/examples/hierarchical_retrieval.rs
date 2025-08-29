@@ -10,10 +10,7 @@ use std::sync::Arc;
 
 use cheungfun_core::{Document, Result};
 use cheungfun_integrations::{FastEmbedder, InMemoryVectorStore};
-use cheungfun_query::{
-    generator::{SiumaiGenerator, SiumaiGeneratorConfig},
-    hierarchical::HierarchicalSystemBuilder,
-};
+use cheungfun_query::{generator::SiumaiGenerator, hierarchical::HierarchicalSystemBuilder};
 use siumai::prelude::*;
 
 #[tokio::main]
@@ -30,11 +27,11 @@ async fn main() -> Result<()> {
 
     // 2. Set up embedder
     let embedder = Arc::new(
-        FastEmbedder::try_new_with_model_name("BAAI/bge-small-en-v1.5").map_err(|e| {
-            cheungfun_core::CheungfunError::Embedding {
+        FastEmbedder::with_model("BAAI/bge-small-en-v1.5")
+            .await
+            .map_err(|e| cheungfun_core::CheungfunError::Embedding {
                 message: format!("Failed to create embedder: {}", e),
-            }
-        })?,
+            })?,
     );
     println!("🔤 Embedder initialized");
 
@@ -45,14 +42,11 @@ async fn main() -> Result<()> {
         .model("gpt-3.5-turbo")
         .build()
         .await
-        .map_err(|e| cheungfun_core::CheungfunError::Generation {
+        .map_err(|e| cheungfun_core::CheungfunError::Llm {
             message: format!("Failed to create Siumai client: {}", e),
         })?;
 
-    let generator = Arc::new(SiumaiGenerator::new(
-        siumai_client,
-        SiumaiGeneratorConfig::default(),
-    ));
+    let generator = Arc::new(SiumaiGenerator::new(siumai_client));
     println!("🤖 LLM generator initialized");
 
     // 4. Build hierarchical retrieval system
@@ -136,11 +130,9 @@ fn create_sample_documents() -> Vec<Document> {
              OAuth2 integration, and role-based access control. The system supports \
              multiple authentication providers including Google, GitHub, and local accounts.",
         )
-        .with_metadata([
-            ("title", "Authentication Overview"),
-            ("category", "security"),
-            ("level", "overview"),
-        ]),
+        .with_metadata("title", "Authentication Overview")
+        .with_metadata("category", "security")
+        .with_metadata("level", "overview"),
         Document::new(
             "JWT Token Implementation Details\n\
              The JWT token implementation uses RS256 algorithm for signing. Tokens are \
@@ -149,12 +141,10 @@ fn create_sample_documents() -> Vec<Document> {
              variables and rotated monthly. Token validation includes signature verification, \
              expiration check, and issuer validation.",
         )
-        .with_metadata([
-            ("title", "JWT Implementation"),
-            ("category", "security"),
-            ("level", "detailed"),
-            ("parent_id", "auth_overview"),
-        ]),
+        .with_metadata("title", "JWT Implementation")
+        .with_metadata("category", "security")
+        .with_metadata("level", "detailed")
+        .with_metadata("parent_id", "auth_overview"),
         Document::new(
             "Database Connection Management\n\
              The application uses a connection pool with a maximum of 20 connections. \
@@ -162,11 +152,9 @@ fn create_sample_documents() -> Vec<Document> {
              after 10 minutes. The system supports both read and write replicas with \
              automatic failover capabilities.",
         )
-        .with_metadata([
-            ("title", "Database Connections"),
-            ("category", "infrastructure"),
-            ("level", "overview"),
-        ]),
+        .with_metadata("title", "Database Connections")
+        .with_metadata("category", "infrastructure")
+        .with_metadata("level", "overview"),
         Document::new(
             "Connection Pool Configuration\n\
              Connection pool is configured using HikariCP with the following settings: \
@@ -175,12 +163,10 @@ fn create_sample_documents() -> Vec<Document> {
              every 30 seconds using SELECT 1 query. Failed connections trigger automatic \
              retry with exponential backoff starting at 1 second.",
         )
-        .with_metadata([
-            ("title", "Connection Pool Details"),
-            ("category", "infrastructure"),
-            ("level", "detailed"),
-            ("parent_id", "db_overview"),
-        ]),
+        .with_metadata("title", "Connection Pool Details")
+        .with_metadata("category", "infrastructure")
+        .with_metadata("level", "detailed")
+        .with_metadata("parent_id", "db_overview"),
         Document::new(
             "Security Features Summary\n\
              The application implements comprehensive security measures including: \
@@ -191,11 +177,9 @@ fn create_sample_documents() -> Vec<Document> {
              - Regular security audits and penetration testing\n\
              - GDPR compliance for data protection",
         )
-        .with_metadata([
-            ("title", "Security Features"),
-            ("category", "security"),
-            ("level", "overview"),
-        ]),
+        .with_metadata("title", "Security Features")
+        .with_metadata("category", "security")
+        .with_metadata("level", "overview"),
         Document::new(
             "Rate Limiting Implementation\n\
              Rate limiting is implemented using Redis with sliding window algorithm. \
@@ -204,11 +188,9 @@ fn create_sample_documents() -> Vec<Document> {
              by IP address and user ID. When limits are exceeded, HTTP 429 status \
              is returned with Retry-After header indicating when to retry.",
         )
-        .with_metadata([
-            ("title", "Rate Limiting Details"),
-            ("category", "security"),
-            ("level", "detailed"),
-            ("parent_id", "security_overview"),
-        ]),
+        .with_metadata("title", "Rate Limiting Details")
+        .with_metadata("category", "security")
+        .with_metadata("level", "detailed")
+        .with_metadata("parent_id", "security_overview"),
     ]
 }

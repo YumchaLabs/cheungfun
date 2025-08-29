@@ -27,7 +27,6 @@
 //!
 //! If no API keys are provided, the example will fail with helpful error messages.
 
-use std::collections::HashMap;
 use std::sync::Arc;
 
 use cheungfun_core::{

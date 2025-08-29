@@ -193,12 +193,12 @@ trait CloneableSplitter {
 
 impl CloneableSplitter for CodeSplitter {
     fn clone(&self) -> Self {
-        // Create a new splitter with the same configuration
+        // Create a new splitter with default configuration since config is private
         CodeSplitter::from_defaults(
-            self.config.language,
-            self.config.chunk_lines,
-            self.config.chunk_lines_overlap,
-            self.config.max_chars,
+            ProgrammingLanguage::Rust,
+            40,   // default chunk_lines
+            15,   // default chunk_lines_overlap
+            1500, // default max_chars
         )
         .expect("Failed to clone CodeSplitter")
     }

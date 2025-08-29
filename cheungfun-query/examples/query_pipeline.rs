@@ -6,19 +6,16 @@
 //! - Query optimization and caching
 
 use cheungfun_core::{
-    traits::{Embedder, ResponseGenerator},
-    types::{GenerationOptions, Query, QueryResponse, SearchMode},
-    Node, ScoredNode,
+    traits::{BaseMemory, Embedder, ResponseGenerator},
+    types::{GenerationOptions, Query, SearchMode},
+    ChatMessage, MessageRole, Node, ScoredNode,
 };
-use cheungfun_query::{
-    engine::{QueryEngine, QueryEngineConfig},
-    generator::{SiumaiGenerator, SiumaiGeneratorConfig},
-    memory::{ChatMemoryBuffer, ChatMemoryConfig},
-};
+use cheungfun_query::memory::{ChatMemoryBuffer, ChatMemoryConfig};
 use std::{collections::HashMap, sync::Arc};
 use uuid::Uuid;
 
 // Mock embedder for demonstration
+#[derive(Debug)]
 struct MockEmbedder;
 
 #[async_trait::async_trait]
@@ -51,6 +48,7 @@ impl Embedder for MockEmbedder {
 }
 
 // Mock response generator
+#[derive(Debug)]
 struct MockGenerator;
 
 #[async_trait::async_trait]
@@ -88,8 +86,9 @@ impl ResponseGenerator for MockGenerator {
         query: &str,
         context_nodes: Vec<ScoredNode>,
         options: &GenerationOptions,
-    ) -> cheungfun_core::Result<impl futures::Stream<Item = cheungfun_core::Result<String>> + Send>
-    {
+    ) -> cheungfun_core::Result<
+        std::pin::Pin<Box<dyn futures::Stream<Item = cheungfun_core::Result<String>> + Send>>,
+    > {
         let response = self
             .generate_response(query, context_nodes, options)
             .await?;
@@ -99,7 +98,7 @@ impl ResponseGenerator for MockGenerator {
             .map(|s| format!("{} ", s))
             .collect();
 
-        Ok(futures::stream::iter(chunks.into_iter().map(Ok)))
+        Ok(Box::pin(futures::stream::iter(chunks.into_iter().map(Ok))))
     }
 }
 
@@ -114,37 +113,53 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
 
     // Test 1: Basic Memory Management
     println!("🧠 Testing Conversation Memory");
-    println!("-".repeat(40));
+    println!("{}", "-".repeat(40));
 
     let memory_config = ChatMemoryConfig {
-        max_messages: 10,
+        max_messages: Some(10),
         max_tokens: Some(2000),
         ..Default::default()
     };
 
-    let mut memory = ChatMemoryBuffer::from_config(memory_config)?;
+    let mut memory = ChatMemoryBuffer::new(memory_config);
 
     // Simulate conversation
-    memory.add_user_message("What is machine learning?").await?;
-    memory
-        .add_ai_message("Machine learning is a subset of artificial intelligence...")
-        .await?;
-    memory
-        .add_user_message("Can you give me an example?")
-        .await?;
+    let user_msg1 = ChatMessage {
+        role: MessageRole::User,
+        content: "What is machine learning?".to_string(),
+        timestamp: chrono::Utc::now(),
+        metadata: Some(HashMap::new()),
+    };
+    BaseMemory::add_message(&mut memory, user_msg1).await?;
 
-    let messages = memory.get_messages().await?;
+    let ai_msg1 = ChatMessage {
+        role: MessageRole::Assistant,
+        content: "Machine learning is a subset of artificial intelligence...".to_string(),
+        timestamp: chrono::Utc::now(),
+        metadata: Some(HashMap::new()),
+    };
+    BaseMemory::add_message(&mut memory, ai_msg1).await?;
+
+    let user_msg2 = ChatMessage {
+        role: MessageRole::User,
+        content: "Can you give me an example?".to_string(),
+        timestamp: chrono::Utc::now(),
+        metadata: Some(HashMap::new()),
+    };
+    BaseMemory::add_message(&mut memory, user_msg2).await?;
+
+    let messages = BaseMemory::get_messages(&memory).await?;
     println!("Conversation history ({} messages):", messages.len());
     for (i, msg) in messages.iter().enumerate() {
         println!(
-            "  {}. {}: {}",
+            "  {}. {:?}: {}",
             i + 1,
             msg.role,
-            &msg.content[..msg.content.len().min(50)] + "..."
+            &msg.content[..msg.content.len().min(50)]
         );
     }
 
-    let stats = memory.get_stats().await?;
+    let stats = memory.stats();
     println!(
         "Memory stats: {} messages, ~{} tokens",
         stats.message_count, stats.estimated_tokens
@@ -153,7 +168,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
 
     // Test 2: Query Processing
     println!("❓ Testing Query Processing");
-    println!("-".repeat(40));
+    println!("{}", "-".repeat(40));
 
     let queries = vec![
         "What is the purpose of this codebase?",
@@ -196,8 +211,8 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
             .await?;
 
         println!(
-            "  Response: {}",
-            &response.content[..response.content.len().min(100)] + "..."
+            "  Response: {}...",
+            &response.content[..response.content.len().min(100)]
         );
         println!("  Sources: {} documents", response.source_nodes.len());
         println!();
@@ -205,7 +220,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
 
     // Test 3: Streaming Response
     println!("🌊 Testing Streaming Response");
-    println!("-".repeat(40));
+    println!("{}", "-".repeat(40));
 
     let query_text = "Explain how streaming works";
     let mock_nodes = create_mock_context_nodes();
@@ -254,13 +269,16 @@ fn create_mock_context_nodes() -> Vec<Node> {
             },
             embedding: Some(vec![0.1, 0.2, 0.3]),
             sparse_embedding: None,
-            relationships: HashMap::new(),
+            relationships: cheungfun_core::relationships::NodeRelationships::default(),
             source_document_id: Uuid::new_v4(),
-            chunk_info: cheungfun_core::types::ChunkInfo {
-                start_offset: 0,
-                end_offset: 100,
-                chunk_index: 0,
-            },
+            chunk_info: cheungfun_core::types::ChunkInfo::new(Some(0), Some(100), 0),
+            excluded_embed_metadata_keys: std::collections::HashSet::new(),
+            excluded_llm_metadata_keys: std::collections::HashSet::new(),
+            hash: Some("mock_hash_1".to_string()),
+            text_template: "default_template".to_string(),
+            metadata_template: "metadata_template".to_string(),
+            metadata_separator: "\n".to_string(),
+            mimetype: "text/plain".to_string(),
         },
         Node {
             id: Uuid::new_v4(),
@@ -273,13 +291,16 @@ fn create_mock_context_nodes() -> Vec<Node> {
             },
             embedding: Some(vec![0.4, 0.5, 0.6]),
             sparse_embedding: None,
-            relationships: HashMap::new(),
+            relationships: cheungfun_core::relationships::NodeRelationships::default(),
             source_document_id: Uuid::new_v4(),
-            chunk_info: cheungfun_core::types::ChunkInfo {
-                start_offset: 100,
-                end_offset: 200,
-                chunk_index: 1,
-            },
+            chunk_info: cheungfun_core::types::ChunkInfo::new(Some(100), Some(200), 1),
+            excluded_embed_metadata_keys: std::collections::HashSet::new(),
+            excluded_llm_metadata_keys: std::collections::HashSet::new(),
+            hash: Some("mock_hash_2".to_string()),
+            text_template: "default_template".to_string(),
+            metadata_template: "metadata_template".to_string(),
+            metadata_separator: "\n".to_string(),
+            mimetype: "text/plain".to_string(),
         },
     ]
 }

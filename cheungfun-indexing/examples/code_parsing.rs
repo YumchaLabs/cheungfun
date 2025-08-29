@@ -133,13 +133,13 @@ namespace GameSystem
 
     // Test Rust parsing
     println!("🦀 Analyzing Rust Code");
-    println!("-".repeat(40));
+    println!("{}", "-".repeat(40));
     analyze_code(rust_code, ProgrammingLanguage::Rust).await?;
     println!();
 
     // Test C# parsing
     println!("🎮 Analyzing C# Code");
-    println!("-".repeat(40));
+    println!("{}", "-".repeat(40));
     analyze_code(csharp_code, ProgrammingLanguage::CSharp).await?;
 
     Ok(())
@@ -154,12 +154,11 @@ async fn analyze_code(
         extract_classes: true,
         extract_imports: true,
         extract_comments: true,
-        extract_variables: true,
         ..Default::default()
     };
 
-    let mut parser = AstParser::new(language, config)?;
-    let analysis = parser.parse_content(code, "example_file").await?;
+    let parser = AstParser::with_config(config)?;
+    let analysis = parser.parse(code, language)?;
 
     println!("📊 Analysis Results:");
     println!("  Lines of code: {}", code.lines().count());
@@ -168,16 +167,19 @@ async fn analyze_code(
     if !analysis.imports.is_empty() {
         println!("\n📦 Imports/Uses:");
         for import in &analysis.imports {
-            println!("  - {}", import);
+            println!("  - {} (line {})", import.module, import.start_line);
         }
     }
 
     if !analysis.classes.is_empty() {
         println!("\n🏗️  Classes/Structs:");
         for class in &analysis.classes {
-            println!("  - {} (line {})", class.name, class.line_number);
-            if !class.methods.is_empty() {
-                println!("    Methods: {}", class.methods.join(", "));
+            println!(
+                "  - {} {} (lines {}-{})",
+                class.kind, class.name, class.start_line, class.end_line
+            );
+            if let Some(doc) = &class.documentation {
+                println!("    Documentation: {}", doc);
             }
         }
     }
@@ -186,11 +188,13 @@ async fn analyze_code(
         println!("\n⚡ Functions:");
         for function in &analysis.functions {
             println!(
-                "  - {} (line {}, {} params)",
-                function.name,
-                function.line_number,
-                function.parameters.len()
+                "  - {} (lines {}-{})",
+                function.name, function.start_line, function.end_line
             );
+            println!("    Signature: {}", function.signature);
+            if let Some(doc) = &function.documentation {
+                println!("    Documentation: {}", doc);
+            }
         }
     }
 
@@ -198,7 +202,7 @@ async fn analyze_code(
         println!("\n💬 Comments:");
         for comment in analysis.comments.iter().take(3) {
             let preview = comment.content.lines().next().unwrap_or("");
-            println!("  - Line {}: {}", comment.line_number, preview);
+            println!("  - Line {}: {}", comment.start_line, preview);
         }
         if analysis.comments.len() > 3 {
             println!("  ... and {} more comments", analysis.comments.len() - 3);

@@ -4,6 +4,7 @@ use cheungfun_core::Document;
 use cheungfun_indexing::node_parser::{
     file::{HTMLNodeParser, JSONNodeParser},
     relational::HierarchicalNodeParser,
+    NodeParser,
 };
 
 #[tokio::main]

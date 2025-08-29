@@ -7,8 +7,8 @@
 
 use cheungfun_core::{
     traits::VectorStore,
-    types::{DistanceMetric, Query, SearchMode},
-    Node,
+    types::{Query, SearchMode},
+    DistanceMetric, Node,
 };
 use cheungfun_integrations::vector_stores::{
     memory::InMemoryVectorStore, memory_optimized::OptimizedInMemoryVectorStore,
@@ -53,7 +53,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
 
     for (store_name, store) in stores {
         println!("🔬 Testing: {}", store_name);
-        println!("-".repeat(50));
+        println!("{}", "-".repeat(50));
 
         // Test insertion performance
         let start = Instant::now();
@@ -102,7 +102,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
 
     // Performance summary
     println!("📈 Performance Summary");
-    println!("-".repeat(50));
+    println!("{}", "-".repeat(50));
     println!("Test Configuration:");
     println!("  Vectors: {}", NUM_VECTORS);
     println!("  Dimensions: {}", DIMENSION);

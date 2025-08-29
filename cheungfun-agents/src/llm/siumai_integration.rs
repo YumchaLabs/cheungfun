@@ -19,6 +19,15 @@ pub struct SiumaiLlmClient {
     config: LlmClientConfig,
 }
 
+impl Clone for SiumaiLlmClient {
+    fn clone(&self) -> Self {
+        Self {
+            client: self.client.clone_box(),
+            config: self.config.clone(),
+        }
+    }
+}
+
 impl std::fmt::Debug for SiumaiLlmClient {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         f.debug_struct("SiumaiLlmClient")

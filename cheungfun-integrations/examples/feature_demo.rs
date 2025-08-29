@@ -53,19 +53,19 @@ async fn test_vector_store() -> Result<(), Box<dyn std::error::Error>> {
         Node::new(
             "First test document",
             source_doc_id,
-            ChunkInfo::new(0, 20, 0),
+            ChunkInfo::new(Some(0), Some(20), 0),
         )
         .with_embedding(vec![0.1, 0.2, 0.3]),
         Node::new(
             "Second test document",
             source_doc_id,
-            ChunkInfo::new(21, 42, 1),
+            ChunkInfo::new(Some(21), Some(42), 1),
         )
         .with_embedding(vec![0.4, 0.5, 0.6]),
         Node::new(
             "Third test document",
             source_doc_id,
-            ChunkInfo::new(43, 63, 2),
+            ChunkInfo::new(Some(43), Some(63), 2),
         )
         .with_embedding(vec![0.7, 0.8, 0.9]),
     ];

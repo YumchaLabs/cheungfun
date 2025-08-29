@@ -10,7 +10,7 @@ use cheungfun_core::{
     ChunkInfo, Document, Node, Result as CoreResult,
 };
 use std::collections::HashMap;
-use tracing::debug;
+use tracing::{debug, warn};
 use unicode_segmentation::UnicodeSegmentation;
 use uuid::Uuid;
 

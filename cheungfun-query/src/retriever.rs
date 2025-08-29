@@ -481,7 +481,7 @@ mod tests {
 
     fn create_test_node(content: &str, embedding: Vec<f32>) -> Node {
         let source_doc_id = Uuid::new_v4();
-        let chunk_info = ChunkInfo::new(0, content.len(), 0);
+        let chunk_info = ChunkInfo::new(Some(0), Some(content.len()), 0);
 
         Node::new(content, source_doc_id, chunk_info).with_embedding(embedding)
     }
