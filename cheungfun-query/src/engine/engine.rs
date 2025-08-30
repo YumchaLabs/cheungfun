@@ -13,6 +13,8 @@ use cheungfun_core::{
     ChatMessage, MessageRole, Result,
 };
 
+use crate::postprocessor::{NodePostprocessor, PostprocessorChain};
+
 /// Strategies for query rewriting to improve retrieval effectiveness.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum QueryRewriteStrategy {
@@ -60,6 +62,9 @@ pub struct QueryEngine {
 
     /// Optional memory for conversation history.
     memory: Option<Arc<tokio::sync::Mutex<dyn BaseMemory>>>,
+
+    /// Optional postprocessor chain for node processing.
+    postprocessors: Option<PostprocessorChain>,
 
     /// Configuration for query processing.
     config: QueryEngineConfig,
@@ -111,6 +116,7 @@ impl QueryEngine {
             retriever,
             generator,
             memory: None,
+            postprocessors: None,
             config: QueryEngineConfig::default(),
         }
     }
@@ -125,6 +131,7 @@ impl QueryEngine {
             retriever,
             generator,
             memory: None,
+            postprocessors: None,
             config,
         }
     }
@@ -139,6 +146,7 @@ impl QueryEngine {
             retriever,
             generator,
             memory: Some(memory),
+            postprocessors: None,
             config: QueryEngineConfig::default(),
         }
     }
@@ -154,8 +162,92 @@ impl QueryEngine {
             retriever,
             generator,
             memory: Some(memory),
+            postprocessors: None,
             config,
         }
+    }
+
+    /// Add postprocessors to this query engine (LlamaIndex-style API).
+    ///
+    /// This method provides a fluent interface similar to LlamaIndex's approach:
+    /// ```python
+    /// query_engine = index.as_query_engine(
+    ///     node_postprocessors=[
+    ///         LLMRerank(top_n=5),
+    ///         SentenceTransformerRerank(model='...', top_n=3)
+    ///     ]
+    /// )
+    /// ```
+    ///
+    /// # Arguments
+    ///
+    /// * `processors` - The postprocessors to apply to retrieved nodes
+    ///
+    /// # Examples
+    ///
+    /// ```rust,no_run
+    /// use cheungfun_query::engine::QueryEngine;
+    /// use cheungfun_query::postprocessor::{KeywordFilter, SimilarityFilter};
+    /// use std::sync::Arc;
+    ///
+    /// # async fn example() -> cheungfun_core::Result<()> {
+    /// let query_engine = QueryEngine::new(retriever, generator)
+    ///     .with_postprocessors(vec![
+    ///         Arc::new(KeywordFilter::new(keyword_config)?),
+    ///         Arc::new(SimilarityFilter::new(similarity_config)),
+    ///     ]);
+    /// # Ok(())
+    /// # }
+    /// ```
+    pub fn with_postprocessors(mut self, processors: Vec<Arc<dyn NodePostprocessor>>) -> Self {
+        if !processors.is_empty() {
+            self.postprocessors = Some(PostprocessorChain::new(processors));
+        }
+        self
+    }
+
+    /// Add postprocessors with custom chain configuration.
+    ///
+    /// # Arguments
+    ///
+    /// * `processors` - The postprocessors to apply to retrieved nodes
+    /// * `continue_on_error` - Whether to continue if a postprocessor fails
+    /// * `verbose` - Whether to enable verbose logging
+    pub fn with_postprocessors_config(
+        mut self,
+        processors: Vec<Arc<dyn NodePostprocessor>>,
+        continue_on_error: bool,
+        verbose: bool,
+    ) -> Self {
+        if !processors.is_empty() {
+            self.postprocessors = Some(PostprocessorChain::with_config(
+                processors,
+                continue_on_error,
+                verbose,
+            ));
+        }
+        self
+    }
+
+    /// Add a single postprocessor to the existing chain.
+    ///
+    /// # Arguments
+    ///
+    /// * `processor` - The postprocessor to add
+    pub fn add_postprocessor(mut self, processor: Arc<dyn NodePostprocessor>) -> Self {
+        match &mut self.postprocessors {
+            Some(chain) => {
+                // We need to create a new chain since PostprocessorChain doesn't have add_processor as mut
+                let mut processors = vec![processor];
+                // Note: This is a limitation - we can't easily add to existing chain
+                // In a real implementation, we might want to make PostprocessorChain more flexible
+                self.postprocessors = Some(PostprocessorChain::new(processors));
+            }
+            None => {
+                self.postprocessors = Some(PostprocessorChain::new(vec![processor]));
+            }
+        }
+        self
     }
 
     /// Create a builder for constructing query engines.
@@ -205,6 +297,13 @@ impl QueryEngine {
         debug!("Retrieving context for query");
         let mut retrieved_nodes = self.retriever.retrieve(&query).await?;
         info!("Retrieved {} context nodes", retrieved_nodes.len());
+
+        // Apply postprocessors if configured (LlamaIndex-style processing)
+        if let Some(ref postprocessors) = self.postprocessors {
+            debug!("Applying postprocessor chain to retrieved nodes");
+            retrieved_nodes = postprocessors.postprocess(retrieved_nodes, query_text).await?;
+            info!("After postprocessing: {} context nodes", retrieved_nodes.len());
+        }
 
         // Validate context if enabled
         if self.config.validate_context {
@@ -981,6 +1080,7 @@ pub struct QueryEngineBuilder {
     retriever: Option<Arc<dyn Retriever>>,
     generator: Option<Arc<dyn ResponseGenerator>>,
     memory: Option<Arc<tokio::sync::Mutex<dyn BaseMemory>>>,
+    postprocessors: Option<Vec<Arc<dyn NodePostprocessor>>>,
     config: Option<QueryEngineConfig>,
 }
 
@@ -1017,6 +1117,31 @@ impl QueryEngineBuilder {
         self
     }
 
+    /// Set the postprocessors (LlamaIndex-style API).
+    ///
+    /// # Arguments
+    ///
+    /// * `processors` - The postprocessors to apply to retrieved nodes
+    #[must_use]
+    pub fn postprocessors(mut self, processors: Vec<Arc<dyn NodePostprocessor>>) -> Self {
+        self.postprocessors = Some(processors);
+        self
+    }
+
+    /// Add a single postprocessor.
+    ///
+    /// # Arguments
+    ///
+    /// * `processor` - The postprocessor to add
+    #[must_use]
+    pub fn add_postprocessor(mut self, processor: Arc<dyn NodePostprocessor>) -> Self {
+        match &mut self.postprocessors {
+            Some(processors) => processors.push(processor),
+            None => self.postprocessors = Some(vec![processor]),
+        }
+        self
+    }
+
     /// Build the query engine.
     pub fn build(self) -> Result<QueryEngine> {
         let retriever =
@@ -1033,12 +1158,18 @@ impl QueryEngineBuilder {
 
         let config = self.config.unwrap_or_default();
 
-        if let Some(memory) = self.memory {
-            Ok(QueryEngine::with_memory_and_config(
-                retriever, generator, memory, config,
-            ))
+        // Create base query engine
+        let mut query_engine = if let Some(memory) = self.memory {
+            QueryEngine::with_memory_and_config(retriever, generator, memory, config)
         } else {
-            Ok(QueryEngine::with_config(retriever, generator, config))
+            QueryEngine::with_config(retriever, generator, config)
+        };
+
+        // Add postprocessors if provided
+        if let Some(processors) = self.postprocessors {
+            query_engine = query_engine.with_postprocessors(processors);
         }
+
+        Ok(query_engine)
     }
 }

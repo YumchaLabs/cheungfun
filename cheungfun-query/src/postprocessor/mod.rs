@@ -9,14 +9,18 @@ use async_trait::async_trait;
 use cheungfun_core::{Result, ScoredNode};
 use serde::{Deserialize, Serialize};
 
+pub mod chain;
 pub mod config;
 pub mod keyword_filter;
+pub mod llm_chain_extractor;
 pub mod metadata_filter;
 pub mod sentence_optimizer;
 pub mod similarity_filter;
 
+pub use chain::*;
 pub use config::*;
 pub use keyword_filter::*;
+pub use llm_chain_extractor::*;
 pub use metadata_filter::*;
 pub use sentence_optimizer::*;
 pub use similarity_filter::*;

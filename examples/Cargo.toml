@@ -260,6 +260,14 @@ name = "self_rag"
 path = "Rag_Techniques/23_self_rag.rs"
 
 [[bin]]
+name = "llamaindex_style_postprocessors"
+path = "Rag_Techniques/26_llamaindex_style_postprocessors.rs"
+
+[[bin]]
+name = "query_fusion_and_bm25"
+path = "Rag_Techniques/27_query_fusion_and_bm25.rs"
+
+[[bin]]
 name = "corrective_rag"
 path = "Rag_Techniques/24_corrective_rag.rs"
 
