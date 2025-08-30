@@ -29,7 +29,13 @@ use cheungfun_indexing::{
 };
 use cheungfun_integrations::{FastEmbedder, InMemoryVectorStore};
 use cheungfun_query::{
-    engine::QueryEngine, generator::SiumaiGenerator, retriever::VectorRetriever,
+    engine::QueryEngine,
+    generator::SiumaiGenerator,
+    postprocessor::{
+        NodePostprocessor, SentenceEmbeddingConfig, SentenceEmbeddingOptimizer, SimilarityFilter,
+        SimilarityFilterConfig,
+    },
+    retriever::VectorRetriever,
 };
 use siumai::prelude::*;
 
@@ -54,7 +60,7 @@ struct Args {
     min_length: usize,
     #[arg(long, default_value = "2000")]
     max_length: usize,
-    #[arg(long, default_value = "combined")]
+    #[arg(long, default_value = "sentence_embedding")]
     strategy: String,
     #[arg(long)]
     compare_strategies: bool,
@@ -194,11 +200,21 @@ fn apply_metadata_filtering(chunks: Vec<ScoredNode>, _args: &Args) -> Vec<Scored
         .collect()
 }
 
-fn apply_score_filtering(chunks: Vec<ScoredNode>, args: &Args) -> Vec<ScoredNode> {
-    chunks
-        .into_iter()
-        .filter(|chunk| chunk.score >= args.score_threshold)
-        .collect()
+async fn apply_score_filtering(
+    chunks: Vec<ScoredNode>,
+    args: &Args,
+    query: &str,
+) -> ExampleResult<Vec<ScoredNode>> {
+    let similarity_filter = SimilarityFilter::new(SimilarityFilterConfig {
+        similarity_cutoff: args.score_threshold,
+        max_nodes: Some(args.top_k),
+        use_query_embedding: true,
+    });
+
+    similarity_filter
+        .postprocess(chunks, query)
+        .await
+        .map_err(|e| ExampleError::Config(format!("Similarity filtering failed: {}", e)))
 }
 
 fn apply_quality_filtering(chunks: Vec<ScoredNode>, args: &Args) -> Vec<ScoredNode> {
@@ -227,17 +243,34 @@ async fn apply_filtering_strategy(
     chunks: Vec<ScoredNode>,
     strategy: &str,
     args: &Args,
+    query: &str,
+    embedder: Arc<dyn Embedder>,
 ) -> ExampleResult<FilteredResult> {
     let timer = Timer::new(&format!("{} filtering", strategy));
     let original_count = chunks.len();
 
     let filtered_chunks = match strategy {
         "metadata" => apply_metadata_filtering(chunks, args),
-        "score" => apply_score_filtering(chunks, args),
+        "score" => apply_score_filtering(chunks, args, query).await?,
         "quality" => apply_quality_filtering(chunks, args),
+        "sentence_embedding" => {
+            // Use SentenceEmbeddingOptimizer for advanced filtering
+            let config = SentenceEmbeddingConfig {
+                percentile_cutoff: Some(0.7), // Keep top 70% of sentences
+                threshold_cutoff: Some(0.3),  // Minimum similarity threshold
+                context_before: Some(1),
+                context_after: Some(1),
+                max_sentences_per_node: Some(20),
+            };
+
+            let optimizer = SentenceEmbeddingOptimizer::new(embedder, config);
+            optimizer.postprocess(chunks, query).await.map_err(|e| {
+                ExampleError::Config(format!("Sentence embedding filtering failed: {}", e))
+            })?
+        }
         "combined" => {
             let after_metadata = apply_metadata_filtering(chunks, args);
-            let after_score = apply_score_filtering(after_metadata, args);
+            let after_score = apply_score_filtering(after_metadata, args, query).await?;
             apply_quality_filtering(after_score, args)
         }
         _ => chunks,
@@ -263,7 +296,13 @@ async fn compare_filtering_strategies(
 
     let (vector_store, _) = build_indexing_pipeline(args, embedder.clone()).await?;
     let test_queries = get_climate_test_queries();
-    let strategies = vec!["metadata", "score", "quality", "combined"];
+    let strategies = vec![
+        "metadata",
+        "score",
+        "quality",
+        "sentence_embedding",
+        "combined",
+    ];
 
     for (i, query) in test_queries.iter().enumerate() {
         println!("\n📝 Query {}: {}", i + 1, query);
@@ -279,7 +318,9 @@ async fn compare_filtering_strategies(
                 .search(&search_query)
                 .await
                 .map_err(|e| ExampleError::Cheungfun(e))?;
-            let filtered_result = apply_filtering_strategy(initial_chunks, strategy, args).await?;
+            let filtered_result =
+                apply_filtering_strategy(initial_chunks, strategy, args, query, embedder.clone())
+                    .await?;
 
             println!(
                 "   🎯 {}: {} → {} chunks",
@@ -312,8 +353,14 @@ async fn run_test_queries(
             .search(&search_query)
             .await
             .map_err(|e| ExampleError::Cheungfun(e))?;
-        let filtered_result =
-            apply_filtering_strategy(initial_chunks, &args.strategy, args).await?;
+        let filtered_result = apply_filtering_strategy(
+            initial_chunks,
+            &args.strategy,
+            args,
+            query,
+            embedder.clone(),
+        )
+        .await?;
 
         let options = GenerationOptions::default();
         let response = generator
@@ -361,8 +408,14 @@ async fn run_interactive_mode(
 
         match vector_store.search(&search_query).await {
             Ok(initial_chunks) => {
-                let filtered_result =
-                    apply_filtering_strategy(initial_chunks, &args.strategy, args).await?;
+                let filtered_result = apply_filtering_strategy(
+                    initial_chunks,
+                    &args.strategy,
+                    args,
+                    query,
+                    embedder.clone(),
+                )
+                .await?;
 
                 let options = GenerationOptions::default();
 

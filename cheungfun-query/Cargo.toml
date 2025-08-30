@@ -49,6 +49,9 @@ tracing = { workspace = true }
 # Random number generation
 rand = { workspace = true }
 
+# Text processing
+regex = { workspace = true }
+
 # Date and time
 chrono = { workspace = true }
 

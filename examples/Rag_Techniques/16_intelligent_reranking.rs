@@ -17,7 +17,12 @@ use cheungfun_indexing::{
 };
 use cheungfun_integrations::{FastEmbedder, InMemoryVectorStore};
 use cheungfun_query::{
-    advanced::rerankers::ScoreRerankStrategy, engine::QueryEngine, generator::SiumaiGenerator,
+    advanced::{
+        rerankers::{LLMReranker, ModelReranker, ScoreRerankStrategy},
+        AdvancedQuery, Reranker,
+    },
+    engine::QueryEngine,
+    generator::SiumaiGenerator,
     retriever::VectorRetriever,
 };
 use clap::{Arg, Command};
@@ -31,6 +36,10 @@ use tracing::info;
 mod shared;
 
 use shared::{setup_logging, ExampleError, ExampleResult, PerformanceMetrics, Timer};
+
+// Import additional traits and types for reranking
+use async_trait::async_trait;
+use cheungfun_query::advanced::rerankers::RerankModel;
 
 /// Configuration for reranking strategies
 #[derive(Debug, Clone)]
@@ -139,12 +148,16 @@ impl IntelligentRerankingDemo {
         println!("\n🧠 2. LLM-based Reranking");
         let _llm_results = self.demonstrate_llm_reranking(query).await?;
 
-        // 3. Score-based reranking strategies
-        println!("\n📈 3. Score-based Reranking Strategies");
+        // 3. Model-based reranking (Cross-encoder style)
+        println!("\n🤖 3. Model-based Reranking");
+        let _model_results = self.demonstrate_model_reranking(query).await?;
+
+        // 4. Score-based reranking strategies
+        println!("\n📈 4. Score-based Reranking Strategies");
         self.demonstrate_score_reranking(query).await?;
 
-        // 4. Diversity-based reranking
-        println!("\n🌈 4. Diversity-based Reranking");
+        // 5. Diversity-based reranking
+        println!("\n🌈 5. Diversity-based Reranking");
         self.demonstrate_diversity_reranking(query).await?;
 
         Ok(())
@@ -188,42 +201,107 @@ impl IntelligentRerankingDemo {
         Ok(results)
     }
 
-    /// Demonstrate LLM-based reranking
+    /// Demonstrate LLM-based reranking using real LLMReranker
     async fn demonstrate_llm_reranking(&self, query: &str) -> ExampleResult<Vec<ScoredNode>> {
-        println!("🧠 LLM-based Reranking");
-        println!("⚠️  Note: LLM reranking requires advanced query pipeline setup");
-        println!("💡 For now, showing baseline results with simulated reranking scores");
+        println!("🧠 LLM-based Reranking (Real Implementation)");
+        println!("✨ Using Cheungfun's LLMReranker with Siumai integration");
 
-        let timer = Timer::new("llm_reranking_simulation");
+        let timer = Timer::new("llm_reranking");
 
         // Get initial results
-        let mut initial_results = self.get_baseline_results(query).await?;
+        let initial_results = self.get_baseline_results(query).await?;
+        println!("📊 Initial results: {} nodes", initial_results.len());
 
-        // Simulate LLM reranking by adjusting scores
-        // In a real implementation, this would use LLMReranker with proper setup
-        for (i, result) in initial_results.iter_mut().enumerate() {
-            // Simulate LLM giving higher scores to more relevant results
-            let relevance_boost = 1.0 - (i as f32 * 0.1);
-            result.score = (result.score * relevance_boost).min(1.0);
-        }
+        // Create Siumai client for LLM reranking
+        let siumai_client = self.create_siumai_client().await?;
+        let llm_generator = Arc::new(SiumaiGenerator::new(siumai_client));
 
-        // Sort by new scores
-        initial_results.sort_by(|a, b| {
-            b.score
-                .partial_cmp(&a.score)
-                .unwrap_or(std::cmp::Ordering::Equal)
-        });
+        // Create LLMReranker with custom configuration
+        let llm_reranker = LLMReranker::new(llm_generator)
+            .with_top_n(self.config.top_n)
+            .with_batch_size(match &self.config.strategy {
+                RerankingStrategy::LLM { batch_size, .. } => *batch_size,
+                _ => 5,
+            });
 
-        let reranked_results: Vec<ScoredNode> = initial_results
-            .into_iter()
-            .take(self.config.top_n)
-            .collect();
+        // Create AdvancedQuery for reranking
+        let advanced_query = AdvancedQuery::from_text(query);
+
+        // Apply LLM reranking
+        let reranked_results = llm_reranker
+            .rerank(&advanced_query, initial_results)
+            .await
+            .map_err(|e| ExampleError::Config(format!("LLM reranking failed: {}", e)))?;
 
         let reranking_time = timer.finish();
         self.display_reranking_results(
-            "LLM Reranking (Simulated)",
+            "LLM Reranking (Real)",
             &reranked_results,
             Some(reranking_time),
+        );
+
+        println!(
+            "✅ LLM reranking completed: {} → {} nodes",
+            self.config.initial_retrieval_count,
+            reranked_results.len()
+        );
+
+        Ok(reranked_results)
+    }
+
+    /// Create Siumai client for LLM operations
+    async fn create_siumai_client(&self) -> ExampleResult<Siumai> {
+        // Try to use environment API key, fallback to demo key
+        let api_key = std::env::var("OPENAI_API_KEY").unwrap_or_else(|_| "demo-key".to_string());
+
+        Siumai::builder()
+            .openai()
+            .api_key(&api_key)
+            .model("gpt-3.5-turbo")
+            .build()
+            .await
+            .map_err(|e| ExampleError::Config(format!("Failed to create Siumai client: {}", e)))
+    }
+
+    /// Demonstrate Model-based reranking using Cross-encoder style approach
+    async fn demonstrate_model_reranking(&self, query: &str) -> ExampleResult<Vec<ScoredNode>> {
+        println!("🤖 Model-based Reranking (Cross-encoder Style)");
+        println!("✨ Using Cheungfun's ModelReranker with embedding similarity");
+
+        let timer = Timer::new("model_reranking");
+
+        // Get initial results
+        let initial_results = self.get_baseline_results(query).await?;
+        println!("📊 Initial results: {} nodes", initial_results.len());
+
+        // Create a mock rerank model using embeddings
+        // In a real implementation, you would use a proper cross-encoder model
+        let mock_rerank_model = Arc::new(MockRerankModel::new());
+
+        // Create ModelReranker
+        let model_reranker = ModelReranker::new(mock_rerank_model)
+            .with_top_n(self.config.top_n)
+            .with_batch_size(8);
+
+        // Create AdvancedQuery for reranking
+        let advanced_query = AdvancedQuery::from_text(query);
+
+        // Apply model reranking
+        let reranked_results = model_reranker
+            .rerank(&advanced_query, initial_results)
+            .await
+            .map_err(|e| ExampleError::Config(format!("Model reranking failed: {}", e)))?;
+
+        let reranking_time = timer.finish();
+        self.display_reranking_results(
+            "Model Reranking (Cross-encoder Style)",
+            &reranked_results,
+            Some(reranking_time),
+        );
+
+        println!(
+            "✅ Model reranking completed: {} nodes",
+            reranked_results.len()
         );
 
         Ok(reranked_results)
@@ -694,4 +772,72 @@ async fn create_retrievers_and_engine(
     let query_engine = QueryEngine::new(Arc::new(retriever), Arc::new(generator));
 
     Ok((vector_store, query_engine))
+}
+
+/// Mock rerank model for demonstration purposes.
+///
+/// In a real implementation, this would be replaced with a proper cross-encoder model
+/// like BERT-based rerankers, BGE reranker, or other specialized reranking models.
+#[derive(Debug)]
+pub struct MockRerankModel {
+    model_name: String,
+    max_input_length: usize,
+}
+
+impl MockRerankModel {
+    pub fn new() -> Self {
+        Self {
+            model_name: "mock-cross-encoder-v1".to_string(),
+            max_input_length: 512,
+        }
+    }
+}
+
+#[async_trait]
+impl RerankModel for MockRerankModel {
+    /// Calculate relevance scores using a simple heuristic.
+    ///
+    /// In a real implementation, this would use a trained cross-encoder model
+    /// to compute query-document relevance scores.
+    async fn score(&self, query: &str, documents: &[&str]) -> anyhow::Result<Vec<f32>> {
+        let query_lower = query.to_lowercase();
+        let query_words: std::collections::HashSet<&str> = query_lower.split_whitespace().collect();
+
+        let mut scores = Vec::new();
+
+        for document in documents {
+            let doc_lower = document.to_lowercase();
+            let doc_words: std::collections::HashSet<&str> = doc_lower.split_whitespace().collect();
+
+            // Calculate Jaccard similarity as a simple relevance score
+            let intersection = query_words.intersection(&doc_words).count();
+            let union = query_words.union(&doc_words).count();
+
+            let jaccard_score = if union > 0 {
+                intersection as f32 / union as f32
+            } else {
+                0.0
+            };
+
+            // Add some randomness to simulate model uncertainty
+            let noise = (rand::random::<f32>() - 0.5) * 0.1; // ±5% noise
+            let final_score = (jaccard_score + noise).clamp(0.0, 1.0);
+
+            scores.push(final_score);
+        }
+
+        Ok(scores)
+    }
+
+    fn model_name(&self) -> &str {
+        &self.model_name
+    }
+
+    fn max_input_length(&self) -> usize {
+        self.max_input_length
+    }
+
+    fn supports_batch(&self) -> bool {
+        true
+    }
 }

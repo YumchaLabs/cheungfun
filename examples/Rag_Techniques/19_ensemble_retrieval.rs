@@ -38,7 +38,7 @@ cargo run --bin ensemble_retrieval --features fastembed -- --interactive
 */
 
 use clap::Parser;
-use std::{collections::HashMap, path::PathBuf, sync::Arc};
+use std::{path::PathBuf, sync::Arc};
 
 #[path = "../shared/mod.rs"]
 mod shared;
@@ -56,7 +56,10 @@ use cheungfun_indexing::{
 };
 use cheungfun_integrations::{FastEmbedder, InMemoryVectorStore};
 use cheungfun_query::{
-    engine::QueryEngine, generator::SiumaiGenerator, retriever::VectorRetriever,
+    advanced::fusion::{DistributionBasedFusion, ReciprocalRankFusion},
+    engine::QueryEngine,
+    generator::SiumaiGenerator,
+    retriever::VectorRetriever,
 };
 use siumai::prelude::*;
 
@@ -369,71 +372,71 @@ fn simulate_hybrid_search(
     combined_chunks
 }
 
-fn fuse_ensemble_results(
+async fn fuse_ensemble_results(
     results: &[EnsembleResult],
     fusion_method: &str,
     args: &Args,
-) -> FusedResult {
+) -> ExampleResult<FusedResult> {
     let fusion_timer = Timer::new(&format!("{} fusion", fusion_method));
 
+    // Convert EnsembleResult to the format expected by fusion strategies
+    let result_sets: Vec<Vec<ScoredNode>> = results.iter().map(|r| r.chunks.clone()).collect();
+
     let fused_chunks = match fusion_method {
-        "rank" => rank_fusion(results, args.top_k),
-        "score" => score_fusion(results, args),
-        "voting" => voting_fusion(results, args.top_k),
-        "adaptive" => adaptive_fusion(results, args),
-        _ => rank_fusion(results, args.top_k), // Default to rank fusion
+        "rank" => {
+            let fusion = ReciprocalRankFusion::new(60.0); // k=60 parameter
+            let mut results = fusion.fuse_results(result_sets);
+            results.truncate(args.top_k);
+            results
+        }
+        "score" => {
+            // Use weighted score fusion (manual implementation for now)
+            let weights = vec![args.vector_weight, args.keyword_weight, 0.5]; // Default weights
+            weighted_score_fusion(result_sets, weights, args.top_k)
+        }
+        "voting" => {
+            // Use voting-based fusion (manual implementation for now)
+            voting_based_fusion(result_sets, args.top_k)
+        }
+        "adaptive" => {
+            // Use distribution-based fusion for adaptive strategy
+            let fusion = DistributionBasedFusion::new(result_sets.len());
+            let mut results = fusion.fuse_results(result_sets);
+            results.truncate(args.top_k);
+            results
+        }
+        _ => {
+            // Default to rank fusion
+            let fusion = ReciprocalRankFusion::new(60.0);
+            let mut results = fusion.fuse_results(result_sets);
+            results.truncate(args.top_k);
+            results
+        }
     };
 
     let fusion_time = fusion_timer.finish();
 
-    FusedResult {
+    Ok(FusedResult {
         fusion_method: fusion_method.to_string(),
         chunks: fused_chunks,
         fusion_time: fusion_time.as_secs_f64(),
         component_results: results.to_vec(),
-    }
+    })
 }
 
-fn rank_fusion(results: &[EnsembleResult], top_k: usize) -> Vec<ScoredNode> {
-    let mut rank_scores: HashMap<String, f32> = HashMap::new();
-    let mut all_chunks: HashMap<String, ScoredNode> = HashMap::new();
+/// Weighted score fusion implementation.
+fn weighted_score_fusion(
+    result_sets: Vec<Vec<ScoredNode>>,
+    weights: Vec<f32>,
+    top_k: usize,
+) -> Vec<ScoredNode> {
+    let mut score_map: std::collections::HashMap<String, (ScoredNode, f32, usize)> =
+        std::collections::HashMap::new();
 
-    for result in results {
-        for (rank, chunk) in result.chunks.iter().enumerate() {
-            let id = chunk.node.id.to_string();
-            all_chunks.insert(id.clone(), chunk.clone());
-
-            // Reciprocal rank fusion: 1 / (rank + 60)
-            let rank_score = 1.0 / (rank as f32 + 60.0);
-            *rank_scores.entry(id).or_insert(0.0) += rank_score;
-        }
-    }
-
-    let mut fused: Vec<(String, f32)> = rank_scores.into_iter().collect();
-    fused.sort_by(|a, b| b.1.partial_cmp(&a.1).unwrap());
-
-    fused
-        .into_iter()
-        .take(top_k)
-        .filter_map(|(id, score)| {
-            all_chunks.get(&id).map(|chunk| {
-                let mut fused_chunk = chunk.clone();
-                fused_chunk.score = score;
-                fused_chunk
-            })
-        })
-        .collect()
-}
-
-fn score_fusion(results: &[EnsembleResult], args: &Args) -> Vec<ScoredNode> {
-    let mut score_map: HashMap<String, (ScoredNode, f32, usize)> = HashMap::new();
-
-    let weights = vec![args.vector_weight, args.keyword_weight, 0.5]; // Default weights
-
-    for (method_idx, result) in results.iter().enumerate() {
+    for (method_idx, result_set) in result_sets.into_iter().enumerate() {
         let weight = weights.get(method_idx).unwrap_or(&0.33);
 
-        for chunk in &result.chunks {
+        for chunk in result_set {
             let id = chunk.node.id.to_string();
             let weighted_score = chunk.score * weight;
 
@@ -443,7 +446,7 @@ fn score_fusion(results: &[EnsembleResult], args: &Args) -> Vec<ScoredNode> {
                     *count += 1;
                 }
                 None => {
-                    score_map.insert(id, (chunk.clone(), weighted_score, 1));
+                    score_map.insert(id, (chunk, weighted_score, 1));
                 }
             }
         }
@@ -462,21 +465,23 @@ fn score_fusion(results: &[EnsembleResult], args: &Args) -> Vec<ScoredNode> {
     fused.sort_by(|a, b| b.1.partial_cmp(&a.1).unwrap());
     fused
         .into_iter()
-        .take(args.top_k)
+        .take(top_k)
         .map(|(chunk, _)| chunk)
         .collect()
 }
 
-fn voting_fusion(results: &[EnsembleResult], top_k: usize) -> Vec<ScoredNode> {
-    let mut vote_counts: HashMap<String, (ScoredNode, usize)> = HashMap::new();
+/// Voting-based fusion implementation.
+fn voting_based_fusion(result_sets: Vec<Vec<ScoredNode>>, top_k: usize) -> Vec<ScoredNode> {
+    let mut vote_counts: std::collections::HashMap<String, (ScoredNode, usize)> =
+        std::collections::HashMap::new();
 
-    for result in results {
-        for chunk in &result.chunks {
+    for result_set in result_sets {
+        for chunk in result_set {
             let id = chunk.node.id.to_string();
             match vote_counts.get_mut(&id) {
                 Some((_, count)) => *count += 1,
                 None => {
-                    vote_counts.insert(id, (chunk.clone(), 1));
+                    vote_counts.insert(id, (chunk, 1));
                 }
             }
         }
@@ -493,21 +498,6 @@ fn voting_fusion(results: &[EnsembleResult], top_k: usize) -> Vec<ScoredNode> {
         .take(top_k)
         .map(|(chunk, _)| chunk)
         .collect()
-}
-
-fn adaptive_fusion(results: &[EnsembleResult], args: &Args) -> Vec<ScoredNode> {
-    // Simple adaptive strategy: choose best performing method based on average scores
-    let best_method = results
-        .iter()
-        .max_by(|a, b| a.avg_score.partial_cmp(&b.avg_score).unwrap())
-        .unwrap();
-
-    println!(
-        "🎯 Adaptive fusion selected: {} (avg score: {:.3})",
-        best_method.method_name, best_method.avg_score
-    );
-
-    best_method.chunks.clone()
 }
 
 async fn run_test_queries(
@@ -527,7 +517,8 @@ async fn run_test_queries(
         let ensemble_results = run_ensemble_methods(vector_store, query, args.top_k).await?;
 
         // Fuse results
-        let fused_result = fuse_ensemble_results(&ensemble_results, &args.fusion_method, args);
+        let fused_result =
+            fuse_ensemble_results(&ensemble_results, &args.fusion_method, args).await?;
 
         let query_time = timer.finish();
 
@@ -582,7 +573,8 @@ async fn compare_fusion_strategies(args: &Args, embedder: Arc<dyn Embedder>) -> 
 
         // Test each fusion strategy
         for fusion_method in &fusion_methods {
-            let fused_result = fuse_ensemble_results(&ensemble_results, fusion_method, args);
+            let fused_result =
+                fuse_ensemble_results(&ensemble_results, fusion_method, args).await?;
 
             let avg_score = if fused_result.chunks.is_empty() {
                 0.0
@@ -635,7 +627,8 @@ async fn run_interactive_mode(
         let ensemble_results = run_ensemble_methods(vector_store, query, args.top_k).await?;
 
         // Fuse results
-        let fused_result = fuse_ensemble_results(&ensemble_results, &args.fusion_method, args);
+        let fused_result =
+            fuse_ensemble_results(&ensemble_results, &args.fusion_method, args).await?;
 
         let query_time = timer.finish();
 

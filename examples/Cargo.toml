@@ -405,6 +405,16 @@ name = "markdown_parser"
 path = "utilities/markdown_parser_demo.rs"
 required-features = ["basic"]
 
+[[bin]]
+name = "25_performance_benchmark"
+path = "Rag_Techniques/25_performance_benchmark.rs"
+required-features = ["fastembed"]
+
+[[bin]]
+name = "performance_benchmark"
+path = "Rag_Techniques/25_performance_benchmark.rs"
+required-features = ["fastembed"]
+
 # rag_tools.rs is a library file, not a binary
 
 # === Removed Legacy Examples ===

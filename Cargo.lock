@@ -1203,6 +1203,7 @@ dependencies = [
  "futures",
  "futures-util",
  "rand 0.8.5",
+ "regex",
  "serde",
  "serde_json",
  "siumai 0.9.1",

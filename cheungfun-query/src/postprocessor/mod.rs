@@ -10,10 +10,14 @@ use cheungfun_core::{Result, ScoredNode};
 use serde::{Deserialize, Serialize};
 
 pub mod config;
+pub mod keyword_filter;
+pub mod metadata_filter;
 pub mod sentence_optimizer;
 pub mod similarity_filter;
 
 pub use config::*;
+pub use keyword_filter::*;
+pub use metadata_filter::*;
 pub use sentence_optimizer::*;
 pub use similarity_filter::*;
 
