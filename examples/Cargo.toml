@@ -374,10 +374,6 @@ name = "mcp_integration_example"
 path = "backup/04_integrations/mcp_integration_example.rs"
 required-features = ["intelligent-assistant"]
 
-[[bin]]
-name = "complete_rag_demo"
-path = "backup/06_production/complete_rag_demo.rs"
-required-features = ["knowledge-base"]
 
 [[bin]]
 name = "end_to_end_indexing"

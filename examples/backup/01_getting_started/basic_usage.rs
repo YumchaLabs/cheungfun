@@ -67,7 +67,7 @@ async fn main() -> Result<()> {
 
     // 4. Create scored nodes (simulating search results)
     println!("\n🎯 Creating scored search results...");
-    let scored_node = ScoredNode::new(node.expect("Failed to get node"), 0.95);
+    let scored_node = ScoredNode::new(node, 0.95);
     println!(
         "✅ Scored node created with similarity: {}",
         scored_node.score

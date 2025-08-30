@@ -211,7 +211,7 @@ async fn build_indexing_pipeline(
         .map_err(|e| ExampleError::Cheungfun(e))?;
     let indexing_time = indexing_timer.finish();
 
-    println!("✅ Indexing completed in {:.2}s", indexing_time);
+    println!("✅ Indexing completed in {:.2}s", indexing_time.as_secs_f64());
     println!("📊 Indexed {} nodes", index_result.nodes_created);
 
     let siumai_client = create_siumai_client().await?;
@@ -251,7 +251,7 @@ async fn run_ensemble_methods(
     results.push(EnsembleResult {
         method_name: "Vector".to_string(),
         chunks: vector_chunks,
-        retrieval_time: vector_time,
+        retrieval_time: vector_time.as_secs_f64(),
         avg_score: vector_avg,
     });
 
@@ -278,7 +278,7 @@ async fn run_ensemble_methods(
     results.push(EnsembleResult {
         method_name: "Keyword".to_string(),
         chunks: keyword_chunks,
-        retrieval_time: keyword_time,
+        retrieval_time: keyword_time.as_secs_f64(),
         avg_score: keyword_avg,
     });
 
@@ -295,7 +295,7 @@ async fn run_ensemble_methods(
     results.push(EnsembleResult {
         method_name: "Hybrid".to_string(),
         chunks: hybrid_chunks,
-        retrieval_time: hybrid_time,
+        retrieval_time: hybrid_time.as_secs_f64(),
         avg_score: hybrid_avg,
     });
 
@@ -386,7 +386,7 @@ fn fuse_ensemble_results(
     FusedResult {
         fusion_method: fusion_method.to_string(),
         chunks: fused_chunks,
-        fusion_time,
+        fusion_time: fusion_time.as_secs_f64(),
         component_results: results.to_vec(),
     }
 }
@@ -536,7 +536,7 @@ async fn run_test_queries(
             .map_err(|e| ExampleError::Config(format!("Generation failed: {}", e)))?;
 
         println!("💬 Response: {}", response.content);
-        println!("⏱️ Query time: {:.2}s", query_time);
+        println!("⏱️ Query time: {:.2}s", query_time.as_secs_f64());
 
         if args.verbose {
             display_ensemble_details(&fused_result);
@@ -644,7 +644,7 @@ async fn run_interactive_mode(
         {
             Ok(response) => {
                 println!("\n💬 Response: {}", response.content);
-                println!("⏱️ Query time: {:.2}s", query_time);
+                println!("⏱️ Query time: {:.2}s", query_time.as_secs_f64());
 
                 if args.verbose {
                     display_ensemble_details(&fused_result);

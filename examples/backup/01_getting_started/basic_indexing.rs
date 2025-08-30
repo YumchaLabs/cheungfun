@@ -14,6 +14,7 @@
 
 use anyhow::Result;
 use cheungfun_core::{
+    relationships::NodeRelationships,
     traits::{DistanceMetric, Embedder, VectorStore},
     types::{ChunkInfo, Node},
 };
@@ -21,7 +22,7 @@ use cheungfun_integrations::InMemoryVectorStore;
 use std::collections::HashMap;
 use std::sync::Arc;
 use tempfile::TempDir;
-use tracing::{info, Level};
+use tracing::Level;
 use uuid::Uuid;
 
 #[tokio::main]
@@ -256,32 +257,38 @@ async fn process_documents_with_strategy(
 
         for (i, chunk) in chunks.iter().enumerate() {
             let embedding = embedder.embed(chunk).await?;
+            let mut metadata = HashMap::new();
+            metadata.insert(
+                "source".to_string(),
+                serde_json::Value::String(
+                    path.file_name().unwrap().to_string_lossy().to_string(),
+                ),
+            );
+            metadata.insert(
+                "chunk_index".to_string(),
+                serde_json::Value::Number(i.into()),
+            );
+
             let node = Node {
                 id: Uuid::new_v4(),
                 content: chunk.clone(),
-                metadata: {
-                    let mut meta = HashMap::new();
-                    meta.insert(
-                        "source".to_string(),
-                        serde_json::Value::String(
-                            path.file_name().unwrap().to_string_lossy().to_string(),
-                        ),
-                    );
-                    meta.insert(
-                        "chunk_index".to_string(),
-                        serde_json::Value::Number(i.into()),
-                    );
-                    meta
-                },
+                metadata,
                 embedding: Some(embedding),
                 sparse_embedding: None,
-                relationships: HashMap::new(),
+                relationships: NodeRelationships::new(),
                 source_document_id: source_doc_id,
                 chunk_info: ChunkInfo {
-                    start_offset: i * (chunk_size - overlap),
-                    end_offset: i * (chunk_size - overlap) + chunk.len(),
+                    start_char_idx: Some(i * (chunk_size - overlap)),
+                    end_char_idx: Some(i * (chunk_size - overlap) + chunk.len()),
                     chunk_index: i,
                 },
+                hash: None, // Will be calculated automatically
+                mimetype: "text/plain".to_string(),
+                excluded_embed_metadata_keys: std::collections::HashSet::new(),
+                excluded_llm_metadata_keys: std::collections::HashSet::new(),
+                text_template: "{content}\n\n{metadata_str}".to_string(),
+                metadata_separator: "\n".to_string(),
+                metadata_template: "{key}: {value}".to_string(),
             };
             nodes.push(node);
         }

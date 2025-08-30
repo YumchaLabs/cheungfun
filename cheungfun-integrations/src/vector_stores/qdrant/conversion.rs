@@ -73,11 +73,11 @@ pub fn node_to_point(node: &Node, config: &QdrantConfig) -> Result<PointStruct> 
     // Add chunk info
     payload.insert(
         "chunk_start".to_string(),
-        QdrantValue::from(node.chunk_info.start_offset as i64),
+        QdrantValue::from(node.chunk_info.start_char_idx.unwrap_or(0) as i64),
     );
     payload.insert(
         "chunk_end".to_string(),
-        QdrantValue::from(node.chunk_info.end_offset as i64),
+        QdrantValue::from(node.chunk_info.end_char_idx.unwrap_or(0) as i64),
     );
     payload.insert(
         "chunk_index".to_string(),
@@ -191,7 +191,7 @@ fn extract_node_from_payload(
         .and_then(|v| qdrant_value_to_u64(v))
         .unwrap_or(0) as usize;
 
-    let chunk_info = ChunkInfo::new(chunk_start, chunk_end, chunk_index);
+    let chunk_info = ChunkInfo::new(Some(chunk_start), Some(chunk_end), chunk_index);
 
     // Extract embedding - simplified for now
     let embedding = None; // TODO: Extract from vectors when needed

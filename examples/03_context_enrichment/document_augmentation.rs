@@ -49,19 +49,21 @@ mod shared;
 use shared::{get_climate_test_queries, setup_logging, ExampleError, ExampleResult, Timer};
 
 use cheungfun_core::{
-    traits::{Embedder, IndexingPipeline, VectorStore},
-    types::{Query, SearchMode},
-    DistanceMetric, Node, ScoredNode,
+    traits::{Embedder, IndexingPipeline, VectorStore, Loader, Retriever, ResponseGenerator},
+    types::ChunkInfo,
+    DistanceMetric, Node,
 };
 use cheungfun_indexing::{
     loaders::DirectoryLoader, node_parser::text::SentenceSplitter,
     pipeline::DefaultIndexingPipeline, transformers::MetadataExtractor,
+    NodeParser,
 };
 use cheungfun_integrations::{FastEmbedder, InMemoryVectorStore};
 use cheungfun_query::{
     engine::QueryEngine, generator::SiumaiGenerator, retriever::VectorRetriever,
 };
 use siumai::prelude::*;
+use uuid::Uuid;
 
 const DEFAULT_EMBEDDING_DIM: usize = 384;
 
@@ -308,21 +310,35 @@ async fn build_augmented_pipeline(
         .run()
         .await
         .map_err(|e| ExampleError::Cheungfun(e))?;
+
+    // We need to get the actual nodes from the pipeline result
+    // Since IndexingStats doesn't contain nodes, we need to load them separately
+    let loader = Arc::new(DirectoryLoader::new(&data_dir)?);
+    let documents = loader.load().await.map_err(|e| ExampleError::Cheungfun(e))?;
+
+    let splitter = Arc::new(SentenceSplitter::from_defaults(
+        args.chunk_size,
+        args.chunk_overlap,
+    )?);
+
+    // Parse documents into nodes
+    let nodes = splitter.parse_nodes(&documents, false).await.map_err(|e| ExampleError::Cheungfun(e))?;
+
     println!(
         "📊 Processing {} chunks for augmentation...",
-        initial_result.nodes.len()
+        nodes.len()
     );
 
     // Generate questions for each chunk
     let augmentation_timer = Timer::new("Question generation");
     let mut augmented_chunks = Vec::new();
 
-    for (i, node) in initial_result.nodes.iter().enumerate() {
+    for (i, node) in nodes.iter().enumerate() {
         if i % 10 == 0 {
             println!(
                 "   📝 Processing chunk {} of {}...",
                 i + 1,
-                initial_result.nodes.len()
+                nodes.len()
             );
         }
 
@@ -347,7 +363,7 @@ async fn build_augmented_pipeline(
     let augmentation_time = augmentation_timer.finish();
     println!(
         "✅ Question generation completed in {:.2}s",
-        augmentation_time
+        augmentation_time.as_secs_f64()
     );
     println!(
         "📊 Generated {} questions total",
@@ -361,16 +377,19 @@ async fn build_augmented_pipeline(
     for (i, augmented_chunk) in augmented_chunks.iter().enumerate() {
         // Create embedding for augmented content
         let embedding = embedder
-            .embed_text(&augmented_chunk.augmented_content)
+            .embed(&augmented_chunk.augmented_content)
             .await
             .map_err(|e| ExampleError::Cheungfun(e))?;
 
         // Create node with augmented content
-        let chunk_info =
-            cheungfun_core::types::ChunkInfo::new(0, augmented_chunk.augmented_content.len(), i);
+        let chunk_info = ChunkInfo::new(
+            Some(0),
+            Some(augmented_chunk.augmented_content.len()),
+            i
+        );
         let mut node = Node::new(
             augmented_chunk.augmented_content.clone(),
-            format!("augmented_{}", i),
+            Uuid::new_v4(),
             chunk_info,
         );
         node.metadata = augmented_chunk.metadata.clone();
@@ -380,9 +399,12 @@ async fn build_augmented_pipeline(
             augmented_chunk.generated_questions.len().into(),
         );
 
+        // Set embedding on node
+        node = node.with_embedding(embedding);
+
         // Store in vector store
         vector_store
-            .add_node(&node, &embedding)
+            .add(vec![node.clone()])
             .await
             .map_err(|e| ExampleError::Cheungfun(e))?;
 
@@ -390,14 +412,20 @@ async fn build_augmented_pipeline(
     }
 
     let embedding_time = embedding_timer.finish();
-    println!("✅ Augmented embedding completed in {:.2}s", embedding_time);
+    println!("✅ Augmented embedding completed in {:.2}s", embedding_time.as_secs_f64());
 
     // Create query engine
-    let retriever = VectorRetriever::new(vector_store.clone(), args.top_k);
-    let generator = SiumaiGenerator::new()
+    let retriever = VectorRetriever::new(vector_store.clone(), embedder.clone());
+
+    // Create Siumai client
+    let siumai_client = Siumai::builder()
+        .openai()
+        .build()
         .await
-        .map_err(|e| ExampleError::Siumai(e))?;
-    let query_engine = QueryEngine::new(Box::new(retriever), Box::new(generator));
+        .map_err(|e| ExampleError::Siumai(e.to_string()))?;
+
+    let generator = SiumaiGenerator::new(siumai_client);
+    let query_engine = QueryEngine::new(Arc::new(retriever), Arc::new(generator));
 
     Ok((vector_store, query_engine))
 }
@@ -418,43 +446,42 @@ async fn run_test_queries(query_engine: &QueryEngine, verbose: bool) -> ExampleR
             .map_err(|e| ExampleError::Cheungfun(e))?;
         let query_time = timer.finish();
 
-        println!("💬 Response: {}", result.response);
+        println!("💬 Response: {}", result.response.content);
 
         if verbose {
-            if let Some(context) = &result.context {
-                println!("📚 Retrieved {} augmented chunks:", context.len());
-                for (j, node) in context.iter().enumerate() {
-                    println!(
-                        "   {}. Score: {:.3}, Questions: {}",
-                        j + 1,
-                        node.score,
-                        node.node
-                            .metadata
-                            .get("questions_count")
-                            .and_then(|v| v.as_u64())
-                            .unwrap_or(0)
-                    );
+            let context = &result.retrieved_nodes;
+            println!("📚 Retrieved {} augmented chunks:", context.len());
+            for (j, node) in context.iter().enumerate() {
+                println!(
+                    "   {}. Score: {:.3}, Questions: {}",
+                    j + 1,
+                    node.score,
+                    node.node
+                        .metadata
+                        .get("questions_count")
+                        .and_then(|v| v.as_u64())
+                        .unwrap_or(0)
+                );
 
-                    // Show original content (before augmentation)
-                    let content_preview = if node.node.content.contains("Related Questions:") {
-                        node.node
-                            .content
-                            .split("Related Questions:")
-                            .next()
-                            .unwrap_or(&node.node.content)
-                    } else {
-                        &node.node.content
-                    };
+                // Show original content (before augmentation)
+                let content_preview = if node.node.content.contains("Related Questions:") {
+                    node.node
+                        .content
+                        .split("Related Questions:")
+                        .next()
+                        .unwrap_or(&node.node.content)
+                } else {
+                    &node.node.content
+                };
 
-                    println!(
-                        "      Content: {}...",
-                        content_preview.chars().take(100).collect::<String>()
-                    );
-                }
+                println!(
+                    "      Content: {}...",
+                    content_preview.chars().take(100).collect::<String>()
+                );
             }
         }
 
-        println!("⏱️ Query time: {:.2}s", query_time);
+        println!("⏱️ Query time: {:.2}s", query_time.as_secs_f64());
     }
 
     Ok(())
@@ -497,7 +524,7 @@ async fn compare_retrieval_methods(args: &Args, embedder: Arc<dyn Embedder>) -> 
             .await
             .map_err(|e| ExampleError::Cheungfun(e))?;
         let augmented_time = augmented_timer.finish();
-        augmented_total_time += augmented_time;
+        augmented_total_time += augmented_time.as_secs_f64();
 
         // Test standard retrieval
         let standard_timer = Timer::new("standard_query");
@@ -506,13 +533,14 @@ async fn compare_retrieval_methods(args: &Args, embedder: Arc<dyn Embedder>) -> 
             .await
             .map_err(|e| ExampleError::Cheungfun(e))?;
         let standard_time = standard_timer.finish();
-        standard_total_time += standard_time;
+        standard_total_time += standard_time.as_secs_f64();
 
         if args.verbose {
             println!(
                 "   📚 Augmented response: {}",
                 augmented_result
                     .response
+                    .content
                     .chars()
                     .take(100)
                     .collect::<String>()
@@ -521,6 +549,7 @@ async fn compare_retrieval_methods(args: &Args, embedder: Arc<dyn Embedder>) -> 
                 "   📏 Standard response: {}",
                 standard_result
                     .response
+                    .content
                     .chars()
                     .take(100)
                     .collect::<String>()
@@ -529,16 +558,18 @@ async fn compare_retrieval_methods(args: &Args, embedder: Arc<dyn Embedder>) -> 
 
         println!(
             "   ⏱️ Augmented time: {:.2}s, Standard time: {:.2}s",
-            augmented_time, standard_time
+            augmented_time.as_secs_f64(), standard_time.as_secs_f64()
         );
 
         // Calculate average scores
-        if let Some(context) = augmented_result.context {
+        let context = &augmented_result.retrieved_nodes;
+        if !context.is_empty() {
             let avg_score = context.iter().map(|n| n.score).sum::<f32>() / context.len() as f32;
             augmented_scores.push(avg_score);
         }
 
-        if let Some(context) = standard_result.context {
+        let context = &standard_result.retrieved_nodes;
+        if !context.is_empty() {
             let avg_score = context.iter().map(|n| n.score).sum::<f32>() / context.len() as f32;
             standard_scores.push(avg_score);
         }
@@ -547,8 +578,8 @@ async fn compare_retrieval_methods(args: &Args, embedder: Arc<dyn Embedder>) -> 
     // Summary statistics
     println!("\n📈 Performance Summary:");
     println!("   ⏱️ Setup time:");
-    println!("      📚 Augmented: {:.2}s", augmented_time);
-    println!("      📏 Standard: {:.2}s", standard_time);
+    println!("      📚 Augmented: {:.2}s", augmented_time.as_secs_f64());
+    println!("      📏 Standard: {:.2}s", standard_time.as_secs_f64());
 
     println!("   ⏱️ Average query time:");
     println!(
@@ -618,14 +649,20 @@ async fn build_standard_pipeline(
         .await
         .map_err(|e| ExampleError::Cheungfun(e))?;
     println!("✅ Standard indexing completed");
-    println!("📊 Indexed {} standard chunks", index_result.nodes.len());
+    println!("📊 Indexed {} standard chunks", index_result.nodes_created);
 
     // Create query engine
-    let retriever = VectorRetriever::new(vector_store.clone(), args.top_k);
-    let generator = SiumaiGenerator::new()
+    let retriever = VectorRetriever::new(vector_store.clone(), embedder.clone());
+
+    // Create Siumai client
+    let siumai_client = Siumai::builder()
+        .openai()
+        .build()
         .await
-        .map_err(|e| ExampleError::Siumai(e))?;
-    let query_engine = QueryEngine::new(Box::new(retriever), Box::new(generator));
+        .map_err(|e| ExampleError::Siumai(e.to_string()))?;
+
+    let generator = SiumaiGenerator::new(siumai_client);
+    let query_engine = QueryEngine::new(Arc::new(retriever), Arc::new(generator));
 
     Ok((vector_store, query_engine))
 }
@@ -656,10 +693,11 @@ async fn run_interactive_mode(query_engine: &QueryEngine) -> ExampleResult<()> {
         match query_engine.query(query).await {
             Ok(result) => {
                 let query_time = timer.finish();
-                println!("\n💬 Response: {}", result.response);
-                println!("⏱️ Query time: {:.2}s", query_time);
+                println!("\n💬 Response: {}", result.response.content);
+                println!("⏱️ Query time: {:.2}s", query_time.as_secs_f64());
 
-                if let Some(context) = &result.context {
+                let context = &result.retrieved_nodes;
+                if !context.is_empty() {
                     println!(
                         "📚 Used {} augmented chunks with avg score: {:.3}",
                         context.len(),

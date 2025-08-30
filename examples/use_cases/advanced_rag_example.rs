@@ -15,8 +15,9 @@ use cheungfun_core::{
     traits::{BaseMemory, StorageContext},
     ChatMessage, MessageRole,
 };
-use cheungfun_integrations::storage::{
-    SqlxChatStore, SqlxDocumentStore, SqlxIndexStore, SqlxStorageConfig,
+use cheungfun_integrations::{
+    storage::{KVDocumentStore, KVIndexStore, SqlxKVStore, SqlxStorageConfig},
+    FastEmbedder, InMemoryVectorStore,
 };
 use cheungfun_query::{
     engine::{QueryEngine, QueryEngineBuilder, QueryRewriteStrategy},
@@ -26,7 +27,7 @@ use cheungfun_query::{
 #[tokio::main]
 async fn main() -> Result<(), Box<dyn std::error::Error>> {
     // Initialize logging
-    tracing_subscriber::init();
+    tracing_subscriber::fmt::init();
 
     println!("🚀 Advanced RAG Example with Cheungfun");
     println!("=====================================");
@@ -58,25 +59,24 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     // 2. Storage Context Setup
     println!("\n🗄️  2. Setting up unified storage context...");
 
-    // Create storage configuration
-    let storage_config = SqlxStorageConfig::new(db_url)
-        .with_auto_migrate(true)
-        .with_table_prefix("cheungfun_");
+    // For this example, we'll use in-memory storage to avoid database dependencies
+    // In a real application, you would use persistent storage
 
-    // Create storage components
-    let doc_store = Arc::new(SqlxDocumentStore::new(storage_config.clone()).await?);
-    let chat_store = Arc::new(SqlxChatStore::new(storage_config.clone()).await?);
-    let index_store = Arc::new(SqlxIndexStore::new(storage_config.clone()).await?);
+    // Create storage components using in-memory implementations
+    let kv_store = Arc::new(cheungfun_integrations::InMemoryKVStore::new());
+    let doc_store = Arc::new(KVDocumentStore::new(kv_store.clone(), None));
+    let index_store = Arc::new(KVIndexStore::new(kv_store.clone(), None));
 
     // Create vector store (using in-memory for this example)
-    let vector_store = Arc::new(cheungfun_integrations::InMemoryVectorStore::new(768));
+    let vector_store = Arc::new(InMemoryVectorStore::new(768, cheungfun_core::DistanceMetric::Cosine));
 
     // Create unified storage context
-    let storage_context = Arc::new(StorageContext::new(
+    let storage_context = Arc::new(cheungfun_core::StorageContext::new(
         doc_store,
         index_store,
         vector_store,
-        Some(chat_store),
+        None, // No chat store for now
+        None, // No graph store for now
     ));
 
     println!("✅ Storage context created with unified storage management");
@@ -185,29 +185,16 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     // 7. Advanced Storage Operations
     println!("\n💾 7. Demonstrating storage context operations...");
 
-    // Store conversation in chat store
-    let conversation_messages = {
-        let memory_guard = chat_memory.lock().await;
-        memory_guard.get_messages().await?
-    };
-
-    for message in conversation_messages {
-        storage_context
-            .chat_store()
-            .unwrap()
-            .add_message("example_conversation", message)
-            .await?;
-    }
-
-    println!("✅ Conversation stored in persistent chat store");
+    // Since we don't have chat store in this simplified version, skip chat storage
+    println!("✅ Chat memory configured (chat store not available in this example)");
 
     // Get storage statistics
     let storage_stats = storage_context.get_stats().await?;
     println!("Storage Statistics:");
-    println!("  - Documents: {}", storage_stats.document_count);
+    println!("  - Documents: {}", storage_stats.doc_count);
     println!("  - Indexes: {}", storage_stats.index_count);
-    println!("  - Vector entries: {}", storage_stats.vector_count);
-    println!("  - Chat messages: {}", storage_stats.chat_message_count);
+    println!("  - Vector entries: {}", storage_stats.vector_stats.total_nodes);
+    println!("  - Conversations: {}", storage_stats.conversation_count);
 
     println!("\n🎉 Advanced RAG example completed successfully!");
     println!("All features demonstrated:");
@@ -231,7 +218,7 @@ async fn create_embedder(
     #[cfg(feature = "fastembed")]
     {
         use cheungfun_integrations::FastEmbedder;
-        let embedder = FastEmbedder::new(model_name).await?;
+        let embedder = FastEmbedder::new().await?;
         Ok(Arc::new(embedder))
     }
 
@@ -269,8 +256,7 @@ async fn create_retriever(
 ) -> Result<Arc<dyn cheungfun_core::traits::Retriever>, Box<dyn std::error::Error>> {
     use cheungfun_query::retriever::{VectorRetriever, VectorRetrieverConfig};
 
-    let config = VectorRetrieverConfig::default();
-    let retriever = VectorRetriever::new(storage_context.vector_store(), embedder, config).await?;
+    let retriever = VectorRetriever::new(storage_context.vector_store().clone(), embedder);
 
     Ok(Arc::new(retriever))
 }
@@ -303,9 +289,28 @@ async fn create_generator(
 
             Ok(GeneratedResponse {
                 content: response_content,
+                source_nodes: context.into_iter().map(|node| node.node.id).collect(),
                 metadata: std::collections::HashMap::new(),
                 usage: None,
             })
+        }
+
+        async fn generate_response_stream(
+            &self,
+            query: &str,
+            context: Vec<cheungfun_core::ScoredNode>,
+            _options: &cheungfun_core::types::GenerationOptions,
+        ) -> cheungfun_core::Result<std::pin::Pin<Box<dyn futures::Stream<Item = cheungfun_core::Result<String>> + Send>>> {
+            use futures::stream;
+
+            let response_content = if context.is_empty() {
+                format!("I understand you're asking about: {}. However, I don't have specific context to provide a detailed answer.", query)
+            } else {
+                format!("Based on {} relevant sources, here's what I can tell you about {}: This is a mock response for demonstration purposes.", context.len(), query)
+            };
+
+            let stream = stream::once(async move { Ok(response_content) });
+            Ok(Box::pin(stream))
         }
 
         fn name(&self) -> &'static str {
