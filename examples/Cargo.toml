@@ -78,120 +78,202 @@ full = [
     "benchmarks",
 ]
 
-# === New RAG Technique Examples ===
-# Foundational examples
+# === RAG Techniques Examples (Organized by Category) ===
+# Foundational RAG Techniques (01-05)
+[[bin]]
+name = "01_simple_rag"
+path = "Rag_Techniques/01_simple_rag.rs"
+
+[[bin]]
+name = "02_csv_rag"
+path = "Rag_Techniques/02_csv_rag.rs"
+
+[[bin]]
+name = "03_reliable_rag"
+path = "Rag_Techniques/03_reliable_rag.rs"
+
+[[bin]]
+name = "04_chunk_size_optimization"
+path = "Rag_Techniques/04_chunk_size_optimization.rs"
+
+[[bin]]
+name = "05_proposition_chunking"
+path = "Rag_Techniques/05_proposition_chunking.rs"
+
+# Query Enhancement (06-08)
+[[bin]]
+name = "06_query_transformations"
+path = "Rag_Techniques/06_query_transformations.rs"
+
+[[bin]]
+name = "07_hyde"
+path = "Rag_Techniques/07_hyde.rs"
+
+[[bin]]
+name = "08_hype"
+path = "Rag_Techniques/08_hype.rs"
+
+# Context Enrichment (09-14)
+[[bin]]
+name = "09_contextual_chunk_headers"
+path = "Rag_Techniques/09_contextual_chunk_headers.rs"
+
+[[bin]]
+name = "10_relevant_segment_extraction"
+path = "Rag_Techniques/10_relevant_segment_extraction.rs"
+
+[[bin]]
+name = "11_context_window_enhancement"
+path = "Rag_Techniques/11_context_window_enhancement.rs"
+
+[[bin]]
+name = "12_semantic_chunking"
+path = "Rag_Techniques/12_semantic_chunking.rs"
+
+[[bin]]
+name = "13_contextual_compression"
+path = "Rag_Techniques/13_contextual_compression.rs"
+
+[[bin]]
+name = "14_document_augmentation"
+path = "Rag_Techniques/14_document_augmentation.rs"
+
+# Advanced Retrieval Methods (15-19)
+[[bin]]
+name = "15_fusion_retrieval"
+path = "Rag_Techniques/15_fusion_retrieval.rs"
+
+[[bin]]
+name = "16_intelligent_reranking"
+path = "Rag_Techniques/16_intelligent_reranking.rs"
+
+[[bin]]
+name = "17_multi_faceted_filtering"
+path = "Rag_Techniques/17_multi_faceted_filtering.rs"
+
+[[bin]]
+name = "18_hierarchical_indices"
+path = "Rag_Techniques/18_hierarchical_indices.rs"
+
+[[bin]]
+name = "19_ensemble_retrieval"
+path = "Rag_Techniques/19_ensemble_retrieval.rs"
+
+# Iterative and Adaptive Techniques (20-22)
+[[bin]]
+name = "20_retrieval_feedback_loop"
+path = "Rag_Techniques/20_retrieval_feedback_loop.rs"
+
+[[bin]]
+name = "21_adaptive_retrieval"
+path = "Rag_Techniques/21_adaptive_retrieval.rs"
+
+[[bin]]
+name = "22_iterative_retrieval"
+path = "Rag_Techniques/22_iterative_retrieval.rs"
+
+# Advanced Architectures (23-24)
+[[bin]]
+name = "23_self_rag"
+path = "Rag_Techniques/23_self_rag.rs"
+
+[[bin]]
+name = "24_corrective_rag"
+path = "Rag_Techniques/24_corrective_rag.rs"
+
+# === Legacy Examples (Backward Compatibility) ===
+# These provide backward compatibility by pointing to the new Rag_Techniques files
 [[bin]]
 name = "simple_rag"
-path = "01_foundational/simple_rag.rs"
+path = "Rag_Techniques/01_simple_rag.rs"
 
 [[bin]]
 name = "csv_rag"
-path = "01_foundational/csv_rag.rs"
+path = "Rag_Techniques/02_csv_rag.rs"
 
 [[bin]]
 name = "reliable_rag"
-path = "01_foundational/reliable_rag.rs"
+path = "Rag_Techniques/03_reliable_rag.rs"
 
 [[bin]]
 name = "chunk_size_optimization"
-path = "01_foundational/chunk_size_optimization.rs"
+path = "Rag_Techniques/04_chunk_size_optimization.rs"
 
 [[bin]]
 name = "proposition_chunking"
-path = "01_foundational/proposition_chunking.rs"
+path = "Rag_Techniques/05_proposition_chunking.rs"
 
 [[bin]]
 name = "query_transformations"
-path = "02_query_enhancement/query_transformations.rs"
+path = "Rag_Techniques/06_query_transformations.rs"
 
 [[bin]]
 name = "hyde"
-path = "02_query_enhancement/hyde.rs"
+path = "Rag_Techniques/07_hyde.rs"
 
 [[bin]]
 name = "hype"
-path = "02_query_enhancement/hype.rs"
+path = "Rag_Techniques/08_hype.rs"
 
 [[bin]]
 name = "contextual_chunk_headers"
-path = "03_context_enrichment/contextual_chunk_headers.rs"
+path = "Rag_Techniques/09_contextual_chunk_headers.rs"
 
 [[bin]]
 name = "semantic_chunking"
-path = "03_context_enrichment/semantic_chunking.rs"
+path = "Rag_Techniques/12_semantic_chunking.rs"
 
 [[bin]]
 name = "relevant_segment_extraction"
-path = "03_context_enrichment/relevant_segment_extraction.rs"
+path = "Rag_Techniques/10_relevant_segment_extraction.rs"
 
 [[bin]]
 name = "context_window_enhancement"
-path = "03_context_enrichment/context_window_enhancement.rs"
-
-
+path = "Rag_Techniques/11_context_window_enhancement.rs"
 
 [[bin]]
 name = "document_augmentation"
-path = "03_context_enrichment/document_augmentation.rs"
+path = "Rag_Techniques/14_document_augmentation.rs"
 
 [[bin]]
 name = "fusion_retrieval"
-path = "03_retrieval_optimization/fusion_retrieval.rs"
+path = "Rag_Techniques/15_fusion_retrieval.rs"
 
 [[bin]]
 name = "intelligent_reranking"
-path = "03_retrieval_optimization/intelligent_reranking.rs"
+path = "Rag_Techniques/16_intelligent_reranking.rs"
 
 [[bin]]
 name = "multi_faceted_filtering"
-path = "03_retrieval_optimization/multi_faceted_filtering.rs"
+path = "Rag_Techniques/17_multi_faceted_filtering.rs"
 
 [[bin]]
 name = "hierarchical_indices"
-path = "03_retrieval_optimization/hierarchical_indices.rs"
+path = "Rag_Techniques/18_hierarchical_indices.rs"
 
 [[bin]]
 name = "ensemble_retrieval"
-path = "03_retrieval_optimization/ensemble_retrieval.rs"
+path = "Rag_Techniques/19_ensemble_retrieval.rs"
 
 [[bin]]
 name = "self_rag"
-path = "03_retrieval_optimization/self_rag.rs"
+path = "Rag_Techniques/23_self_rag.rs"
 
 [[bin]]
 name = "corrective_rag"
-path = "03_retrieval_optimization/corrective_rag.rs"
-
-# Advanced Retrieval examples
-[[bin]]
-name = "advanced_multi_filtering"
-path = "04_advanced_retrieval/multi_faceted_filtering.rs"
+path = "Rag_Techniques/24_corrective_rag.rs"
 
 [[bin]]
-name = "advanced_contextual_compression"
-path = "04_advanced_retrieval/contextual_compression.rs"
+name = "contextual_compression"
+path = "Rag_Techniques/13_contextual_compression.rs"
 
 [[bin]]
 name = "adaptive_retrieval"
-path = "04_advanced_retrieval/adaptive_retrieval.rs"
+path = "Rag_Techniques/21_adaptive_retrieval.rs"
 
 [[bin]]
 name = "iterative_retrieval"
-path = "04_advanced_retrieval/iterative_retrieval.rs"
-
-[[bin]]
-name = "self_querying"
-path = "04_advanced_retrieval/self_querying.rs"
-
-[[bin]]
-name = "multi_vector_retrieval"
-path = "04_advanced_retrieval/multi_vector_retrieval.rs"
-required-features = ["fastembed"]
-
-[[bin]]
-name = "advanced_ensemble_retrieval"
-path = "04_advanced_retrieval/ensemble_retrieval.rs"
-required-features = ["fastembed"]
+path = "Rag_Techniques/22_iterative_retrieval.rs"
 
 # === Application Examples ===
 [[bin]]
@@ -328,84 +410,9 @@ name = "rag_tools"
 path = "utilities/rag_tools.rs"
 required-features = ["basic"]
 
-# === Legacy Examples (keeping for compatibility) ===
-[[bin]]
-name = "hello_world"
-path = "backup/01_getting_started/hello_world.rs"
-required-features = ["basic"]
+# === Removed Legacy Examples ===
+# Note: backup folder and legacy examples have been cleaned up
+# All functionality is now available in the organized Rag_Techniques folder
 
-[[bin]]
-name = "basic_indexing"
-path = "backup/01_getting_started/basic_indexing.rs"
-required-features = ["basic"]
-
-[[bin]]
-name = "basic_querying"
-path = "backup/01_getting_started/basic_querying.rs"
-required-features = ["basic"]
-
-[[bin]]
-name = "basic_usage"
-path = "backup/01_getting_started/basic_usage.rs"
-required-features = ["basic"]
-
-[[bin]]
-name = "candle_embedder_demo"
-path = "backup/02_core_components/embedders/candle_embedder_demo.rs"
-required-features = ["candle"]
-
-[[bin]]
-name = "candle_embedder_performance"
-path = "backup/02_core_components/embedders/candle_embedder_performance.rs"
-required-features = ["candle", "benchmarks"]
-
-[[bin]]
-name = "qdrant_vector_store_demo"
-path = "backup/02_core_components/vector_stores/qdrant_vector_store_demo.rs"
-required-features = ["qdrant"]
-
-[[bin]]
-name = "advanced_retrieval_demo"
-path = "backup/03_advanced_features/advanced_retrieval_demo.rs"
-required-features = ["performance"]
-
-[[bin]]
-name = "mcp_integration_example"
-path = "backup/04_integrations/mcp_integration_example.rs"
-required-features = ["intelligent-assistant"]
-
-
-[[bin]]
-name = "end_to_end_indexing"
-path = "backup/06_production/end_to_end_indexing.rs"
-required-features = ["knowledge-base"]
-
-[[bin]]
-name = "end_to_end_query"
-path = "backup/06_production/end_to_end_query.rs"
-required-features = ["knowledge-base"]
-
-[[bin]]
-name = "end_to_end_retrieval_demo"
-path = "backup/06_production/end_to_end_retrieval_demo.rs"
-required-features = ["knowledge-base"]
-
-[[bin]]
-name = "cuda_embedder_demo"
-path = "backup/07_gpu_acceleration/cuda_embedder_demo.rs"
-required-features = ["gpu"]
-
-[[bin]]
-name = "metal_embedder_demo"
-path = "backup/07_gpu_acceleration/metal_embedder_demo.rs"
-required-features = ["gpu"]
-
-[[bin]]
-name = "rag_agent_main"
-path = "backup/08_rag_agent/main.rs"
-required-features = ["intelligent-assistant"]
-
-[[bin]]
-name = "simple_rag_agent"
-path = "backup/08_rag_agent/simple_main.rs"
-required-features = ["intelligent-assistant"]
+# All backup examples have been removed
+# Use the organized Rag_Techniques examples instead

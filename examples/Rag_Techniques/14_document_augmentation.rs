@@ -49,7 +49,7 @@ mod shared;
 use shared::{get_climate_test_queries, setup_logging, ExampleError, ExampleResult, Timer};
 
 use cheungfun_core::{
-    traits::{Embedder, IndexingPipeline, VectorStore, Loader, Retriever, ResponseGenerator},
+    traits::{Embedder, IndexingPipeline, VectorStore, Loader},
     types::ChunkInfo,
     DistanceMetric, Node,
 };
@@ -171,7 +171,7 @@ async fn run_document_augmentation(args: &Args, embedder: Arc<dyn Embedder>) -> 
     let timer = Timer::new("Document augmentation setup");
 
     // Build augmented indexing pipeline
-    let (augmented_store, query_engine) = build_augmented_pipeline(args, embedder.clone()).await?;
+    let (_augmented_store, query_engine) = build_augmented_pipeline(args, embedder.clone()).await?;
 
     timer.finish();
 
@@ -190,8 +190,8 @@ async fn generate_questions_for_chunk(
     num_questions: usize,
 ) -> ExampleResult<Vec<String>> {
     // Create question generation prompt
-    let prompt = format!(
-        r#"Generate {} diverse, specific questions that can be answered using the following text chunk. 
+    let _prompt = format!(
+        r#"Generate {} diverse, specific questions that can be answered using the following text chunk.
 The questions should:
 1. Be directly answerable from the content
 2. Cover different aspects of the information
@@ -306,7 +306,7 @@ async fn build_augmented_pipeline(
         .build()?;
 
     // Run initial processing to get chunks
-    let initial_result = initial_pipeline
+    let _initial_result = initial_pipeline
         .run()
         .await
         .map_err(|e| ExampleError::Cheungfun(e))?;
@@ -495,14 +495,14 @@ async fn compare_retrieval_methods(args: &Args, embedder: Arc<dyn Embedder>) -> 
     // 1. Build augmented system
     println!("📚 1. Building Document Augmentation System...");
     let augmented_timer = Timer::new("Augmented system setup");
-    let (augmented_store, augmented_engine) =
+    let (_augmented_store, augmented_engine) =
         build_augmented_pipeline(args, embedder.clone()).await?;
     let augmented_time = augmented_timer.finish();
 
     // 2. Build standard system
     println!("\n📏 2. Building Standard Retrieval System...");
     let standard_timer = Timer::new("Standard system setup");
-    let (standard_store, standard_engine) = build_standard_pipeline(args, embedder.clone()).await?;
+    let (_standard_store, standard_engine) = build_standard_pipeline(args, embedder.clone()).await?;
     let standard_time = standard_timer.finish();
 
     // 3. Compare performance on test queries
