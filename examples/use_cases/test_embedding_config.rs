@@ -63,7 +63,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     println!();
 
     // 测试批量嵌入
-    let test_texts = vec![
+    let test_texts = [
         "Unity C# scripting tutorial",
         "Game development with Unity",
         "3D graphics programming",

@@ -24,16 +24,12 @@
 //! ```
 
 use cheungfun::prelude::*;
-use cheungfun_query::advanced::{
-    fusion::{DistributionBasedFusion, ReciprocalRankFusion},
-    search_strategies::{HybridSearchStrategy, KeywordSearchStrategy, VectorSearchStrategy},
-};
 use clap::Parser;
 use std::{
     collections::HashMap,
     time::{Duration, Instant},
 };
-use tracing::{debug, info, warn};
+use tracing::{info, warn};
 
 #[derive(Parser, Debug)]
 #[command(name = "adaptive-retrieval")]
@@ -95,14 +91,21 @@ pub struct StrategyMetrics {
     pub query_count: usize,
 }
 
-impl StrategyMetrics {
-    pub fn new() -> Self {
+impl Default for StrategyMetrics {
+    fn default() -> Self {
         Self {
             avg_response_time: Duration::from_millis(0),
             avg_quality_score: 0.0,
             success_rate: 1.0,
             query_count: 0,
         }
+    }
+}
+
+impl StrategyMetrics {
+    #[must_use]
+    pub fn new() -> Self {
+        Self::default()
     }
 
     /// Update metrics with new measurement.
@@ -163,11 +166,18 @@ pub struct VectorStrategy {
     name: String,
 }
 
-impl VectorStrategy {
-    pub fn new() -> Self {
+impl Default for VectorStrategy {
+    fn default() -> Self {
         Self {
             name: "vector".to_string(),
         }
+    }
+}
+
+impl VectorStrategy {
+    #[must_use]
+    pub fn new() -> Self {
+        Self::default()
     }
 }
 
@@ -193,11 +203,18 @@ pub struct KeywordStrategy {
     name: String,
 }
 
-impl KeywordStrategy {
-    pub fn new() -> Self {
+impl Default for KeywordStrategy {
+    fn default() -> Self {
         Self {
             name: "keyword".to_string(),
         }
+    }
+}
+
+impl KeywordStrategy {
+    #[must_use]
+    pub fn new() -> Self {
+        Self::default()
     }
 }
 
@@ -223,11 +240,17 @@ pub struct HybridStrategy {
     name: String,
 }
 
-impl HybridStrategy {
-    pub fn new() -> Self {
+impl Default for HybridStrategy {
+    fn default() -> Self {
         Self {
             name: "hybrid".to_string(),
         }
+    }
+}
+
+impl HybridStrategy {
+    pub fn new() -> Self {
+        Self::default()
     }
 }
 
@@ -249,6 +272,7 @@ impl RetrievalStrategy for HybridStrategy {
 
 impl AdaptiveRetriever {
     /// Create a new adaptive retriever.
+    #[must_use]
     pub fn new(
         performance_threshold: Duration,
         quality_threshold: f32,
@@ -274,6 +298,7 @@ impl AdaptiveRetriever {
     }
 
     /// Classify query to determine optimal strategy.
+    #[must_use]
     pub fn classify_query(&self, query: &str) -> QueryType {
         let query_lower = query.to_lowercase();
 
@@ -297,6 +322,7 @@ impl AdaptiveRetriever {
     }
 
     /// Select optimal strategy based on query type and performance metrics.
+    #[must_use]
     pub fn select_strategy(&self, query_type: &QueryType) -> String {
         if !self.adaptive_enabled {
             return "hybrid".to_string(); // Default strategy
@@ -331,7 +357,7 @@ impl AdaptiveRetriever {
                 let success_score = metrics.success_rate;
 
                 let composite_score =
-                    (performance_score * 0.3 + quality_score * 0.4 + success_score * 0.3);
+                    performance_score * 0.3 + quality_score * 0.4 + success_score * 0.3;
 
                 if composite_score > best_score {
                     best_score = composite_score;
@@ -395,6 +421,7 @@ impl AdaptiveRetriever {
     }
 
     /// Get current performance metrics.
+    #[must_use]
     pub fn get_metrics(&self) -> &HashMap<String, StrategyMetrics> {
         &self.metrics
     }
@@ -406,7 +433,7 @@ fn create_mock_results(query: &str, top_k: usize, base_score: f32) -> Vec<Scored
     use uuid::Uuid;
 
     let doc_id = Uuid::new_v4();
-    let chunk_info = ChunkInfo::new(0, 100, 0);
+    let chunk_info = ChunkInfo::new(Some(0), Some(100), 0);
 
     (0..top_k)
         .map(|i| {
@@ -425,7 +452,7 @@ pub enum ExampleError {
 impl std::fmt::Display for ExampleError {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         match self {
-            ExampleError::Other(e) => write!(f, "Error: {}", e),
+            ExampleError::Other(e) => write!(f, "Error: {e}"),
         }
     }
 }
@@ -478,12 +505,12 @@ async fn main() -> std::result::Result<(), ExampleError> {
     println!("{}", "=".repeat(50));
 
     for (query, expected_type) in test_queries {
-        println!("\nQuery: {}", query);
+        println!("\nQuery: {query}");
 
         // Classify query
         let classified_type = retriever.classify_query(query);
-        println!("Expected Type: {:?}", expected_type);
-        println!("Classified Type: {:?}", classified_type);
+        println!("Expected Type: {expected_type:?}");
+        println!("Classified Type: {classified_type:?}");
 
         // Perform adaptive retrieval
         let results = retriever.retrieve_adaptive(query, args.top_k);
@@ -508,7 +535,7 @@ async fn main() -> std::result::Result<(), ExampleError> {
     println!("{}", "=".repeat(50));
 
     for (strategy_name, metrics) in retriever.get_metrics() {
-        println!("Strategy: {}", strategy_name);
+        println!("Strategy: {strategy_name}");
         println!("  Queries processed: {}", metrics.query_count);
         println!(
             "  Avg response time: {:.2}ms",

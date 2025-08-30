@@ -68,7 +68,10 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     let index_store = Arc::new(KVIndexStore::new(kv_store.clone(), None));
 
     // Create vector store (using in-memory for this example)
-    let vector_store = Arc::new(InMemoryVectorStore::new(768, cheungfun_core::DistanceMetric::Cosine));
+    let vector_store = Arc::new(InMemoryVectorStore::new(
+        768,
+        cheungfun_core::DistanceMetric::Cosine,
+    ));
 
     // Create unified storage context
     let storage_context = Arc::new(cheungfun_core::StorageContext::new(
@@ -193,7 +196,10 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     println!("Storage Statistics:");
     println!("  - Documents: {}", storage_stats.doc_count);
     println!("  - Indexes: {}", storage_stats.index_count);
-    println!("  - Vector entries: {}", storage_stats.vector_stats.total_nodes);
+    println!(
+        "  - Vector entries: {}",
+        storage_stats.vector_stats.total_nodes
+    );
     println!("  - Conversations: {}", storage_stats.conversation_count);
 
     println!("\n🎉 Advanced RAG example completed successfully!");
@@ -300,7 +306,9 @@ async fn create_generator(
             query: &str,
             context: Vec<cheungfun_core::ScoredNode>,
             _options: &cheungfun_core::types::GenerationOptions,
-        ) -> cheungfun_core::Result<std::pin::Pin<Box<dyn futures::Stream<Item = cheungfun_core::Result<String>> + Send>>> {
+        ) -> cheungfun_core::Result<
+            std::pin::Pin<Box<dyn futures::Stream<Item = cheungfun_core::Result<String>> + Send>>,
+        > {
             use futures::stream;
 
             let response_content = if context.is_empty() {

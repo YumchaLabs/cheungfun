@@ -55,7 +55,7 @@ use cheungfun_core::{
 };
 use cheungfun_indexing::{
     loaders::DirectoryLoader,
-    node_parser::{config::SemanticSplitterConfig, text::SemanticSplitter, text::SentenceSplitter},
+    node_parser::{text::SemanticSplitter, text::SentenceSplitter},
     pipeline::DefaultIndexingPipeline,
     transformers::MetadataExtractor,
 };
@@ -207,7 +207,7 @@ async fn run_semantic_chunking(args: &Args, embedder: Arc<dyn Embedder>) -> Exam
     let semantic_splitter = create_semantic_splitter(args, embedder.clone())?;
 
     // Build indexing pipeline with semantic chunking
-    let (vector_store, query_engine) =
+    let (_vector_store, query_engine) =
         build_semantic_pipeline(args, semantic_splitter, embedder).await?;
 
     timer.finish();
@@ -275,10 +275,7 @@ async fn build_semantic_pipeline(
 
     // Run indexing
     let indexing_timer = Timer::new("Semantic indexing");
-    let index_result = pipeline
-        .run()
-        .await
-        .map_err(|e| ExampleError::Cheungfun(e))?;
+    let index_result = pipeline.run().await.map_err(ExampleError::Cheungfun)?;
     let indexing_time = indexing_timer.finish();
 
     println!(
@@ -314,7 +311,7 @@ async fn compare_chunking_methods(args: &Args, embedder: Arc<dyn Embedder>) -> E
     println!("🧠 1. Building Semantic Chunking System...");
     let semantic_timer = Timer::new("Semantic chunking");
     let semantic_splitter = create_semantic_splitter(args, embedder.clone())?;
-    let (semantic_store, semantic_engine) =
+    let (_semantic_store, semantic_engine) =
         build_semantic_pipeline(args, semantic_splitter, embedder.clone()).await?;
     let semantic_time = semantic_timer.finish();
 
@@ -325,7 +322,7 @@ async fn compare_chunking_methods(args: &Args, embedder: Arc<dyn Embedder>) -> E
         args.traditional_chunk_size,
         args.traditional_chunk_overlap,
     )?);
-    let (traditional_store, traditional_engine) =
+    let (_traditional_store, traditional_engine) =
         build_traditional_pipeline(args, traditional_splitter, embedder).await?;
     let traditional_time = traditional_timer.finish();
 
@@ -387,10 +384,7 @@ async fn build_traditional_pipeline(
         .build()?;
 
     // Run indexing
-    let index_result = pipeline
-        .run()
-        .await
-        .map_err(|e| ExampleError::Cheungfun(e))?;
+    let index_result = pipeline.run().await.map_err(ExampleError::Cheungfun)?;
     println!("✅ Traditional indexing completed");
     println!("📊 Indexed {} nodes", index_result.nodes_created);
 
@@ -428,7 +422,7 @@ async fn compare_retrieval_performance(
         let semantic_result = semantic_engine
             .query(query)
             .await
-            .map_err(|e| ExampleError::Cheungfun(e))?;
+            .map_err(ExampleError::Cheungfun)?;
         let semantic_time = semantic_timer.finish();
         semantic_total_time += semantic_time;
 
@@ -437,7 +431,7 @@ async fn compare_retrieval_performance(
         let traditional_result = traditional_engine
             .query(query)
             .await
-            .map_err(|e| ExampleError::Cheungfun(e))?;
+            .map_err(ExampleError::Cheungfun)?;
         let traditional_time = traditional_timer.finish();
         traditional_total_time += traditional_time;
 
@@ -532,29 +526,27 @@ async fn run_test_queries(query_engine: &QueryEngine, verbose: bool) -> ExampleR
         let result = query_engine
             .query(query)
             .await
-            .map_err(|e| ExampleError::Cheungfun(e))?;
+            .map_err(ExampleError::Cheungfun)?;
         let query_time = timer.finish();
 
         println!("💬 Response: {}", result.response.content);
 
-        if verbose {
-            if !result.retrieved_nodes.is_empty() {
+        if verbose && !result.retrieved_nodes.is_empty() {
+            println!(
+                "📚 Retrieved {} context chunks:",
+                result.retrieved_nodes.len()
+            );
+            for (j, node) in result.retrieved_nodes.iter().enumerate() {
                 println!(
-                    "📚 Retrieved {} context chunks:",
-                    result.retrieved_nodes.len()
+                    "   {}. Score: {:.3}, Length: {} chars",
+                    j + 1,
+                    node.score,
+                    node.node.content.len()
                 );
-                for (j, node) in result.retrieved_nodes.iter().enumerate() {
-                    println!(
-                        "   {}. Score: {:.3}, Length: {} chars",
-                        j + 1,
-                        node.score,
-                        node.node.content.len()
-                    );
-                    println!(
-                        "      Content: {}...",
-                        node.node.content.chars().take(100).collect::<String>()
-                    );
-                }
+                println!(
+                    "      Content: {}...",
+                    node.node.content.chars().take(100).collect::<String>()
+                );
             }
         }
 

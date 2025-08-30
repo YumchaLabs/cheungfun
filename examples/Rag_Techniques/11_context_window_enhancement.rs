@@ -299,10 +299,7 @@ async fn build_sentence_pipeline(
 
     // Run indexing
     let indexing_timer = Timer::new("Sentence-level indexing");
-    let index_result = pipeline
-        .run()
-        .await
-        .map_err(|e| ExampleError::Cheungfun(e))?;
+    let index_result = pipeline.run().await.map_err(ExampleError::Cheungfun)?;
     let indexing_time = indexing_timer.finish();
 
     println!(
@@ -425,7 +422,7 @@ async fn run_test_queries(
         let query_embedding = embedder
             .embed(query)
             .await
-            .map_err(|e| ExampleError::Cheungfun(e))?;
+            .map_err(ExampleError::Cheungfun)?;
 
         // Step 2: Retrieve relevant sentences
         let search_query = Query::builder()
@@ -438,7 +435,7 @@ async fn run_test_queries(
         let retrieved_sentences = sentence_store
             .search(&search_query)
             .await
-            .map_err(|e| ExampleError::Cheungfun(e))?;
+            .map_err(ExampleError::Cheungfun)?;
 
         println!(
             "🔍 Retrieved {} initial sentences",
@@ -555,7 +552,7 @@ async fn compare_retrieval_methods(args: &Args, embedder: Arc<dyn Embedder>) -> 
         let query_embedding = embedder
             .embed(query)
             .await
-            .map_err(|e| ExampleError::Cheungfun(e))?;
+            .map_err(ExampleError::Cheungfun)?;
 
         let search_query = Query::builder()
             .text(query.to_string())
@@ -567,12 +564,12 @@ async fn compare_retrieval_methods(args: &Args, embedder: Arc<dyn Embedder>) -> 
         let retrieved_sentences = sentence_store
             .search(&search_query)
             .await
-            .map_err(|e| ExampleError::Cheungfun(e))?;
+            .map_err(ExampleError::Cheungfun)?;
 
         let enhanced_contexts =
             enhance_with_context_windows(retrieved_sentences, args.window_size).await?;
 
-        let combined_context = enhanced_contexts
+        let _combined_context = enhanced_contexts
             .iter()
             .take(args.top_k)
             .map(|ctx| ctx.full_context.clone())
@@ -586,7 +583,7 @@ async fn compare_retrieval_methods(args: &Args, embedder: Arc<dyn Embedder>) -> 
                 &cheungfun_core::types::GenerationOptions::default(),
             )
             .await
-            .map_err(|e| ExampleError::Cheungfun(e))?;
+            .map_err(ExampleError::Cheungfun)?;
         let window_time = window_timer.finish();
         window_total_time += window_time.as_secs_f64();
 
@@ -595,7 +592,7 @@ async fn compare_retrieval_methods(args: &Args, embedder: Arc<dyn Embedder>) -> 
         let standard_result = standard_engine
             .query(query)
             .await
-            .map_err(|e| ExampleError::Cheungfun(e))?;
+            .map_err(ExampleError::Cheungfun)?;
         let standard_time = standard_timer.finish();
         standard_total_time += standard_time.as_secs_f64();
 
@@ -715,10 +712,7 @@ async fn build_standard_pipeline(
         .build()?;
 
     // Run indexing
-    let index_result = pipeline
-        .run()
-        .await
-        .map_err(|e| ExampleError::Cheungfun(e))?;
+    let index_result = pipeline.run().await.map_err(ExampleError::Cheungfun)?;
     println!("✅ Standard indexing completed");
     println!("📊 Indexed {} standard chunks", index_result.nodes_created);
 
@@ -787,7 +781,7 @@ async fn run_interactive_mode(
                 let enhanced_contexts =
                     enhance_with_context_windows(retrieved_sentences, args.window_size).await?;
 
-                let combined_context = enhanced_contexts
+                let _combined_context = enhanced_contexts
                     .iter()
                     .take(args.top_k)
                     .map(|ctx| ctx.full_context.clone())

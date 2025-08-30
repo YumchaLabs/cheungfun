@@ -289,7 +289,7 @@ async fn run_demo_queries(
         let response = query_engine
             .query(query)
             .await
-            .map_err(|e| ExampleError::Cheungfun(e))?;
+            .map_err(ExampleError::Cheungfun)?;
 
         let query_time = timer.finish();
         metrics.record_query(query_time);

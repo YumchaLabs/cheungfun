@@ -39,7 +39,7 @@ cargo run --bin hierarchical_indices --features fastembed -- --interactive
 */
 
 use clap::Parser;
-use std::{collections::HashMap, path::PathBuf, sync::Arc};
+use std::{path::PathBuf, sync::Arc};
 
 #[path = "../shared/mod.rs"]
 mod shared;
@@ -49,7 +49,7 @@ use shared::{get_climate_test_queries, setup_logging, ExampleError, ExampleResul
 use cheungfun_core::{
     traits::{Embedder, IndexingPipeline, ResponseGenerator, VectorStore},
     types::{GenerationOptions, Query, SearchMode},
-    DistanceMetric, Node, ScoredNode,
+    DistanceMetric, ScoredNode,
 };
 use cheungfun_indexing::{
     loaders::DirectoryLoader, node_parser::text::SentenceSplitter,
@@ -166,7 +166,7 @@ async fn build_hierarchical_levels(
     let mut levels = Vec::new();
 
     // Define hierarchy levels with different granularities
-    let level_configs = vec![
+    let level_configs = [
         ("Document", 4000, 400), // Document level
         ("Section", 1500, 150),  // Section level
         ("Paragraph", 600, 60),  // Paragraph level
@@ -216,16 +216,13 @@ async fn build_hierarchical_levels(
             .with_vector_store(vector_store.clone())
             .build()?;
 
-        let index_result = pipeline
-            .run()
-            .await
-            .map_err(|e| ExampleError::Cheungfun(e))?;
+        let index_result = pipeline.run().await.map_err(ExampleError::Cheungfun)?;
         let indexing_time = timer.finish();
 
         println!(
             "   ✅ Level {} completed in {:.2}s, {} nodes",
             level_idx + 1,
-            indexing_time,
+            indexing_time.as_secs_f64(),
             index_result.nodes_created
         );
 
@@ -263,7 +260,7 @@ async fn search_hierarchical_levels(
             .vector_store
             .search(&search_query)
             .await
-            .map_err(|e| ExampleError::Cheungfun(e))?;
+            .map_err(ExampleError::Cheungfun)?;
 
         let avg_score = if chunks.is_empty() {
             0.0
@@ -283,11 +280,11 @@ async fn search_hierarchical_levels(
 
 async fn run_test_queries(
     levels: &[HierarchicalLevel],
-    embedder: Arc<dyn Embedder>,
+    _embedder: Arc<dyn Embedder>,
     args: &Args,
 ) -> ExampleResult<()> {
     let test_queries = get_climate_test_queries();
-    let generator = SiumaiGenerator::new(create_siumai_client().await?);
+    let _generator = SiumaiGenerator::new(create_siumai_client().await?);
 
     for (i, query) in test_queries.iter().enumerate() {
         println!("\n📝 Query {}: {}", i + 1, query);
@@ -313,7 +310,7 @@ async fn run_test_queries(
             .map_err(|e| ExampleError::Config(format!("Generation failed: {}", e)))?;
 
         println!("💬 Response: {}", response.content);
-        println!("⏱️ Search time: {:.2}s", search_time);
+        println!("⏱️ Search time: {:.2}s", search_time.as_secs_f64());
 
         if args.verbose {
             display_hierarchical_results(&results);
@@ -376,7 +373,7 @@ async fn compare_hierarchical_vs_flat(
         let flat_chunks = flat_store
             .search(&search_query)
             .await
-            .map_err(|e| ExampleError::Cheungfun(e))?;
+            .map_err(ExampleError::Cheungfun)?;
 
         let hier_avg = if hier_chunks.is_empty() {
             0.0
@@ -398,8 +395,8 @@ async fn compare_hierarchical_vs_flat(
     }
 
     println!("\n📈 Setup Time Comparison:");
-    println!("   🏗️ Hierarchical: {:.2}s", hier_time);
-    println!("   📏 Flat: {:.2}s", flat_time);
+    println!("   🏗️ Hierarchical: {:.2}s", hier_time.as_secs_f64());
+    println!("   📏 Flat: {:.2}s", flat_time.as_secs_f64());
 
     Ok(())
 }
@@ -433,10 +430,7 @@ async fn build_flat_pipeline(
         .with_vector_store(vector_store.clone())
         .build()?;
 
-    let index_result = pipeline
-        .run()
-        .await
-        .map_err(|e| ExampleError::Cheungfun(e))?;
+    let index_result = pipeline.run().await.map_err(ExampleError::Cheungfun)?;
     println!("✅ Flat indexing: {} nodes", index_result.nodes_created);
 
     let siumai_client = create_siumai_client().await?;
@@ -449,7 +443,7 @@ async fn build_flat_pipeline(
 
 async fn run_interactive_mode(
     levels: &[HierarchicalLevel],
-    embedder: Arc<dyn Embedder>,
+    _embedder: Arc<dyn Embedder>,
     args: &Args,
 ) -> ExampleResult<()> {
     println!("\n🎯 Interactive Mode - Enter your queries (type 'quit' to exit):");
@@ -490,7 +484,7 @@ async fn run_interactive_mode(
             Ok(response) => {
                 let query_time = timer.finish();
                 println!("\n💬 Response: {}", response.content);
-                println!("⏱️ Query time: {:.2}s", query_time);
+                println!("⏱️ Query time: {:.2}s", query_time.as_secs_f64());
 
                 if args.verbose {
                     display_hierarchical_results(&results);

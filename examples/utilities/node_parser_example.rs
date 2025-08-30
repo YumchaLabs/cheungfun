@@ -191,7 +191,7 @@ async fn test_sentence_splitter(document: &Document) -> Result<(), Box<dyn std::
     // Check relationships
     let mut has_relationships = 0;
     for node in &nodes {
-        if !node.relationships.is_empty() {
+        if !node.relationships.relationship_types().is_empty() {
             has_relationships += 1;
         }
     }

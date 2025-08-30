@@ -4,7 +4,6 @@
 //! that are used across multiple examples.
 
 use anyhow::Result;
-use async_trait::async_trait;
 use cheungfun_core::{error::CheungfunError, traits::Embedder};
 use std::collections::hash_map::DefaultHasher;
 use std::hash::{Hash, Hasher};
@@ -22,6 +21,7 @@ pub struct MockEmbedder {
 
 impl MockEmbedder {
     /// Create a new mock embedder with the specified dimension
+    #[must_use]
     pub fn new(dimension: usize) -> Self {
         Self { dimension }
     }
@@ -36,8 +36,8 @@ impl Embedder for MockEmbedder {
         let hash = hasher.finish();
 
         let mut embedding = vec![0.0; self.dimension];
-        for i in 0..self.dimension {
-            embedding[i] = ((hash.wrapping_add(i as u64) % 1000) as f32 - 500.0) / 500.0;
+        for (i, item) in embedding.iter_mut().enumerate().take(self.dimension) {
+            *item = ((hash.wrapping_add(i as u64) % 1000) as f32 - 500.0) / 500.0;
         }
 
         // Normalize the embedding
@@ -67,7 +67,7 @@ impl Embedder for MockEmbedder {
         self.dimension
     }
 
-    fn model_name(&self) -> &str {
+    fn model_name(&self) -> &'static str {
         "mock-embedder-v1"
     }
 }
@@ -112,6 +112,7 @@ pub fn get_document_paths(temp_dir: &TempDir) -> Result<Vec<std::path::PathBuf>>
 }
 
 /// Format duration in a human-readable way
+#[must_use]
 pub fn format_duration(duration: std::time::Duration) -> String {
     if duration.as_secs() > 0 {
         format!("{:.2}s", duration.as_secs_f64())
@@ -123,6 +124,7 @@ pub fn format_duration(duration: std::time::Duration) -> String {
 }
 
 /// Format bytes in a human-readable way
+#[must_use]
 pub fn format_bytes(bytes: u64) -> String {
     const UNITS: &[&str] = &["B", "KB", "MB", "GB", "TB"];
     let mut size = bytes as f64;
@@ -143,35 +145,35 @@ pub fn format_bytes(bytes: u64) -> String {
 /// Print a section header
 pub fn print_section(title: &str) {
     println!();
-    println!("🔹 {}", title);
+    println!("🔹 {title}");
     println!("{}", "=".repeat(title.len() + 3));
 }
 
 /// Print a subsection header
 pub fn print_subsection(title: &str) {
     println!();
-    println!("📌 {}", title);
+    println!("📌 {title}");
     println!("{}", "-".repeat(title.len() + 3));
 }
 
 /// Print a success message
 pub fn print_success(message: &str) {
-    println!("✅ {}", message);
+    println!("✅ {message}");
 }
 
 /// Print an info message
 pub fn print_info(message: &str) {
-    println!("ℹ️  {}", message);
+    println!("ℹ️  {message}");
 }
 
 /// Print a warning message
 pub fn print_warning(message: &str) {
-    println!("⚠️  {}", message);
+    println!("⚠️  {message}");
 }
 
 /// Print an error message
 pub fn print_error(message: &str) {
-    println!("❌ {}", message);
+    println!("❌ {message}");
 }
 
 /// Initialize logging for examples
@@ -182,6 +184,7 @@ pub fn init_logging() {
 }
 
 /// Check if a feature is available
+#[must_use]
 pub fn check_feature(feature_name: &str) -> bool {
     match feature_name {
         "fastembed" => cfg!(feature = "fastembed"),

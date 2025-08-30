@@ -4,7 +4,7 @@
 //! and visualizations from benchmark results.
 
 use anyhow::Result;
-use std::path::Path;
+use std::{fmt::Write, path::Path};
 
 // Note: Plotting features are disabled to avoid complex dependencies
 // Enable plotting by uncommenting the features below and adding plotters dependency
@@ -15,6 +15,7 @@ pub struct ReportGenerator {
 }
 
 impl ReportGenerator {
+    #[must_use]
     pub fn new(title: String, output_dir: String) -> Self {
         Self { title, output_dir }
     }
@@ -23,7 +24,7 @@ impl ReportGenerator {
         let mut report = format!("# {}\n\n", self.title);
 
         for (i, (value, label)) in data.iter().zip(labels.iter()).enumerate() {
-            report.push_str(&format!("{}. {}: {:.2}\n", i + 1, label, value));
+            writeln!(report, "{}. {}: {:.2}", i + 1, label, value).unwrap();
         }
 
         Ok(report)

@@ -22,13 +22,13 @@ use clap::Parser;
 mod shared;
 
 use shared::{
-    constants::*, get_climate_test_queries, print_query_results, setup_logging, ExampleError,
-    ExampleResult, PerformanceMetrics, Timer,
+    constants::*, get_climate_test_queries, setup_logging, ExampleError, ExampleResult,
+    PerformanceMetrics, Timer,
 };
 use std::{path::PathBuf, sync::Arc};
 
 use cheungfun_core::{
-    traits::{Embedder, IndexingPipeline, VectorStore},
+    traits::{Embedder, IndexingPipeline},
     DistanceMetric,
 };
 use cheungfun_indexing::{
@@ -365,7 +365,7 @@ async fn reliable_query(
     let response = query_engine
         .query(query)
         .await
-        .map_err(|e| ExampleError::Cheungfun(e))?;
+        .map_err(ExampleError::Cheungfun)?;
 
     // Extract similarity scores from retrieved context
     let max_similarity = response

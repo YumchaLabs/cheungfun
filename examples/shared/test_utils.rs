@@ -1,6 +1,5 @@
 //! Test utilities and helper functions for examples.
 
-use cheungfun_core::prelude::*;
 use std::time::Instant;
 use tokio::time::Duration;
 
@@ -72,7 +71,7 @@ impl Timer {
     }
 
     pub fn elapsed(&self) -> Duration {
-        self.start.elapsed().into()
+        self.start.elapsed()
     }
 
     pub fn finish(self) -> Duration {

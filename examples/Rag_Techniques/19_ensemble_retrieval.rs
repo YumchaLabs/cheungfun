@@ -211,7 +211,10 @@ async fn build_indexing_pipeline(
         .map_err(|e| ExampleError::Cheungfun(e))?;
     let indexing_time = indexing_timer.finish();
 
-    println!("✅ Indexing completed in {:.2}s", indexing_time.as_secs_f64());
+    println!(
+        "✅ Indexing completed in {:.2}s",
+        indexing_time.as_secs_f64()
+    );
     println!("📊 Indexed {} nodes", index_result.nodes_created);
 
     let siumai_client = create_siumai_client().await?;

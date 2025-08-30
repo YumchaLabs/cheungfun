@@ -39,6 +39,7 @@ pub struct PerformanceMetrics {
 }
 
 impl PerformanceMetrics {
+    #[must_use]
     pub fn new(benchmark_name: String) -> Self {
         Self {
             run_id: Uuid::new_v4(),
@@ -95,6 +96,7 @@ pub struct BenchmarkRunner {
 
 impl BenchmarkRunner {
     /// Create a new benchmark runner with the given configuration
+    #[must_use]
     pub fn new(config: BenchmarkConfig) -> Self {
         Self {
             config,
@@ -114,6 +116,7 @@ impl BenchmarkRunner {
     }
 
     /// Finish the benchmark and return metrics
+    #[must_use]
     pub fn finish(self) -> PerformanceMetrics {
         let total_duration = self
             .start_time
@@ -148,9 +151,10 @@ impl BenchmarkRunner {
 
 /// Utility functions for benchmark analysis
 pub mod analysis {
-    use super::*;
+    use super::Duration;
 
     /// Calculate the mean of a series of durations
+    #[must_use]
     pub fn mean_duration(durations: &[Duration]) -> Duration {
         if durations.is_empty() {
             return Duration::default();
@@ -161,6 +165,7 @@ pub mod analysis {
     }
 
     /// Calculate standard deviation of durations
+    #[must_use]
     pub fn std_dev_duration(durations: &[Duration]) -> Duration {
         if durations.len() < 2 {
             return Duration::default();
@@ -180,6 +185,7 @@ pub mod analysis {
     }
 
     /// Calculate percentile for a sorted list of durations
+    #[must_use]
     pub fn percentile(sorted_durations: &[Duration], percentile: f64) -> Duration {
         if sorted_durations.is_empty() {
             return Duration::default();

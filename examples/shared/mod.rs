@@ -7,10 +7,8 @@ pub mod config;
 pub mod test_utils;
 
 // Re-export commonly used items
-pub use config::*;
 pub use test_utils::*;
 
-use cheungfun_core::prelude::*;
 use std::path::PathBuf;
 use std::time::{Duration, Instant};
 

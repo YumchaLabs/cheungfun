@@ -434,7 +434,7 @@ fn create_sample_long_documents() -> Vec<ScoredNode> {
     use uuid::Uuid;
 
     let doc_id = Uuid::new_v4();
-    let chunk_info = ChunkInfo::new(0, 1000, 0);
+    let chunk_info = ChunkInfo::new(Some(0), Some(1000), 0);
 
     vec![
         ScoredNode::new(

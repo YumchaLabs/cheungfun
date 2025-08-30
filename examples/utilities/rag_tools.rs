@@ -7,7 +7,7 @@ use cheungfun_agents::{
     tool::{Tool, ToolError, ToolParams, ToolResult},
     types::*,
 };
-use cheungfun_core::{traits::VectorStore, Result};
+use cheungfun_core::{traits::{VectorStore, Retriever}, Result};
 use cheungfun_query::retriever::VectorRetriever;
 use serde_json::{json, Value};
 use std::sync::Arc;
@@ -94,7 +94,7 @@ impl Tool for RagVectorSearchTool {
                     "results": search_results,
                     "total_found": results.len(),
                     "query": query
-                }))
+                }).to_string())
             }
             Err(e) => ToolResult::error(format!("搜索失败: {}", e)),
         }
@@ -183,7 +183,7 @@ impl Tool for DocumentSummarizerTool {
                 "original_length": content.len(),
                 "summary_length": summary.trim().len(),
                 "compression_ratio": content.len() as f64 / summary.trim().len() as f64
-            })),
+            }).to_string()),
             Err(e) => ToolResult::error(format!("摘要生成失败: {}", e)),
         }
     }
@@ -301,14 +301,14 @@ impl Tool for FactCheckerTool {
                         "fact_check": fact_check_result,
                         "evidence_count": evidence.len(),
                         "evidence_sources": evidence.iter().map(|e| &e.node.id).collect::<Vec<_>>()
-                    })),
+                    }).to_string()),
                     Err(_) => {
                         // 如果JSON解析失败，返回原始响应
                         ToolResult::success(json!({
                             "claim": claim,
                             "analysis": response,
                             "evidence_count": evidence.len()
-                        }))
+                        }).to_string())
                     }
                 }
             }
@@ -428,6 +428,6 @@ impl Tool for CitationGeneratorTool {
             "citations": citations,
             "style": style,
             "count": citations.len()
-        }))
+        }).to_string())
     }
 }

@@ -11,7 +11,7 @@ cargo run --bin multi_faceted_filtering --features fastembed -- --compare-strate
 */
 
 use clap::Parser;
-use std::{collections::HashMap, path::PathBuf, sync::Arc};
+use std::{path::PathBuf, sync::Arc};
 
 #[path = "../shared/mod.rs"]
 mod shared;
@@ -251,7 +251,7 @@ async fn apply_filtering_strategy(
         strategy_used: strategy.to_string(),
         original_count,
         filtered_count,
-        filtering_time,
+        filtering_time: filtering_time.as_secs_f64(),
     })
 }
 

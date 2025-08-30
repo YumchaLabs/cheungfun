@@ -472,7 +472,7 @@ async fn transform_query(
     original_query: &str,
     technique: &TransformationTechnique,
     preset: &Option<DomainPreset>,
-    llm_client: &Siumai,
+    _llm_client: &Siumai,
 ) -> ExampleResult<Vec<TransformedQuery>> {
     // Create a new Siumai client since it doesn't implement Clone
     let new_llm_client = create_llm_client().await?;
@@ -617,7 +617,7 @@ async fn rewrite_transform(
 
     // For this example, we'll create simple rewritten queries
     // In a real implementation, you'd use the actual QueryEngine.rewrite_query method
-    for (i, strategy) in strategies.iter().enumerate() {
+    for (_i, strategy) in strategies.iter().enumerate() {
         let rewritten_query = match strategy {
             QueryRewriteStrategy::Clarification => {
                 format!("What are the specific details about {}", original_query)

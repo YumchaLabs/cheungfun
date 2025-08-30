@@ -323,7 +323,7 @@ fn create_mock_iteration_results(query: &str, top_k: usize) -> Vec<ScoredNode> {
     use uuid::Uuid;
 
     let doc_id = Uuid::new_v4();
-    let chunk_info = ChunkInfo::new(0, 100, 0);
+    let chunk_info = ChunkInfo::new(Some(0), Some(100), 0);
 
     // Simulate different result quality based on query complexity
     let base_score = if query.len() > 50 { 0.9 } else { 0.8 };

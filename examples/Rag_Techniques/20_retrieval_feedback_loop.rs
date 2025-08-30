@@ -40,8 +40,8 @@ cargo run --bin 20_retrieval_feedback_loop --features fastembed -- --reset-feedb
 */
 
 use clap::Parser;
-use std::{collections::HashMap, path::PathBuf, sync::Arc};
 use serde::{Deserialize, Serialize};
+use std::{collections::HashMap, path::PathBuf, sync::Arc};
 
 // Add the shared module
 #[path = "../shared/mod.rs"]
@@ -50,7 +50,7 @@ mod shared;
 use shared::{get_climate_test_queries, setup_logging, ExampleError, ExampleResult, Timer};
 
 use cheungfun_core::{
-    traits::{Embedder, IndexingPipeline, VectorStore, Loader},
+    traits::{Embedder, IndexingPipeline, Loader, VectorStore},
     DistanceMetric, Node, ScoredNode,
 };
 use cheungfun_indexing::{
@@ -158,28 +158,39 @@ impl FeedbackStore {
     /// Add user feedback
     fn add_feedback(&mut self, feedback: UserFeedback) {
         let key = format!("{}:{}", feedback.query, feedback.document_id);
-        
+
         // Update relevance score (normalize to 0-1 scale)
         let normalized_rating = (feedback.relevance_rating as f32 - 1.0) / 4.0;
         self.relevance_scores.insert(key, normalized_rating);
-        
+
         // Update query statistics
-        let stats = self.query_stats.entry(feedback.query.clone()).or_insert(QueryStats {
-            query_count: 0,
-            avg_relevance: 0.0,
-            improvement_trend: 0.0,
-        });
-        
+        let stats = self
+            .query_stats
+            .entry(feedback.query.clone())
+            .or_insert(QueryStats {
+                query_count: 0,
+                avg_relevance: 0.0,
+                improvement_trend: 0.0,
+            });
+
         stats.query_count += 1;
-        stats.avg_relevance = (stats.avg_relevance * (stats.query_count - 1) as f32 + normalized_rating) / stats.query_count as f32;
-        
+        stats.avg_relevance = (stats.avg_relevance * (stats.query_count - 1) as f32
+            + normalized_rating)
+            / stats.query_count as f32;
+
         self.feedback_history.push(feedback);
     }
 
     /// Get feedback-adjusted score for a query-document pair
-    fn get_adjusted_score(&self, query: &str, document_id: &str, original_score: f32, learning_rate: f32) -> f32 {
+    fn get_adjusted_score(
+        &self,
+        query: &str,
+        document_id: &str,
+        original_score: f32,
+        learning_rate: f32,
+    ) -> f32 {
         let key = format!("{}:{}", query, document_id);
-        
+
         if let Some(&feedback_score) = self.relevance_scores.get(&key) {
             // Blend original similarity score with feedback score
             original_score * (1.0 - learning_rate) + feedback_score * learning_rate
@@ -193,9 +204,11 @@ impl FeedbackStore {
         let total_feedback = self.feedback_history.len();
         let unique_queries = self.query_stats.len();
         let avg_rating = if total_feedback > 0 {
-            self.feedback_history.iter()
+            self.feedback_history
+                .iter()
                 .map(|f| f.relevance_rating as f32)
-                .sum::<f32>() / total_feedback as f32
+                .sum::<f32>()
+                / total_feedback as f32
         } else {
             0.0
         };
@@ -209,7 +222,11 @@ impl FeedbackStore {
             total_feedback,
             unique_queries,
             avg_rating,
-            if unique_queries > 0 { (total_feedback as f32 / unique_queries as f32) * 100.0 } else { 0.0 }
+            if unique_queries > 0 {
+                (total_feedback as f32 / unique_queries as f32) * 100.0
+            } else {
+                0.0
+            }
         )
     }
 }
@@ -282,7 +299,7 @@ async fn build_feedback_rag_pipeline(
     // Load and process documents
     let data_dir = std::env::current_dir()?.join(&args.data_path);
     println!("📂 Loading from directory: {}", data_dir.display());
-    
+
     let loader = Arc::new(DirectoryLoader::new(&data_dir)?);
     let splitter = Arc::new(SentenceSplitter::from_defaults(
         args.chunk_size,
@@ -310,7 +327,7 @@ async fn build_feedback_rag_pipeline(
         .run()
         .await
         .map_err(|e| ExampleError::Cheungfun(e))?;
-    
+
     println!("✅ Indexed {} documents", index_result.nodes_created);
 
     // Create query engine
@@ -374,7 +391,12 @@ async fn run_feedback_demonstration(
                 );
                 println!(
                     "      Content: {}...",
-                    scored_node.node.content.chars().take(100).collect::<String>()
+                    scored_node
+                        .node
+                        .content
+                        .chars()
+                        .take(100)
+                        .collect::<String>()
                 );
             }
         }
@@ -415,11 +437,7 @@ fn apply_feedback_adjustments(
 }
 
 /// Simulate user feedback for demonstration
-fn simulate_user_feedback(
-    query: &str,
-    results: &[ScoredNode],
-    feedback_store: &mut FeedbackStore,
-) {
+fn simulate_user_feedback(query: &str, results: &[ScoredNode], feedback_store: &mut FeedbackStore) {
     use rand::Rng;
     let mut rng = rand::thread_rng();
 
@@ -516,8 +534,15 @@ async fn collect_user_feedback(
 
     for (i, scored_node) in results.iter().take(3).enumerate() {
         println!("\n📄 Document {}: Score: {:.3}", i + 1, scored_node.score);
-        println!("Content: {}...",
-            scored_node.node.content.chars().take(200).collect::<String>());
+        println!(
+            "Content: {}...",
+            scored_node
+                .node
+                .content
+                .chars()
+                .take(200)
+                .collect::<String>()
+        );
 
         loop {
             print!("Rate this document (1-5, or 's' to skip): ");
@@ -532,7 +557,7 @@ async fn collect_user_feedback(
             }
 
             if let Ok(rating) = input.parse::<u8>() {
-                if rating >= 1 && rating <= 5 {
+                if (1..=5).contains(&rating) {
                     let feedback = UserFeedback {
                         query: query.to_string(),
                         document_id: scored_node.node.id.to_string(),

@@ -220,7 +220,7 @@ async fn demonstrate_advanced_features() -> CoreResult<()> {
 
 /// Compare different splitter strategies
 #[allow(dead_code)]
-async fn compare_splitter_strategies(text: &str) -> CoreResult<()> {
+async fn compare_splitter_strategies(_text: &str) -> CoreResult<()> {
     info!("\n📈 Splitter Strategy Comparison:");
 
     // This would compare:

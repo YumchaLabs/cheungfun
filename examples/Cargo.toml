@@ -405,10 +405,7 @@ name = "markdown_parser"
 path = "utilities/markdown_parser_demo.rs"
 required-features = ["basic"]
 
-[[bin]]
-name = "rag_tools"
-path = "utilities/rag_tools.rs"
-required-features = ["basic"]
+# rag_tools.rs is a library file, not a binary
 
 # === Removed Legacy Examples ===
 # Note: backup folder and legacy examples have been cleaned up

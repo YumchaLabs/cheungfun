@@ -49,14 +49,13 @@ mod shared;
 use shared::{get_climate_test_queries, setup_logging, ExampleError, ExampleResult, Timer};
 
 use cheungfun_core::{
-    traits::{Embedder, IndexingPipeline, VectorStore, Loader},
+    traits::{Embedder, IndexingPipeline, Loader, VectorStore},
     types::ChunkInfo,
     DistanceMetric, Node,
 };
 use cheungfun_indexing::{
     loaders::DirectoryLoader, node_parser::text::SentenceSplitter,
-    pipeline::DefaultIndexingPipeline, transformers::MetadataExtractor,
-    NodeParser,
+    pipeline::DefaultIndexingPipeline, transformers::MetadataExtractor, NodeParser,
 };
 use cheungfun_integrations::{FastEmbedder, InMemoryVectorStore};
 use cheungfun_query::{
@@ -314,7 +313,10 @@ async fn build_augmented_pipeline(
     // We need to get the actual nodes from the pipeline result
     // Since IndexingStats doesn't contain nodes, we need to load them separately
     let loader = Arc::new(DirectoryLoader::new(&data_dir)?);
-    let documents = loader.load().await.map_err(|e| ExampleError::Cheungfun(e))?;
+    let documents = loader
+        .load()
+        .await
+        .map_err(|e| ExampleError::Cheungfun(e))?;
 
     let splitter = Arc::new(SentenceSplitter::from_defaults(
         args.chunk_size,
@@ -322,12 +324,12 @@ async fn build_augmented_pipeline(
     )?);
 
     // Parse documents into nodes
-    let nodes = splitter.parse_nodes(&documents, false).await.map_err(|e| ExampleError::Cheungfun(e))?;
+    let nodes = splitter
+        .parse_nodes(&documents, false)
+        .await
+        .map_err(|e| ExampleError::Cheungfun(e))?;
 
-    println!(
-        "📊 Processing {} chunks for augmentation...",
-        nodes.len()
-    );
+    println!("📊 Processing {} chunks for augmentation...", nodes.len());
 
     // Generate questions for each chunk
     let augmentation_timer = Timer::new("Question generation");
@@ -335,11 +337,7 @@ async fn build_augmented_pipeline(
 
     for (i, node) in nodes.iter().enumerate() {
         if i % 10 == 0 {
-            println!(
-                "   📝 Processing chunk {} of {}...",
-                i + 1,
-                nodes.len()
-            );
+            println!("   📝 Processing chunk {} of {}...", i + 1, nodes.len());
         }
 
         let questions =
@@ -382,11 +380,7 @@ async fn build_augmented_pipeline(
             .map_err(|e| ExampleError::Cheungfun(e))?;
 
         // Create node with augmented content
-        let chunk_info = ChunkInfo::new(
-            Some(0),
-            Some(augmented_chunk.augmented_content.len()),
-            i
-        );
+        let chunk_info = ChunkInfo::new(Some(0), Some(augmented_chunk.augmented_content.len()), i);
         let mut node = Node::new(
             augmented_chunk.augmented_content.clone(),
             Uuid::new_v4(),
@@ -412,7 +406,10 @@ async fn build_augmented_pipeline(
     }
 
     let embedding_time = embedding_timer.finish();
-    println!("✅ Augmented embedding completed in {:.2}s", embedding_time.as_secs_f64());
+    println!(
+        "✅ Augmented embedding completed in {:.2}s",
+        embedding_time.as_secs_f64()
+    );
 
     // Create query engine
     let retriever = VectorRetriever::new(vector_store.clone(), embedder.clone());
@@ -502,7 +499,8 @@ async fn compare_retrieval_methods(args: &Args, embedder: Arc<dyn Embedder>) -> 
     // 2. Build standard system
     println!("\n📏 2. Building Standard Retrieval System...");
     let standard_timer = Timer::new("Standard system setup");
-    let (_standard_store, standard_engine) = build_standard_pipeline(args, embedder.clone()).await?;
+    let (_standard_store, standard_engine) =
+        build_standard_pipeline(args, embedder.clone()).await?;
     let standard_time = standard_timer.finish();
 
     // 3. Compare performance on test queries
@@ -558,7 +556,8 @@ async fn compare_retrieval_methods(args: &Args, embedder: Arc<dyn Embedder>) -> 
 
         println!(
             "   ⏱️ Augmented time: {:.2}s, Standard time: {:.2}s",
-            augmented_time.as_secs_f64(), standard_time.as_secs_f64()
+            augmented_time.as_secs_f64(),
+            standard_time.as_secs_f64()
         );
 
         // Calculate average scores
