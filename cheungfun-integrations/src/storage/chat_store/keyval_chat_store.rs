@@ -302,8 +302,7 @@ mod tests {
         assert_eq!(count, 1);
 
         // Delete conversation
-        let deleted = store.delete_conversation(conversation_id).await.unwrap();
-        assert!(deleted);
+        store.delete_messages(conversation_id).await.unwrap();
 
         // Check it's gone
         assert!(!store.conversation_exists(conversation_id).await.unwrap());
@@ -321,7 +320,9 @@ mod tests {
         ];
 
         // Add multiple messages
-        store.add_messages(conversation_id, messages).await.unwrap();
+        for message in messages {
+            store.add_message(conversation_id, message).await.unwrap();
+        }
 
         // Check count
         let count = store.count_messages(conversation_id).await.unwrap();
@@ -375,11 +376,13 @@ mod tests {
             ChatMessage::assistant("Assistant response 2"),
         ];
 
-        store.add_messages(conversation_id, messages).await.unwrap();
+        for message in messages {
+            store.add_message(conversation_id, message).await.unwrap();
+        }
 
         // Get user messages
         let user_messages = store
-            .get_messages_by_role(conversation_id, "user")
+            .get_messages_by_role(conversation_id, MessageRole::User)
             .await
             .unwrap();
         assert_eq!(user_messages.len(), 2);
@@ -388,7 +391,7 @@ mod tests {
 
         // Get assistant messages
         let assistant_messages = store
-            .get_messages_by_role(conversation_id, "assistant")
+            .get_messages_by_role(conversation_id, MessageRole::Assistant)
             .await
             .unwrap();
         assert_eq!(assistant_messages.len(), 2);

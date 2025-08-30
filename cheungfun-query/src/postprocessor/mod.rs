@@ -189,7 +189,7 @@ mod tests {
 
     #[test]
     fn test_compression_metrics() {
-        let metrics = CompressionMetrics::new(1000, 300, 0.8, 150);
+        let metrics = crate::postprocessor::CompressionMetrics::new(1000, 300, 0.8, 150, 800, 600);
 
         assert_eq!(metrics.original_length, 1000);
         assert_eq!(metrics.compressed_length, 300);

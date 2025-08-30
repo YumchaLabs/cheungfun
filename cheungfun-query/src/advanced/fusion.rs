@@ -555,20 +555,15 @@ mod tests {
 
     fn create_test_node(id: &str, score: f32, content: &str) -> ScoredNode {
         ScoredNode {
-            node: Node {
-                id: Uuid::parse_str(id).unwrap(),
-                content: content.to_string(),
-                metadata: HashMap::new(),
-                embedding: None,
-                sparse_embedding: None,
-                relationships: HashMap::new(),
-                source_document_id: Uuid::new_v4(),
-                chunk_info: ChunkInfo {
-                    start_offset: 0,
-                    end_offset: content.len(),
+            node: Node::new(
+                content.to_string(),
+                Uuid::new_v4(),
+                ChunkInfo {
+                    start_char_idx: Some(0),
+                    end_char_idx: Some(content.len()),
                     chunk_index: 0,
                 },
-            },
+            ),
             score,
         }
     }

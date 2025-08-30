@@ -61,7 +61,7 @@ fn create_test_nodes(vectors: &[Vec<f32>]) -> Vec<Node> {
         .enumerate()
         .map(|(i, embedding)| {
             let source_doc_id = Uuid::new_v4();
-            let chunk_info = ChunkInfo::new(i * 100, (i + 1) * 100, i);
+            let chunk_info = ChunkInfo::new(Some(i * 100), Some((i + 1) * 100), i);
             let mut node = Node::new(
                 format!("Test document content {}", i),
                 source_doc_id,

@@ -31,6 +31,7 @@ pub const DEFAULT_BATCH_SIZE: usize = 100;
 /// use serde_json::json;
 /// use async_trait::async_trait;
 ///
+/// #[derive(Debug)]
 /// struct InMemoryKVStore {
 ///     data: std::sync::Arc<tokio::sync::RwLock<std::collections::HashMap<String, std::collections::HashMap<String, serde_json::Value>>>>,
 /// }

@@ -2,12 +2,15 @@
 
 use std::sync::Arc;
 
-use cheungfun_core::{Document, Result};
+use cheungfun_core::{Document, Result, Retriever};
 use cheungfun_query::{
-    engine::{PerformanceProfile, QueryEngineMetadata, QueryType, RuleBasedQuerySelector},
+    engine::{
+        PerformanceProfile, QueryEngineMetadata, QuerySelector, QueryType, RuleBasedQuerySelector,
+    },
     hierarchical::HierarchicalSystemBuilder,
     retrievers::hierarchical::{HierarchicalRetriever, StorageContext},
 };
+use futures;
 
 /// Mock storage context for testing.
 #[derive(Debug)]
@@ -32,15 +35,15 @@ struct MockEmbedder;
 
 #[async_trait::async_trait]
 impl cheungfun_core::traits::Embedder for MockEmbedder {
-    fn name(&self) -> &str {
+    fn name(&self) -> &'static str {
         "MockEmbedder"
     }
 
-    async fn embed_text(&self, _text: &str) -> Result<Vec<f32>> {
+    async fn embed(&self, _text: &str) -> Result<Vec<f32>> {
         Ok(vec![0.1, 0.2, 0.3, 0.4])
     }
 
-    async fn embed_texts(&self, texts: &[String]) -> Result<Vec<Vec<f32>>> {
+    async fn embed_batch(&self, texts: Vec<&str>) -> Result<Vec<Vec<f32>>> {
         let mut embeddings = Vec::new();
         for _ in texts {
             embeddings.push(vec![0.1, 0.2, 0.3, 0.4]);
@@ -48,8 +51,12 @@ impl cheungfun_core::traits::Embedder for MockEmbedder {
         Ok(embeddings)
     }
 
-    fn embedding_dimension(&self) -> usize {
+    fn dimension(&self) -> usize {
         4
+    }
+
+    fn model_name(&self) -> &str {
+        "mock-model"
     }
 }
 
@@ -59,35 +66,39 @@ struct MockVectorStore;
 
 #[async_trait::async_trait]
 impl cheungfun_core::traits::VectorStore for MockVectorStore {
-    fn name(&self) -> &str {
+    fn name(&self) -> &'static str {
         "MockVectorStore"
     }
 
-    async fn add_nodes(&mut self, _nodes: Vec<cheungfun_core::ScoredNode>) -> Result<()> {
+    async fn add(&self, _nodes: Vec<cheungfun_core::Node>) -> Result<Vec<uuid::Uuid>> {
+        Ok(vec![])
+    }
+
+    async fn update(&self, _nodes: Vec<cheungfun_core::Node>) -> Result<()> {
         Ok(())
     }
 
-    async fn query(
+    async fn delete(&self, _node_ids: Vec<uuid::Uuid>) -> Result<()> {
+        Ok(())
+    }
+
+    async fn search(
         &self,
         _query: &cheungfun_core::types::Query,
     ) -> Result<Vec<cheungfun_core::ScoredNode>> {
         Ok(vec![])
     }
 
-    async fn delete_nodes(&mut self, _node_ids: &[String]) -> Result<()> {
+    async fn get(&self, _node_ids: Vec<uuid::Uuid>) -> Result<Vec<Option<cheungfun_core::Node>>> {
+        Ok(vec![])
+    }
+
+    async fn clear(&self) -> Result<()> {
         Ok(())
     }
 
-    async fn clear(&mut self) -> Result<()> {
+    async fn health_check(&self) -> Result<()> {
         Ok(())
-    }
-
-    fn dimension(&self) -> usize {
-        4
-    }
-
-    fn distance_metric(&self) -> cheungfun_core::DistanceMetric {
-        cheungfun_core::DistanceMetric::Cosine
     }
 }
 
@@ -97,19 +108,31 @@ struct MockGenerator;
 
 #[async_trait::async_trait]
 impl cheungfun_core::traits::ResponseGenerator for MockGenerator {
-    fn name(&self) -> &str {
+    fn name(&self) -> &'static str {
         "MockGenerator"
     }
 
     async fn generate_response(
         &self,
         _prompt: &str,
-        _context_nodes: &[cheungfun_core::ScoredNode],
+        _context_nodes: Vec<cheungfun_core::ScoredNode>,
         _options: &cheungfun_core::types::GenerationOptions,
     ) -> Result<cheungfun_core::types::GeneratedResponse> {
         Ok(cheungfun_core::types::GeneratedResponse::new(
             "Mock response".to_string(),
         ))
+    }
+
+    async fn generate_response_stream(
+        &self,
+        _prompt: &str,
+        _context_nodes: Vec<cheungfun_core::ScoredNode>,
+        _options: &cheungfun_core::types::GenerationOptions,
+    ) -> Result<std::pin::Pin<Box<dyn futures::Stream<Item = Result<String>> + Send + 'static>>>
+    {
+        use futures::stream;
+        let stream = stream::once(async { Ok("Mock response".to_string()) });
+        Ok(Box::pin(stream))
     }
 }
 

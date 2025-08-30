@@ -26,6 +26,7 @@ use crate::{GeneratedResponse, GenerationOptions, Result, ScoredNode};
 /// use futures::Stream;
 /// use std::pin::Pin;
 ///
+/// #[derive(Debug)]
 /// struct SimpleGenerator;
 ///
 /// #[async_trait]

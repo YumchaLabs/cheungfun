@@ -300,8 +300,8 @@ mod tests {
     use crate::storage::kvstore::InMemoryKVStore;
 
     fn create_test_document(id: &str, content: &str) -> Document {
-        let mut doc = Document::new(content, None);
-        doc.id = id.to_string();
+        let mut doc = Document::new(content);
+        doc.id = uuid::Uuid::parse_str(id).unwrap_or_else(|_| uuid::Uuid::new_v4());
         doc
     }
 
@@ -337,16 +337,15 @@ mod tests {
         assert!(store.document_exists("doc1").await.unwrap());
         assert!(!store.document_exists("nonexistent").await.unwrap());
 
-        // Update document
+        // Update document (re-add with same ID)
         let updated_doc = create_test_document("doc1", "Updated content");
-        store.update_document(updated_doc).await.unwrap();
+        store.add_documents(vec![updated_doc]).await.unwrap();
 
         let retrieved = store.get_document("doc1").await.unwrap().unwrap();
         assert_eq!(retrieved.content, "Updated content");
 
         // Delete document
-        let deleted = store.delete_document("doc1").await.unwrap();
-        assert!(deleted);
+        store.delete_document("doc1").await.unwrap();
 
         let retrieved = store.get_document("doc1").await.unwrap();
         assert!(retrieved.is_none());
@@ -371,7 +370,8 @@ mod tests {
         assert_eq!(count, 3);
 
         // List documents
-        let listed_ids = store.list_documents().await.unwrap();
+        let all_hashes = store.get_all_document_hashes().await.unwrap();
+        let listed_ids: Vec<String> = all_hashes.keys().cloned().collect();
         assert_eq!(listed_ids.len(), 3);
 
         // Get all documents
@@ -389,22 +389,34 @@ mod tests {
         let store = create_test_store().await;
 
         let mut doc1 = create_test_document("doc1", "Content 1");
-        doc1.metadata
-            .insert("category".to_string(), "tech".to_string());
-        doc1.metadata
-            .insert("author".to_string(), "alice".to_string());
+        doc1.metadata.insert(
+            "category".to_string(),
+            serde_json::Value::String("tech".to_string()),
+        );
+        doc1.metadata.insert(
+            "author".to_string(),
+            serde_json::Value::String("alice".to_string()),
+        );
 
         let mut doc2 = create_test_document("doc2", "Content 2");
-        doc2.metadata
-            .insert("category".to_string(), "tech".to_string());
-        doc2.metadata
-            .insert("author".to_string(), "bob".to_string());
+        doc2.metadata.insert(
+            "category".to_string(),
+            serde_json::Value::String("tech".to_string()),
+        );
+        doc2.metadata.insert(
+            "author".to_string(),
+            serde_json::Value::String("bob".to_string()),
+        );
 
         let mut doc3 = create_test_document("doc3", "Content 3");
-        doc3.metadata
-            .insert("category".to_string(), "science".to_string());
-        doc3.metadata
-            .insert("author".to_string(), "alice".to_string());
+        doc3.metadata.insert(
+            "category".to_string(),
+            serde_json::Value::String("science".to_string()),
+        );
+        doc3.metadata.insert(
+            "author".to_string(),
+            serde_json::Value::String("alice".to_string()),
+        );
 
         store.add_documents(vec![doc1, doc2, doc3]).await.unwrap();
 
@@ -426,6 +438,6 @@ mod tests {
         filter.insert("author".to_string(), "alice".to_string());
         let filtered = store.get_documents_by_metadata(filter).await.unwrap();
         assert_eq!(filtered.len(), 1);
-        assert_eq!(filtered[0].id, "doc1");
+        assert_eq!(filtered[0].id.to_string(), "doc1");
     }
 }

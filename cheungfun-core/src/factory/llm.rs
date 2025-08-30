@@ -25,6 +25,7 @@ use crate::{config::LlmConfig, traits::ResponseGenerator, Result};
 /// use async_trait::async_trait;
 /// use std::sync::Arc;
 ///
+/// #[derive(Debug)]
 /// struct MyLlmFactory;
 ///
 /// #[async_trait]
@@ -32,6 +33,15 @@ use crate::{config::LlmConfig, traits::ResponseGenerator, Result};
 ///     async fn create_llm(&self, config: &LlmConfig) -> Result<Arc<dyn ResponseGenerator>> {
 ///         // Implementation would create LLM client based on config
 ///         todo!("Implement LLM client creation")
+///     }
+///
+///     fn can_create(&self, config: &LlmConfig) -> bool {
+///         // Check if this factory can create the requested LLM type
+///         true
+///     }
+///
+///     fn supported_providers(&self) -> Vec<&'static str> {
+///         vec!["openai", "azure", "anthropic"]
 ///     }
 /// }
 /// ```

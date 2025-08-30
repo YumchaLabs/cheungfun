@@ -24,6 +24,7 @@ use crate::{config::VectorStoreConfig, traits::VectorStore, Result};
 /// use async_trait::async_trait;
 /// use std::sync::Arc;
 ///
+/// #[derive(Debug)]
 /// struct MyVectorStoreFactory;
 ///
 /// #[async_trait]
@@ -31,6 +32,15 @@ use crate::{config::VectorStoreConfig, traits::VectorStore, Result};
 ///     async fn create_vector_store(&self, config: &VectorStoreConfig) -> Result<Arc<dyn VectorStore>> {
 ///         // Implementation would create vector store based on config
 ///         todo!("Implement vector store creation")
+///     }
+///
+///     fn can_create(&self, config: &VectorStoreConfig) -> bool {
+///         // Check if this factory can create the requested vector store type
+///         true
+///     }
+///
+///     fn supported_types(&self) -> Vec<&'static str> {
+///         vec!["in-memory", "qdrant"]
 ///     }
 /// }
 /// ```

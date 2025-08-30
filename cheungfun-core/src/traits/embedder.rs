@@ -21,6 +21,7 @@ use crate::Result;
 /// use cheungfun_core::Result;
 /// use async_trait::async_trait;
 ///
+/// #[derive(Debug)]
 /// struct SimpleEmbedder {
 ///     dimension: usize,
 /// }
@@ -45,6 +46,10 @@ use crate::Result;
 ///     }
 ///
 ///     fn model_name(&self) -> &str {
+///         "simple-embedder"
+///     }
+///
+///     fn name(&self) -> &'static str {
 ///         "simple-embedder"
 ///     }
 /// }
@@ -146,6 +151,7 @@ pub trait Embedder: Send + Sync + std::fmt::Debug {
 /// use async_trait::async_trait;
 /// use std::collections::HashMap;
 ///
+/// #[derive(Debug)]
 /// struct SimpleSparseEmbedder;
 ///
 /// #[async_trait]

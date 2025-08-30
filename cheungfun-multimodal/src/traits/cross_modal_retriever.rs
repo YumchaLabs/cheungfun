@@ -411,7 +411,7 @@ mod tests {
     fn test_scored_multimodal_node_conversion() {
         use cheungfun_core::types::Node;
 
-        let chunk_info = cheungfun_core::types::ChunkInfo::new(0, 12, 0);
+        let chunk_info = cheungfun_core::types::ChunkInfo::new(Some(0), Some(12), 0);
         let base_node = Node::new("test content", Uuid::new_v4(), chunk_info);
         let multimodal_node = MultimodalNode::from_node(base_node);
         let scored = ScoredMultimodalNode {

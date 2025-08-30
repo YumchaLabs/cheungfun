@@ -95,6 +95,7 @@ impl From<ChunkNode> for LabelledNodeType {
 /// ```rust
 /// use cheungfun_core::types::labelled_property_graph::LabelledPropertyGraph;
 /// use cheungfun_core::types::graph::{EntityNode, Relation};
+/// use cheungfun_core::types::LabelledNodeType;
 /// use std::collections::HashMap;
 ///
 /// let mut graph = LabelledPropertyGraph::new();
@@ -109,8 +110,8 @@ impl From<ChunkNode> for LabelledNodeType {
 ///     HashMap::new(),
 /// );
 ///
-/// graph.add_node(Box::new(entity1));
-/// graph.add_node(Box::new(entity2));
+/// graph.add_node(LabelledNodeType::Entity(entity1));
+/// graph.add_node(LabelledNodeType::Entity(entity2));
 /// graph.add_relation(relation);
 ///
 /// let triplets = graph.get_triplets();
@@ -426,8 +427,8 @@ mod tests {
         let entity1 = EntityNode::new("Alice".to_string(), "Person".to_string(), HashMap::new());
         let entity2 = EntityNode::new("Bob".to_string(), "Person".to_string(), HashMap::new());
 
-        graph.add_node(Box::new(entity1)).unwrap();
-        graph.add_node(Box::new(entity2)).unwrap();
+        graph.add_node(LabelledNodeType::Entity(entity1)).unwrap();
+        graph.add_node(LabelledNodeType::Entity(entity2)).unwrap();
 
         assert_eq!(graph.node_count(), 2);
         assert!(!graph.is_empty());
@@ -442,8 +443,8 @@ mod tests {
         let entity1_id = entity1.id();
         let entity2_id = entity2.id();
 
-        graph.add_node(Box::new(entity1)).unwrap();
-        graph.add_node(Box::new(entity2)).unwrap();
+        graph.add_node(LabelledNodeType::Entity(entity1)).unwrap();
+        graph.add_node(LabelledNodeType::Entity(entity2)).unwrap();
 
         let relation = Relation::new(
             "rel_1".to_string(),

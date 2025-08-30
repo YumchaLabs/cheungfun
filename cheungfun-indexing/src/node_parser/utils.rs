@@ -336,28 +336,14 @@ mod tests {
         assert_eq!(nodes[1].content, "document with some content.");
 
         // Check relationships
-        assert!(nodes[0]
-            .relationships
-            .get_single(NodeRelationship::Next)
-            .is_some());
-        assert!(nodes[1]
-            .relationships
-            .get_single(NodeRelationship::Previous)
-            .is_some());
+        assert!(nodes[0].relationships.next_node().is_some());
+        assert!(nodes[1].relationships.prev_node().is_some());
         assert_eq!(
-            nodes[0]
-                .relationships
-                .get_single(NodeRelationship::Next)
-                .unwrap()
-                .node_id,
+            nodes[0].relationships.next_node().unwrap().node_id,
             nodes[1].id
         );
         assert_eq!(
-            nodes[1]
-                .relationships
-                .get_single(NodeRelationship::Previous)
-                .unwrap()
-                .node_id,
+            nodes[1].relationships.prev_node().unwrap().node_id,
             nodes[0].id
         );
     }

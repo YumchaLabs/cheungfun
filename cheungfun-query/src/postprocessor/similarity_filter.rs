@@ -5,8 +5,9 @@
 
 use super::{NodePostprocessor, SimilarityFilterConfig};
 use async_trait::async_trait;
-use cheungfun_core::{Result, ScoredNode};
+use cheungfun_core::{ChunkInfo, Result, ScoredNode};
 use tracing::debug;
+use uuid::Uuid;
 
 /// Similarity-based node filter.
 ///
@@ -94,35 +95,35 @@ mod tests {
     fn create_test_nodes() -> Vec<ScoredNode> {
         vec![
             ScoredNode {
-                node: Node {
-                    id: "1".to_string(),
-                    content: "High relevance content".to_string(),
-                    metadata: std::collections::HashMap::new(),
-                },
+                node: Node::new(
+                    "High relevance content".to_string(),
+                    Uuid::new_v4(),
+                    ChunkInfo::new(Some(0), Some(22), 0),
+                ),
                 score: 0.9,
             },
             ScoredNode {
-                node: Node {
-                    id: "2".to_string(),
-                    content: "Medium relevance content".to_string(),
-                    metadata: std::collections::HashMap::new(),
-                },
+                node: Node::new(
+                    "Medium relevance content".to_string(),
+                    Uuid::new_v4(),
+                    ChunkInfo::new(Some(0), Some(24), 1),
+                ),
                 score: 0.7,
             },
             ScoredNode {
-                node: Node {
-                    id: "3".to_string(),
-                    content: "Low relevance content".to_string(),
-                    metadata: std::collections::HashMap::new(),
-                },
+                node: Node::new(
+                    "Low relevance content".to_string(),
+                    Uuid::new_v4(),
+                    ChunkInfo::new(Some(0), Some(21), 2),
+                ),
                 score: 0.3,
             },
             ScoredNode {
-                node: Node {
-                    id: "4".to_string(),
-                    content: "Very low relevance content".to_string(),
-                    metadata: std::collections::HashMap::new(),
-                },
+                node: Node::new(
+                    "Very low relevance content".to_string(),
+                    Uuid::new_v4(),
+                    ChunkInfo::new(Some(0), Some(26), 3),
+                ),
                 score: 0.1,
             },
         ]
@@ -137,8 +138,9 @@ mod tests {
 
         // Should keep nodes with score >= 0.5 (nodes 1 and 2)
         assert_eq!(filtered.len(), 2);
-        assert_eq!(filtered[0].node.id, "1");
-        assert_eq!(filtered[1].node.id, "2");
+        // Note: We can't directly compare UUIDs with strings, so we check the content instead
+        assert_eq!(filtered[0].node.content, "High relevance content");
+        assert_eq!(filtered[1].node.content, "Medium relevance content");
     }
 
     #[tokio::test]
@@ -150,8 +152,9 @@ mod tests {
 
         // Should keep only top 2 nodes
         assert_eq!(filtered.len(), 2);
-        assert_eq!(filtered[0].node.id, "1");
-        assert_eq!(filtered[1].node.id, "2");
+        // Note: We can't directly compare UUIDs with strings, so we check the content instead
+        assert_eq!(filtered[0].node.content, "High relevance content");
+        assert_eq!(filtered[1].node.content, "Medium relevance content");
     }
 
     #[tokio::test]

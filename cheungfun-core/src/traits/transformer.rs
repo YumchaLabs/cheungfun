@@ -60,6 +60,7 @@ impl TransformInput {
 /// use cheungfun_core::{Document, Node, Result, CheungfunError};
 /// use async_trait::async_trait;
 ///
+/// #[derive(Debug)]
 /// struct SentenceSplitter {
 ///     chunk_size: usize,
 ///     overlap: usize,
@@ -74,8 +75,8 @@ impl TransformInput {
 ///                 // Implementation here...
 ///                 Ok(vec![])
 ///             }
-///             _ => Err(CheungfunError::InvalidInput(
-///                 "SentenceSplitter only accepts documents".into()
+///             _ => Err(CheungfunError::pipeline(
+///                 "SentenceSplitter only accepts documents"
 ///             ))
 ///         }
 ///     }

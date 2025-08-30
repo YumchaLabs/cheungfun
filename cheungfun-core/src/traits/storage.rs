@@ -63,6 +63,7 @@ pub struct ChatStoreStats {
 /// use async_trait::async_trait;
 /// use uuid::Uuid;
 ///
+/// #[derive(Debug)]
 /// struct InMemoryVectorStore {
 ///     nodes: std::collections::HashMap<Uuid, Node>,
 /// }
@@ -96,6 +97,10 @@ pub struct ChatStoreStats {
 ///
 ///     async fn health_check(&self) -> Result<()> {
 ///         Ok(())
+///     }
+///
+///     fn name(&self) -> &'static str {
+///         "in-memory-vector-store"
 ///     }
 /// }
 /// ```
@@ -413,6 +418,7 @@ mod tests {
 /// use async_trait::async_trait;
 /// use std::collections::HashMap;
 ///
+/// #[derive(Debug)]
 /// struct SimpleDocumentStore {
 ///     documents: std::sync::RwLock<HashMap<String, Document>>,
 /// }
@@ -421,7 +427,7 @@ mod tests {
 /// impl DocumentStore for SimpleDocumentStore {
 ///     async fn add_documents(&self, docs: Vec<Document>) -> Result<Vec<String>> {
 ///         // Implementation would store documents and return their IDs
-///         Ok(docs.iter().map(|d| d.id.clone()).collect())
+///         Ok(docs.iter().map(|d| d.id.to_string()).collect())
 ///     }
 ///
 ///     async fn get_document(&self, doc_id: &str) -> Result<Option<Document>> {
@@ -661,6 +667,7 @@ impl IndexStruct {
 /// use async_trait::async_trait;
 /// use std::collections::HashMap;
 ///
+/// #[derive(Debug)]
 /// struct SimpleIndexStore {
 ///     indexes: std::sync::RwLock<HashMap<String, IndexStruct>>,
 /// }
@@ -778,6 +785,7 @@ pub trait IndexStore: Send + Sync + std::fmt::Debug {
 /// use async_trait::async_trait;
 /// use std::collections::HashMap;
 ///
+/// #[derive(Debug)]
 /// struct SimpleChatStore {
 ///     conversations: std::sync::RwLock<HashMap<String, Vec<ChatMessage>>>,
 /// }
@@ -1001,14 +1009,19 @@ pub trait ChatStore: Send + Sync + std::fmt::Debug {
 /// // Create storage context with default implementations
 /// let storage_context = StorageContext::from_defaults(None, None, None, None, None);
 ///
-/// // Or with custom implementations
-/// let storage_context = StorageContext::new(
-///     Arc::new(my_doc_store),
-///     Arc::new(my_index_store),
-///     Arc::new(my_vector_store),
-///     Some(Arc::new(my_chat_store)),
-///     Some(Arc::new(my_graph_store)),
-/// );
+/// // Or with custom implementations (example variables)
+/// // let my_doc_store = SimpleDocumentStore::new();
+/// // let my_index_store = SimpleIndexStore::new();
+/// // let my_vector_store = InMemoryVectorStore::new();
+/// // let my_chat_store = SimpleChatStore::new();
+/// // let my_graph_store = SimplePropertyGraphStore::new();
+/// // let storage_context = StorageContext::new(
+/// //     Arc::new(my_doc_store),
+/// //     Arc::new(my_index_store),
+/// //     Arc::new(my_vector_store),
+/// //     Some(Arc::new(my_chat_store)),
+/// //     Some(Arc::new(my_graph_store)),
+/// // );
 /// ```
 #[derive(Debug)]
 pub struct StorageContext {
@@ -1286,21 +1299,23 @@ pub struct StorageContextConfig {
 /// ```rust,no_run
 /// use cheungfun_core::traits::PropertyGraphStore;
 /// use cheungfun_core::types::graph::{EntityNode, ChunkNode, Relation, Triplet, LabelledNode};
+/// use cheungfun_core::CheungfunError;
 /// use async_trait::async_trait;
 /// use std::collections::HashMap;
 ///
+/// #[derive(Debug)]
 /// struct SimplePropertyGraphStore {
 ///     // Implementation details
 /// }
 ///
 /// #[async_trait]
 /// impl PropertyGraphStore for SimplePropertyGraphStore {
-///     async fn upsert_nodes(&self, nodes: Vec<Box<dyn LabelledNode>>) -> Result<()> {
+///     async fn upsert_nodes(&self, nodes: Vec<Box<dyn LabelledNode>>) -> Result<(), CheungfunError> {
 ///         // Implementation would store the nodes
 ///         Ok(())
 ///     }
 ///
-///     async fn upsert_relations(&self, relations: Vec<Relation>) -> Result<()> {
+///     async fn upsert_relations(&self, relations: Vec<Relation>) -> Result<(), CheungfunError> {
 ///         // Implementation would store the relations
 ///         Ok(())
 ///     }
@@ -1311,9 +1326,24 @@ pub struct StorageContextConfig {
 ///         relation_names: Option<Vec<String>>,
 ///         properties: Option<HashMap<String, serde_json::Value>>,
 ///         ids: Option<Vec<String>>,
-///     ) -> Result<Vec<Triplet>> {
+///     ) -> Result<Vec<Triplet>, CheungfunError> {
 ///         // Implementation would retrieve triplets
 ///         Ok(vec![])
+///     }
+///
+///     async fn get(&self, _filters: Option<HashMap<String, serde_json::Value>>, _ids: Option<Vec<String>>) -> Result<Vec<Box<dyn LabelledNode>>, CheungfunError> {
+///         // Implementation would get nodes by filters or IDs
+///         Ok(vec![])
+///     }
+///
+///     async fn get_rel_map(&self, _ids: Vec<String>, _depth: usize) -> Result<Vec<Vec<Box<dyn LabelledNode>>>, CheungfunError> {
+///         // Implementation would get relationship map
+///         Ok(vec![])
+///     }
+///
+///     async fn delete(&self, _node_ids: Option<Vec<String>>, _rel_ids: Option<Vec<String>>) -> Result<(), CheungfunError> {
+///         // Implementation would delete nodes and relations
+///         Ok(())
 ///     }
 /// }
 /// ```

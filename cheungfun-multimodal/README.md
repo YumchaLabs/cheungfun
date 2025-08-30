@@ -17,7 +17,7 @@ Add this to your `Cargo.toml`:
 
 ```toml
 [dependencies]
-cheungfun-multimodal = { path = "../cheungfun-multimodal", features = ["full"] }
+cheungfun-multimodal = { version = "0.1.0", features = ["full"] }
 ```
 
 ### Feature Flags
@@ -154,31 +154,19 @@ This is an early-stage implementation focusing on:
 5. 🚧 **Multimodal Embeddings**: Interface defined, implementations pending
 6. 🚧 **Cross-Modal Retrieval**: Interface defined, implementations pending
 
-## 🔮 Roadmap
+## 🧪 Testing
 
-### Phase 1: Foundation (Current)
-- [x] Core data structures and traits
-- [x] Basic image processing
-- [x] Format detection utilities
-- [x] Documentation and examples
+Run the test suite:
 
-### Phase 2: Core Implementations
-- [ ] CLIP multimodal embeddings
-- [ ] Audio processing with speech recognition
-- [ ] Video frame extraction and analysis
-- [ ] Cross-modal retrieval system
+```bash
+cargo test -p cheungfun-multimodal
+```
 
-### Phase 3: Advanced Features
-- [ ] GPU acceleration support
-- [ ] Streaming processing
-- [ ] Advanced ML models integration
-- [ ] Performance optimizations
+Run with specific features:
 
-### Phase 4: Production Ready
-- [ ] Comprehensive testing
-- [ ] Benchmarking and optimization
-- [ ] Production deployment guides
-- [ ] Integration with existing RAG systems
+```bash
+cargo test -p cheungfun-multimodal --features "image-support,audio-support"
+```
 
 ## 🤝 Contributing
 

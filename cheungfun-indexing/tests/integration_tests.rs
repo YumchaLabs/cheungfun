@@ -91,7 +91,10 @@ async fn test_text_splitter() {
         // SentenceSplitter may produce chunks larger than chunk_size to respect sentence boundaries
         assert!(!node.content.is_empty()); // Just ensure content exists
                                            // Verify chunk info is properly set
-        assert!(node.chunk_info.end_offset >= node.chunk_info.start_offset);
+        assert!(
+            node.chunk_info.end_char_idx.unwrap_or(0)
+                >= node.chunk_info.start_char_idx.unwrap_or(0)
+        );
     }
 }
 
@@ -194,8 +197,8 @@ async fn test_metadata_extractor_functionality() {
         test_content.to_string(),
         uuid::Uuid::new_v4(),
         ChunkInfo {
-            start_offset: 0,
-            end_offset: test_content.len(),
+            start_char_idx: Some(0),
+            end_char_idx: Some(test_content.len()),
             chunk_index: 0,
         },
     );

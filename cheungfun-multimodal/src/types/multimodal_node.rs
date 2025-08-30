@@ -374,7 +374,7 @@ mod tests {
 
     #[test]
     fn test_multimodal_node_builder() {
-        let chunk_info = cheungfun_core::types::ChunkInfo::new(0, 12, 0);
+        let chunk_info = cheungfun_core::types::ChunkInfo::new(Some(0), Some(12), 0);
         let base_node = Node::new("Test content", uuid::Uuid::new_v4(), chunk_info);
         let multimodal_node = MultimodalNodeBuilder::new()
             .base(base_node)
@@ -394,7 +394,7 @@ mod tests {
 
     #[test]
     fn test_cross_modal_relations() {
-        let chunk_info = cheungfun_core::types::ChunkInfo::new(0, 12, 0);
+        let chunk_info = cheungfun_core::types::ChunkInfo::new(Some(0), Some(12), 0);
         let base_node = Node::new("Test content", uuid::Uuid::new_v4(), chunk_info);
         let related_id = uuid::Uuid::new_v4();
 

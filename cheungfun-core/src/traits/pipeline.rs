@@ -17,7 +17,7 @@ use crate::{QueryResponse, Result};
 ///
 /// ```rust,no_run
 /// use cheungfun_core::traits::IndexingPipeline;
-/// use cheungfun_core::Result;
+/// use cheungfun_core::{Result, IndexingStats, IndexingProgress};
 /// use async_trait::async_trait;
 ///
 /// struct SimpleIndexingPipeline;
@@ -31,7 +31,7 @@ use crate::{QueryResponse, Result};
 ///
 ///     async fn run_with_progress(
 ///         &self,
-///         progress_callback: impl Fn(IndexingProgress) + Send + Sync,
+///         progress_callback: Box<dyn Fn(IndexingProgress) + Send + Sync>,
 ///     ) -> Result<IndexingStats> {
 ///         // Implementation would report progress during indexing
 ///         self.run().await

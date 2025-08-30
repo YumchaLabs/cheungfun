@@ -24,6 +24,7 @@ use crate::{config::EmbedderConfig, traits::Embedder, Result};
 /// use async_trait::async_trait;
 /// use std::sync::Arc;
 ///
+/// #[derive(Debug)]
 /// struct MyEmbedderFactory;
 ///
 /// #[async_trait]
@@ -31,6 +32,15 @@ use crate::{config::EmbedderConfig, traits::Embedder, Result};
 ///     async fn create_embedder(&self, config: &EmbedderConfig) -> Result<Arc<dyn Embedder>> {
 ///         // Implementation would create embedder based on config
 ///         todo!("Implement embedder creation")
+///     }
+///
+///     fn can_create(&self, config: &EmbedderConfig) -> bool {
+///         // Check if this factory can create the requested embedder type
+///         true
+///     }
+///
+///     fn supported_types(&self) -> Vec<&'static str> {
+///         vec!["fastembed", "api", "candle"]
 ///     }
 /// }
 /// ```

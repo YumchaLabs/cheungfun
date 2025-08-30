@@ -3,16 +3,23 @@
 //! These tests verify the complete pipeline from documents to knowledge graph
 //! using LLM-powered entity extraction.
 
+use async_trait::async_trait;
 use cheungfun_core::{
     traits::{PropertyGraphStore, Retriever},
     types::Document,
     Query,
 };
-use cheungfun_indexing::transformers::{ExtractionFormat, LlmExtractionConfig, LlmExtractor};
+use cheungfun_indexing::transformers::{
+    llm_extractor::ExtractionFormat, LlmExtractionConfig, LlmExtractor,
+};
 use cheungfun_integrations::SimplePropertyGraphStore;
-use cheungfun_query::{PropertyGraphIndex, PropertyGraphIndexConfig};
-use siumai::prelude::*;
-use std::sync::Arc;
+use cheungfun_query::prelude::{PropertyGraphIndex, PropertyGraphIndexConfig};
+use siumai::{
+    prelude::*,
+    traits::{ChatCapability, ProviderCapabilities},
+    types::{ChatMessage, ChatRequest, ChatResponse, FinishReason, MessageContent},
+};
+use std::{collections::HashMap, sync::Arc};
 use tokio;
 
 /// Mock LLM client for testing PropertyGraphIndex integration.
@@ -35,54 +42,57 @@ impl MockGraphLlmClient {
     }
 }
 
-#[async_trait::async_trait]
-impl LlmClient for MockGraphLlmClient {
-    async fn complete(
+#[async_trait]
+impl ChatCapability for MockGraphLlmClient {
+    async fn chat_with_tools(
         &self,
-        _request: CompletionRequest,
-    ) -> Result<CompletionResponse, Box<dyn std::error::Error + Send + Sync>> {
-        Ok(CompletionResponse {
-            content: self.response.clone(),
-            model: "mock-model".to_string(),
+        _messages: Vec<ChatMessage>,
+        _tools: Option<Vec<Tool>>,
+    ) -> Result<ChatResponse, LlmError> {
+        Ok(ChatResponse {
+            id: Some("mock-id".to_string()),
+            content: MessageContent::Text(self.response.clone()),
+            model: Some("mock-model".to_string()),
             usage: None,
+            finish_reason: Some(FinishReason::Stop),
+            tool_calls: None,
+            thinking: None,
+            metadata: HashMap::new(),
         })
     }
 
-    async fn chat(
+    async fn chat_stream(
         &self,
-        _request: ChatRequest,
-    ) -> Result<ChatResponse, Box<dyn std::error::Error + Send + Sync>> {
-        unimplemented!("Chat not implemented for mock")
+        _messages: Vec<ChatMessage>,
+        _tools: Option<Vec<Tool>>,
+    ) -> Result<ChatStream, LlmError> {
+        Err(LlmError::UnsupportedOperation(
+            "Mock streaming not implemented".to_string(),
+        ))
+    }
+}
+
+impl LlmClient for MockGraphLlmClient {
+    fn provider_name(&self) -> &'static str {
+        "mock"
     }
 
-    async fn stream_complete(
-        &self,
-        _request: CompletionRequest,
-    ) -> Result<
-        Box<
-            dyn futures::Stream<
-                    Item = Result<CompletionResponse, Box<dyn std::error::Error + Send + Sync>>,
-                > + Send
-                + Unpin,
-        >,
-        Box<dyn std::error::Error + Send + Sync>,
-    > {
-        unimplemented!("Stream complete not implemented for mock")
+    fn supported_models(&self) -> Vec<String> {
+        vec!["mock-model".to_string()]
     }
 
-    async fn stream_chat(
-        &self,
-        _request: ChatRequest,
-    ) -> Result<
-        Box<
-            dyn futures::Stream<
-                    Item = Result<ChatResponse, Box<dyn std::error::Error + Send + Sync>>,
-                > + Send
-                + Unpin,
-        >,
-        Box<dyn std::error::Error + Send + Sync>,
-    > {
-        unimplemented!("Stream chat not implemented for mock")
+    fn capabilities(&self) -> ProviderCapabilities {
+        ProviderCapabilities::new().with_chat()
+    }
+
+    fn as_any(&self) -> &dyn std::any::Any {
+        self
+    }
+
+    fn clone_box(&self) -> Box<dyn LlmClient> {
+        Box::new(MockGraphLlmClient {
+            response: self.response.clone(),
+        })
     }
 }
 
@@ -218,7 +228,7 @@ async fn test_property_graph_index_from_documents_with_llm() {
 
     // Test that we can retrieve specific triplets
     let all_triplets = graph_store
-        .get_triplets(None, None, None, Some(20))
+        .get_triplets(None, None, None, Some(vec!["20".to_string()]))
         .await
         .unwrap();
     assert!(!all_triplets.is_empty(), "Should have extracted triplets");
@@ -229,9 +239,9 @@ async fn test_property_graph_index_from_documents_with_llm() {
         println!(
             "  {}. ({}, {}, {})",
             i + 1,
-            triplet.subject.name,
+            triplet.source.name,
             triplet.relation.label,
-            triplet.object.name
+            triplet.target.name
         );
     }
 
@@ -338,7 +348,8 @@ async fn test_real_llm_property_graph_integration() {
         ..Default::default()
     };
 
-    let llm_extractor = Arc::new(LlmExtractor::new(llm_client, extraction_config).unwrap());
+    let llm_extractor =
+        Arc::new(LlmExtractor::new(Arc::new(llm_client), extraction_config).unwrap());
 
     let index_config = PropertyGraphIndexConfig {
         enable_llm_extraction: true,
@@ -420,16 +431,16 @@ async fn test_real_llm_property_graph_integration() {
     // Display some extracted triplets
     println!("\n🕸️  Sample extracted triplets:");
     let all_triplets = graph_store
-        .get_triplets(None, None, None, Some(15))
+        .get_triplets(None, None, None, Some(vec!["15".to_string()]))
         .await
         .unwrap();
     for (i, triplet) in all_triplets.iter().take(15).enumerate() {
         println!(
             "   {}. ({}, {}, {})",
             i + 1,
-            triplet.subject.name,
+            triplet.source.name,
             triplet.relation.label,
-            triplet.object.name
+            triplet.target.name
         );
     }
 

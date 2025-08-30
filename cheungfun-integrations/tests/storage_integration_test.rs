@@ -7,23 +7,21 @@ mod storage_tests {
         ChatMessage, Document, MessageRole,
     };
     use cheungfun_integrations::storage::{
-        SqlxChatStore, SqlxDocumentStore, SqlxIndexStore, SqlxStorageConfig,
+        KVChatStore, KVDocumentStore, KVIndexStore, SqlxStorageConfig,
     };
     use chrono::Utc;
     use std::collections::HashMap;
     use std::sync::Arc;
 
     async fn setup_test_storage(
-    ) -> Result<(SqlxDocumentStore, SqlxChatStore, SqlxIndexStore), Box<dyn std::error::Error>>
-    {
+    ) -> Result<(KVDocumentStore, KVChatStore, KVIndexStore), Box<dyn std::error::Error>> {
         // Use in-memory SQLite for testing
-        let config = SqlxStorageConfig::new("sqlite::memory:")
-            .with_auto_migrate(true)
-            .with_table_prefix("test_");
+        let config = SqlxStorageConfig::new("sqlite::memory:").with_table_prefix("test_");
 
-        let doc_store = SqlxDocumentStore::new(config.clone()).await?;
-        let chat_store = SqlxChatStore::new(config.clone()).await?;
-        let index_store = SqlxIndexStore::new(config).await?;
+        let kv_store = Arc::new(config.create_kv_store().await?);
+        let doc_store = KVDocumentStore::new(kv_store.clone(), None);
+        let chat_store = KVChatStore::new(kv_store.clone(), None);
+        let index_store = KVIndexStore::new(kv_store, None);
 
         Ok((doc_store, chat_store, index_store))
     }
@@ -184,6 +182,7 @@ mod storage_tests {
             Arc::new(index_store),
             vector_store,
             Some(Arc::new(chat_store)),
+            None, // No graph store
         );
 
         // Test that all stores are accessible
@@ -205,15 +204,15 @@ mod storage_tests {
         // Test with invalid database URL
         let invalid_config = SqlxStorageConfig::new("invalid://url");
 
-        let result = SqlxDocumentStore::new(invalid_config).await;
+        let result = invalid_config.create_kv_store().await;
         assert!(result.is_err());
     }
 
     #[tokio::test]
     async fn test_concurrent_storage_operations() {
         let (doc_store, chat_store, _) = setup_test_storage().await.unwrap();
-        let doc_store = Arc::new(doc_store);
-        let chat_store = Arc::new(chat_store);
+        let doc_store: Arc<dyn DocumentStore> = Arc::new(doc_store);
+        let chat_store: Arc<dyn ChatStore> = Arc::new(chat_store);
 
         // Test concurrent document operations
         let mut handles = Vec::new();
@@ -311,12 +310,10 @@ async fn test_storage_config_creation() {
     use cheungfun_integrations::SqlxStorageConfig;
 
     let config = SqlxStorageConfig::new("sqlite::memory:")
-        .with_auto_migrate(true)
         .with_table_prefix("test_")
         .with_max_connections(5);
 
     // Test that config is created correctly
-    assert!(config.auto_migrate);
     assert_eq!(config.table_prefix, "test_");
     assert_eq!(config.max_connections, 5);
 }

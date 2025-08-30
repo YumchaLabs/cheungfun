@@ -74,7 +74,7 @@ Add to your `Cargo.toml`:
 ```toml
 [dependencies]
 cheungfun = "0.1.0"
-siumai = "0.4.0"  # LLM integration
+siumai = "0.9.1"  # LLM integration
 tokio = { version = "1.0", features = ["full"] }
 ```
 
@@ -220,32 +220,18 @@ Cheungfun provides granular control over features and dependencies:
 - [API Documentation](https://docs.rs/cheungfun) - Complete API reference
 - [Examples](examples/) - Practical usage examples
 
-## 🏗️ Roadmap
+## ✅ Current Status
 
-### ✅ Phase 1 - Core Foundation
+### 🎯 Completed Features
 
-- [x] Project architecture and module design
-- [x] Core traits and data structures
-- [x] SIMD-accelerated vector operations
-- [x] HNSW approximate nearest neighbor search
-- [x] Memory-optimized vector stores
-- [x] Comprehensive performance benchmarks
-
-### 🚧 Phase 2 - Advanced Features
-
-- [ ] MCP (Model Context Protocol) agent framework
-- [ ] Qdrant vector database integration
-- [ ] Advanced query processing pipeline
-- [ ] Multi-modal document processing
-- [ ] Distributed indexing capabilities
-
-### 🔮 Phase 3 - Enterprise Features
-
-- [ ] Workflow orchestration engine
-- [ ] Model fine-tuning and training
-- [ ] Advanced evaluation metrics
-- [ ] Cloud-native deployment
-- [ ] Enterprise security features
+- ✅ **Core Foundation**: Complete modular architecture with 6 main crates
+- ✅ **Performance Optimization**: SIMD acceleration, HNSW search, memory optimization
+- ✅ **Advanced Indexing**: Tree-sitter AST parsing for 9+ programming languages
+- ✅ **Query Processing**: Hybrid search, query transformations, reranking algorithms
+- ✅ **Agent Framework**: Complete MCP integration with workflow orchestration
+- ✅ **Multimodal Support**: Text, image, audio, video processing capabilities
+- ✅ **External Integrations**: FastEmbed, Qdrant, API embedders with caching
+- ✅ **Unified Interface**: LlamaIndex-style Transform interface for all components
 
 ## 🤝 Contributing
 

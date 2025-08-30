@@ -621,8 +621,8 @@ mod tests {
             content.to_string(),
             Uuid::new_v4(),
             ChunkInfo {
-                start_offset: 0,
-                end_offset: content.len(),
+                start_char_idx: Some(0),
+                end_char_idx: Some(content.len()),
                 chunk_index: 0,
             },
         )

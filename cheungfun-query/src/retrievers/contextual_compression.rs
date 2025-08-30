@@ -6,9 +6,10 @@
 
 use crate::postprocessor::{DocumentCompressor, NodePostprocessor};
 use async_trait::async_trait;
-use cheungfun_core::{Query, Result, Retriever, ScoredNode};
-use std::sync::Arc;
+use cheungfun_core::{ChunkInfo, Query, Result, Retriever, ScoredNode};
+use std::{collections::HashMap, sync::Arc};
 use tracing::{debug, info};
+use uuid::Uuid;
 
 /// Contextual compression retriever.
 ///
@@ -266,27 +267,27 @@ mod tests {
     fn create_test_nodes() -> Vec<ScoredNode> {
         vec![
             ScoredNode {
-                node: Node {
-                    id: "1".to_string(),
-                    content: "High relevance content with many details".to_string(),
-                    metadata: HashMap::new(),
-                },
+                node: Node::new(
+                    "High relevance content with many details".to_string(),
+                    Uuid::new_v4(),
+                    ChunkInfo::new(Some(0), Some(42), 0),
+                ),
                 score: 0.9,
             },
             ScoredNode {
-                node: Node {
-                    id: "2".to_string(),
-                    content: "Medium relevance content".to_string(),
-                    metadata: HashMap::new(),
-                },
+                node: Node::new(
+                    "Medium relevance content".to_string(),
+                    Uuid::new_v4(),
+                    ChunkInfo::new(Some(0), Some(24), 1),
+                ),
                 score: 0.7,
             },
             ScoredNode {
-                node: Node {
-                    id: "3".to_string(),
-                    content: "Low relevance content".to_string(),
-                    metadata: HashMap::new(),
-                },
+                node: Node::new(
+                    "Low relevance content".to_string(),
+                    Uuid::new_v4(),
+                    ChunkInfo::new(Some(0), Some(21), 2),
+                ),
                 score: 0.3,
             },
         ]
@@ -308,8 +309,12 @@ mod tests {
 
         // Should filter out nodes with score < 0.5
         assert_eq!(results.len(), 2);
-        assert_eq!(results[0].node.id, "1");
-        assert_eq!(results[1].node.id, "2");
+        // Note: We can't directly compare UUIDs with strings, so we check the content instead
+        assert_eq!(
+            results[0].node.content,
+            "High relevance content with many details"
+        );
+        assert_eq!(results[1].node.content, "Medium relevance content");
     }
 
     #[tokio::test]

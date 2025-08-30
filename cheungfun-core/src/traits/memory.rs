@@ -21,7 +21,9 @@ use crate::{ChatMessage, Result};
 /// use cheungfun_core::traits::BaseMemory;
 /// use cheungfun_core::{ChatMessage, MessageRole, Result};
 /// use async_trait::async_trait;
+/// use std::collections::HashMap;
 ///
+/// #[derive(Debug)]
 /// struct SimpleMemory {
 ///     messages: Vec<ChatMessage>,
 ///     max_tokens: usize,

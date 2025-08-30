@@ -39,7 +39,8 @@ use crate::{CheungfunError, Result};
 ///     // Load configuration from directory
 ///     manager.load_from_directory(Path::new("./config")).await?;
 ///     
-///     // Enable hot reloading
+///     // Enable hot reloading (requires "hot-reload" feature)
+///     #[cfg(feature = "hot-reload")]
 ///     manager.enable_hot_reload().await?;
 ///     
 ///     // Get configuration values

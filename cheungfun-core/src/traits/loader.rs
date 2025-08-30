@@ -22,6 +22,7 @@ use crate::{Document, Result};
 /// use cheungfun_core::{Document, Result};
 /// use async_trait::async_trait;
 ///
+/// #[derive(Debug)]
 /// struct FileLoader {
 ///     path: String,
 /// }
@@ -88,6 +89,7 @@ pub trait Loader: Send + Sync + std::fmt::Debug {
 /// use futures::Stream;
 /// use std::pin::Pin;
 ///
+/// #[derive(Debug)]
 /// struct StreamingFileLoader {
 ///     directory: String,
 /// }

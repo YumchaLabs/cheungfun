@@ -426,24 +426,22 @@ impl Relation {
 /// use std::collections::HashMap;
 ///
 /// let person = EntityNode::new(
-///     "person_123".to_string(),
 ///     "John Doe".to_string(),
 ///     "Person".to_string(),
 ///     HashMap::new(),
 /// );
 ///
 /// let company = EntityNode::new(
-///     "company_789".to_string(),
 ///     "Acme Corp".to_string(),
 ///     "Organization".to_string(),
 ///     HashMap::new(),
 /// );
 ///
 /// let works_at = Relation::new(
-///     "rel_456".to_string(),
+///     "rel_1".to_string(),
 ///     "works_at".to_string(),
-///     "person_123".to_string(),
-///     "company_789".to_string(),
+///     person.id(),
+///     company.id(),
 ///     HashMap::new(),
 /// );
 ///
@@ -584,18 +582,18 @@ mod tests {
         let mut properties = HashMap::new();
         properties.insert("age".to_string(), serde_json::Value::Number(30.into()));
 
-        let entity = EntityNode::new(
+        let entity = EntityNode::with_id(
             "test_id".to_string(),
             "Test Entity".to_string(),
             "TestType".to_string(),
             properties,
         );
 
-        assert_eq!(entity.id, "test_id");
+        assert_eq!(entity.id(), "test_id");
         assert_eq!(entity.name, "Test Entity");
         assert_eq!(entity.label, "TestType");
         assert_eq!(
-            entity.get_property("age"),
+            entity.properties.get("age"),
             Some(&serde_json::Value::Number(30.into()))
         );
         assert!(!entity.has_embedding());
@@ -619,18 +617,8 @@ mod tests {
 
     #[test]
     fn test_triplet_creation() {
-        let source = EntityNode::new(
-            "source".to_string(),
-            "Source".to_string(),
-            "Entity".to_string(),
-            HashMap::new(),
-        );
-        let target = EntityNode::new(
-            "target".to_string(),
-            "Target".to_string(),
-            "Entity".to_string(),
-            HashMap::new(),
-        );
+        let source = EntityNode::new("Source".to_string(), "Entity".to_string(), HashMap::new());
+        let target = EntityNode::new("Target".to_string(), "Entity".to_string(), HashMap::new());
         let relation = Relation::new(
             "rel".to_string(),
             "connects".to_string(),
@@ -639,10 +627,10 @@ mod tests {
             HashMap::new(),
         );
 
-        let triplet = Triplet::new(source, relation, target);
+        let triplet = Triplet::new(source.clone(), relation, target.clone());
         assert_eq!(triplet.to_string(), "(Source) -[connects]-> (Target)");
-        assert!(triplet.involves_entity("source"));
-        assert!(triplet.involves_entity("target"));
+        assert!(triplet.involves_entity(&source.id()));
+        assert!(triplet.involves_entity(&target.id()));
         assert!(!triplet.involves_entity("other"));
     }
 }

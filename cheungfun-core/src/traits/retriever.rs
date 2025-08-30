@@ -22,6 +22,7 @@ use crate::{Query, Result, RetrievalContext, ScoredNode};
 /// use cheungfun_core::{Query, ScoredNode, RetrievalContext, Result};
 /// use async_trait::async_trait;
 ///
+/// #[derive(Debug)]
 /// struct SimpleRetriever;
 ///
 /// #[async_trait]
@@ -38,6 +39,10 @@ use crate::{Query, Result, RetrievalContext, ScoredNode};
 ///     ) -> Result<Vec<ScoredNode>> {
 ///         // Implementation would use context for better retrieval
 ///         self.retrieve(query).await
+///     }
+///
+///     fn name(&self) -> &'static str {
+///         "simple-retriever"
 ///     }
 /// }
 /// ```
