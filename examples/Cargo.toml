@@ -268,6 +268,10 @@ name = "query_fusion_and_bm25"
 path = "Rag_Techniques/27_query_fusion_and_bm25.rs"
 
 [[bin]]
+name = "summary_and_keyword_indices"
+path = "Rag_Techniques/28_summary_and_keyword_indices.rs"
+
+[[bin]]
 name = "corrective_rag"
 path = "Rag_Techniques/24_corrective_rag.rs"
 

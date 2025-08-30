@@ -8,6 +8,7 @@
 pub mod cache;
 pub mod embedder;
 pub mod generator;
+pub mod keyword_store;
 pub mod kvstore;
 pub mod loader;
 pub mod memory;
@@ -20,6 +21,7 @@ pub mod transformer;
 pub use cache::*;
 pub use embedder::*;
 pub use generator::*;
+pub use keyword_store::*;
 pub use kvstore::*;
 pub use loader::*;
 pub use memory::*;

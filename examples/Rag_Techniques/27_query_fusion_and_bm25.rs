@@ -30,9 +30,7 @@ use std::{path::PathBuf, sync::Arc};
 #[path = "../shared/mod.rs"]
 mod shared;
 
-use shared::{
-    constants::*, setup_logging, ExampleError, ExampleResult, PerformanceMetrics, Timer,
-};
+use shared::{constants::*, setup_logging, ExampleError, ExampleResult, PerformanceMetrics, Timer};
 
 use cheungfun_core::{
     traits::{Embedder, IndexingPipeline, Loader, Retriever},
@@ -49,9 +47,7 @@ use cheungfun_query::{
     engine::QueryEngine,
     generator::SiumaiGenerator,
     retriever::VectorRetriever,
-    retrievers::{
-        BM25Retriever, BM25Config, QueryFusionRetriever,
-    },
+    retrievers::{BM25Config, BM25Retriever, QueryFusionRetriever},
 };
 use siumai::prelude::*;
 
@@ -166,7 +162,8 @@ impl QueryFusionDemo {
         let nodes = bm25_splitter.parse_nodes(&documents, false).await?;
 
         // Create retrievers
-        let vector_retriever = Arc::new(VectorRetriever::new(vector_store.clone(), embedder.clone()));
+        let vector_retriever =
+            Arc::new(VectorRetriever::new(vector_store.clone(), embedder.clone()));
 
         // Create BM25 retriever
         let bm25_config = BM25Config {
@@ -176,20 +173,16 @@ impl QueryFusionDemo {
         let bm25_retriever = Arc::new(BM25Retriever::from_nodes(nodes, bm25_config).await?);
 
         // Create fusion retrievers with different modes
-        let fusion_retriever_rrf = Arc::new(
-            QueryFusionRetriever::with_rrf(
-                vec![vector_retriever.clone(), bm25_retriever.clone()],
-                60.0, // RRF k parameter
-            )?
-        );
+        let fusion_retriever_rrf = Arc::new(QueryFusionRetriever::with_rrf(
+            vec![vector_retriever.clone(), bm25_retriever.clone()],
+            60.0, // RRF k parameter
+        )?);
 
-        let fusion_retriever_weighted = Arc::new(
-            QueryFusionRetriever::with_weighted_average(
-                vec![vector_retriever.clone(), bm25_retriever.clone()],
-                vec![args.vector_weight, args.bm25_weight],
-                true, // normalize scores
-            )?
-        );
+        let fusion_retriever_weighted = Arc::new(QueryFusionRetriever::with_weighted_average(
+            vec![vector_retriever.clone(), bm25_retriever.clone()],
+            vec![args.vector_weight, args.bm25_weight],
+            true, // normalize scores
+        )?);
 
         // Create LLM client and query engine
         let llm_client = create_llm_client().await?;
@@ -234,15 +227,21 @@ impl QueryFusionDemo {
         let timer = Timer::new("Vector retrieval");
         let vector_results = self.vector_retriever.retrieve(&query).await?;
         let vector_time = timer.finish();
-        println!("🔢 Vector Retriever: {} results in {:.2}s", 
-            vector_results.len(), vector_time.as_secs_f64());
+        println!(
+            "🔢 Vector Retriever: {} results in {:.2}s",
+            vector_results.len(),
+            vector_time.as_secs_f64()
+        );
 
         // BM25 retriever
         let timer = Timer::new("BM25 retrieval");
         let bm25_results = self.bm25_retriever.retrieve(&query).await?;
         let bm25_time = timer.finish();
-        println!("📝 BM25 Retriever: {} results in {:.2}s", 
-            bm25_results.len(), bm25_time.as_secs_f64());
+        println!(
+            "📝 BM25 Retriever: {} results in {:.2}s",
+            bm25_results.len(),
+            bm25_time.as_secs_f64()
+        );
 
         println!();
 
@@ -254,15 +253,21 @@ impl QueryFusionDemo {
         let timer = Timer::new("RRF fusion");
         let rrf_results = self.fusion_retriever_rrf.retrieve(&query).await?;
         let rrf_time = timer.finish();
-        println!("⚡ RRF Fusion: {} results in {:.2}s", 
-            rrf_results.len(), rrf_time.as_secs_f64());
+        println!(
+            "⚡ RRF Fusion: {} results in {:.2}s",
+            rrf_results.len(),
+            rrf_time.as_secs_f64()
+        );
 
         // Weighted average fusion
         let timer = Timer::new("Weighted fusion");
         let weighted_results = self.fusion_retriever_weighted.retrieve(&query).await?;
         let weighted_time = timer.finish();
-        println!("⚖️  Weighted Fusion: {} results in {:.2}s", 
-            weighted_results.len(), weighted_time.as_secs_f64());
+        println!(
+            "⚖️  Weighted Fusion: {} results in {:.2}s",
+            weighted_results.len(),
+            weighted_time.as_secs_f64()
+        );
 
         println!();
 
@@ -272,7 +277,7 @@ impl QueryFusionDemo {
         let timer = Timer::new("Query engine");
         let response = self.query_engine.query(&self.args.query).await?;
         let response_time = timer.finish();
-        
+
         println!("✅ Response: {}", response.content());
         println!("⏱️  Total time: {:.2}s", response_time.as_secs_f64());
         println!("📄 Source nodes: {}", response.response.source_nodes.len());
@@ -303,16 +308,21 @@ impl QueryFusionDemo {
 
             println!("   📊 Results: {}", results.len());
             println!("   ⏱️  Time: {:.3}s", time.as_secs_f64());
-            
+
             if !results.is_empty() {
                 let avg_score = results.iter().map(|r| r.score).sum::<f32>() / results.len() as f32;
                 let max_score = results.iter().map(|r| r.score).fold(0.0f32, f32::max);
-                let min_score = results.iter().map(|r| r.score).fold(f32::INFINITY, f32::min);
-                
-                println!("   🎯 Score stats: avg={:.3}, max={:.3}, min={:.3}", 
-                    avg_score, max_score, min_score);
+                let min_score = results
+                    .iter()
+                    .map(|r| r.score)
+                    .fold(f32::INFINITY, f32::min);
+
+                println!(
+                    "   🎯 Score stats: avg={:.3}, max={:.3}, min={:.3}",
+                    avg_score, max_score, min_score
+                );
             }
-            
+
             println!();
         }
 
@@ -351,10 +361,22 @@ impl QueryFusionDemo {
 
             // Test all retrieval strategies
             let strategies = vec![
-                ("Vector Only", self.vector_retriever.clone() as Arc<dyn Retriever>),
-                ("BM25 Only", self.bm25_retriever.clone() as Arc<dyn Retriever>),
-                ("RRF Fusion", self.fusion_retriever_rrf.clone() as Arc<dyn Retriever>),
-                ("Weighted Fusion", self.fusion_retriever_weighted.clone() as Arc<dyn Retriever>),
+                (
+                    "Vector Only",
+                    self.vector_retriever.clone() as Arc<dyn Retriever>,
+                ),
+                (
+                    "BM25 Only",
+                    self.bm25_retriever.clone() as Arc<dyn Retriever>,
+                ),
+                (
+                    "RRF Fusion",
+                    self.fusion_retriever_rrf.clone() as Arc<dyn Retriever>,
+                ),
+                (
+                    "Weighted Fusion",
+                    self.fusion_retriever_weighted.clone() as Arc<dyn Retriever>,
+                ),
             ];
 
             for (strategy_name, retriever) in strategies {
@@ -362,8 +384,12 @@ impl QueryFusionDemo {
                 match retriever.retrieve(&query).await {
                     Ok(results) => {
                         let time = timer.finish();
-                        println!("✅ {}: {} results in {:.3}s", 
-                            strategy_name, results.len(), time.as_secs_f64());
+                        println!(
+                            "✅ {}: {} results in {:.3}s",
+                            strategy_name,
+                            results.len(),
+                            time.as_secs_f64()
+                        );
                     }
                     Err(e) => {
                         println!("❌ {}: Error - {}", strategy_name, e);
@@ -383,8 +409,9 @@ async fn create_embedder(provider: &str) -> ExampleResult<Arc<dyn Embedder>> {
     match provider {
         "fastembed" => {
             println!("🤖 Using FastEmbed for embeddings");
-            let embedder = FastEmbedder::new().await
-                .map_err(|e| ExampleError::Config(format!("FastEmbed initialization failed: {}", e)))?;
+            let embedder = FastEmbedder::new().await.map_err(|e| {
+                ExampleError::Config(format!("FastEmbed initialization failed: {}", e))
+            })?;
             Ok(Arc::new(embedder))
         }
         _ => Err(ExampleError::Config(format!(

@@ -36,10 +36,10 @@ use super::NodePostprocessor;
 pub struct PostprocessorChain {
     /// The postprocessors to apply in sequence.
     processors: Vec<Arc<dyn NodePostprocessor>>,
-    
+
     /// Whether to continue processing if a postprocessor fails.
     continue_on_error: bool,
-    
+
     /// Whether to log detailed processing information.
     verbose: bool,
 }
@@ -81,10 +81,7 @@ impl PostprocessorChain {
     ///
     /// * `processors` - The postprocessors to apply in sequence
     /// * `verbose` - Whether to enable verbose logging
-    pub fn with_verbose(
-        processors: Vec<Arc<dyn NodePostprocessor>>,
-        verbose: bool,
-    ) -> Self {
+    pub fn with_verbose(processors: Vec<Arc<dyn NodePostprocessor>>, verbose: bool) -> Self {
         Self {
             processors,
             continue_on_error: false,
@@ -175,7 +172,11 @@ impl PostprocessorChain {
 #[async_trait]
 impl NodePostprocessor for PostprocessorChain {
     #[instrument(skip(self, nodes), fields(chain_length = self.processors.len()))]
-    async fn postprocess(&self, mut nodes: Vec<ScoredNode>, query: &str) -> Result<Vec<ScoredNode>> {
+    async fn postprocess(
+        &self,
+        mut nodes: Vec<ScoredNode>,
+        query: &str,
+    ) -> Result<Vec<ScoredNode>> {
         if self.processors.is_empty() {
             debug!("Empty postprocessor chain, returning nodes unchanged");
             return Ok(nodes);
@@ -231,9 +232,10 @@ impl NodePostprocessor for PostprocessorChain {
                         );
                         // We can't continue because nodes was moved into the failed postprocess call
                         // In this case, we need to return an error or have a different design
-                        return Err(cheungfun_core::CheungfunError::pipeline(
-                            format!("Postprocessor {} failed and nodes were consumed: {}", processor_name, e)
-                        ));
+                        return Err(cheungfun_core::CheungfunError::pipeline(format!(
+                            "Postprocessor {} failed and nodes were consumed: {}",
+                            processor_name, e
+                        )));
                     } else {
                         return Err(e);
                     }
@@ -348,13 +350,18 @@ mod tests {
 
     #[async_trait]
     impl NodePostprocessor for MockPostprocessor {
-        async fn postprocess(&self, mut nodes: Vec<ScoredNode>, _query: &str) -> Result<Vec<ScoredNode>> {
+        async fn postprocess(
+            &self,
+            mut nodes: Vec<ScoredNode>,
+            _query: &str,
+        ) -> Result<Vec<ScoredNode>> {
             if self.should_fail {
-                return Err(cheungfun_core::CheungfunError::Processing(
-                    format!("{} failed", self.name)
-                ));
+                return Err(cheungfun_core::CheungfunError::Processing(format!(
+                    "{} failed",
+                    self.name
+                )));
             }
-            
+
             // Remove one node to simulate processing
             if !nodes.is_empty() {
                 nodes.pop();
@@ -386,16 +393,18 @@ mod tests {
     async fn test_empty_chain() {
         let chain = PostprocessorChain::new(vec![]);
         let nodes = create_test_nodes(3);
-        let result = chain.postprocess(nodes.clone(), "test query").await.unwrap();
+        let result = chain
+            .postprocess(nodes.clone(), "test query")
+            .await
+            .unwrap();
         assert_eq!(result.len(), nodes.len());
     }
 
     #[tokio::test]
     async fn test_single_processor() {
-        let chain = PostprocessorChain::new(vec![
-            Arc::new(MockPostprocessor::new("TestProcessor"))
-        ]);
-        
+        let chain =
+            PostprocessorChain::new(vec![Arc::new(MockPostprocessor::new("TestProcessor"))]);
+
         let nodes = create_test_nodes(3);
         let result = chain.postprocess(nodes, "test query").await.unwrap();
         assert_eq!(result.len(), 2); // One node removed
@@ -407,7 +416,7 @@ mod tests {
             Arc::new(MockPostprocessor::new("Processor1")),
             Arc::new(MockPostprocessor::new("Processor2")),
         ]);
-        
+
         let nodes = create_test_nodes(5);
         let result = chain.postprocess(nodes, "test query").await.unwrap();
         assert_eq!(result.len(), 3); // Two nodes removed
@@ -420,7 +429,7 @@ mod tests {
             Arc::new(MockPostprocessor::with_failure("FailingProcessor")),
             Arc::new(MockPostprocessor::new("Processor3")),
         ]);
-        
+
         let nodes = create_test_nodes(5);
         let result = chain.postprocess(nodes, "test query").await;
         assert!(result.is_err());
@@ -436,7 +445,7 @@ mod tests {
             ],
             true, // continue_on_error
         );
-        
+
         let nodes = create_test_nodes(5);
         let result = chain.postprocess(nodes, "test query").await.unwrap();
         assert_eq!(result.len(), 3); // Two successful processors removed 2 nodes
@@ -450,7 +459,7 @@ mod tests {
             .with_error_handling(true)
             .with_verbose(true)
             .build();
-        
+
         assert_eq!(chain.len(), 2);
         assert_eq!(chain.processor_names(), vec!["Processor1", "Processor2"]);
     }

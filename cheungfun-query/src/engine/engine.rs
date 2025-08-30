@@ -301,8 +301,13 @@ impl QueryEngine {
         // Apply postprocessors if configured (LlamaIndex-style processing)
         if let Some(ref postprocessors) = self.postprocessors {
             debug!("Applying postprocessor chain to retrieved nodes");
-            retrieved_nodes = postprocessors.postprocess(retrieved_nodes, query_text).await?;
-            info!("After postprocessing: {} context nodes", retrieved_nodes.len());
+            retrieved_nodes = postprocessors
+                .postprocess(retrieved_nodes, query_text)
+                .await?;
+            info!(
+                "After postprocessing: {} context nodes",
+                retrieved_nodes.len()
+            );
         }
 
         // Validate context if enabled

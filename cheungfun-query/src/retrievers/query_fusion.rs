@@ -27,18 +27,18 @@ use crate::advanced::fusion::{ReciprocalRankFusion, WeightedAverageFusion};
 pub enum FusionMode {
     /// Reciprocal Rank Fusion with configurable k parameter
     ReciprocalRank { k: f32 },
-    
+
     /// Weighted average fusion with retriever weights
     WeightedAverage { normalize_scores: bool },
-    
+
     /// Distance-based score fusion (converts distances to similarities)
-    DistBasedScore { 
+    DistBasedScore {
         /// Whether to normalize scores before fusion
         normalize: bool,
         /// Distance metric used by retrievers
         distance_metric: DistanceMetric,
     },
-    
+
     /// Simple concatenation with deduplication
     SimpleConcat,
 }
@@ -62,19 +62,19 @@ pub enum DistanceMetric {
 pub struct QueryFusionConfig {
     /// Fusion mode to use
     pub mode: FusionMode,
-    
+
     /// Weights for each retriever (must match number of retrievers)
     pub retriever_weights: Vec<f32>,
-    
+
     /// Whether to use async parallel retrieval
     pub use_async: bool,
-    
+
     /// Number of queries to generate (for query expansion)
     pub num_queries: usize,
-    
+
     /// Final number of results to return
     pub final_top_k: usize,
-    
+
     /// Intermediate top_k multiplier for each retriever
     pub intermediate_multiplier: f32,
 }
@@ -124,13 +124,13 @@ impl Default for QueryFusionConfig {
 pub struct QueryFusionRetriever {
     /// The retrievers to fuse results from
     retrievers: Vec<Arc<dyn Retriever>>,
-    
+
     /// Configuration for fusion
     config: QueryFusionConfig,
-    
+
     /// RRF fuser (cached for performance)
     rrf_fuser: Option<ReciprocalRankFusion>,
-    
+
     /// Weighted average fuser (cached for performance)
     weighted_fuser: Option<WeightedAverageFusion>,
 }
@@ -146,10 +146,7 @@ impl QueryFusionRetriever {
     /// # Errors
     ///
     /// Returns an error if the number of retriever weights doesn't match the number of retrievers.
-    pub fn new(
-        retrievers: Vec<Arc<dyn Retriever>>,
-        config: QueryFusionConfig,
-    ) -> Result<Self> {
+    pub fn new(retrievers: Vec<Arc<dyn Retriever>>, config: QueryFusionConfig) -> Result<Self> {
         // Validate configuration
         if config.retriever_weights.len() != retrievers.len() {
             return Err(cheungfun_core::CheungfunError::configuration(format!(
@@ -161,13 +158,14 @@ impl QueryFusionRetriever {
 
         // Pre-create fusers based on mode
         let (rrf_fuser, weighted_fuser) = match &config.mode {
-            FusionMode::ReciprocalRank { k } => {
-                (Some(ReciprocalRankFusion::new(*k)), None)
-            }
-            FusionMode::WeightedAverage { normalize_scores } => {
-                (None, Some(WeightedAverageFusion::new(config.retriever_weights.clone())
-                    .with_normalize_scores(*normalize_scores)))
-            }
+            FusionMode::ReciprocalRank { k } => (Some(ReciprocalRankFusion::new(*k)), None),
+            FusionMode::WeightedAverage { normalize_scores } => (
+                None,
+                Some(
+                    WeightedAverageFusion::new(config.retriever_weights.clone())
+                        .with_normalize_scores(*normalize_scores),
+                ),
+            ),
             _ => (None, None),
         };
 
@@ -180,10 +178,7 @@ impl QueryFusionRetriever {
     }
 
     /// Create a QueryFusionRetriever with default RRF fusion.
-    pub fn with_rrf(
-        retrievers: Vec<Arc<dyn Retriever>>,
-        k: f32,
-    ) -> Result<Self> {
+    pub fn with_rrf(retrievers: Vec<Arc<dyn Retriever>>, k: f32) -> Result<Self> {
         let config = QueryFusionConfig {
             mode: FusionMode::ReciprocalRank { k },
             retriever_weights: vec![1.0; retrievers.len()],
@@ -214,7 +209,10 @@ impl QueryFusionRetriever {
         normalize: bool,
     ) -> Result<Self> {
         let config = QueryFusionConfig {
-            mode: FusionMode::DistBasedScore { normalize, distance_metric },
+            mode: FusionMode::DistBasedScore {
+                normalize,
+                distance_metric,
+            },
             retriever_weights: weights,
             ..Default::default()
         };
@@ -223,15 +221,17 @@ impl QueryFusionRetriever {
 
     /// Retrieve results from all retrievers.
     async fn retrieve_from_all(&self, query: &Query) -> Result<Vec<Vec<ScoredNode>>> {
-        let intermediate_top_k = (self.config.final_top_k as f32 * self.config.intermediate_multiplier) as usize;
-        
+        let intermediate_top_k =
+            (self.config.final_top_k as f32 * self.config.intermediate_multiplier) as usize;
+
         // Adjust query for intermediate retrieval
         let mut adjusted_query = query.clone();
         adjusted_query.top_k = intermediate_top_k;
 
         if self.config.use_async {
             // Parallel retrieval
-            let futures: Vec<_> = self.retrievers
+            let futures: Vec<_> = self
+                .retrievers
                 .iter()
                 .map(|retriever| retriever.retrieve(&adjusted_query))
                 .collect();
@@ -268,30 +268,33 @@ impl QueryFusionRetriever {
                     self.simple_concat_fusion(results)
                 }
             }
-            FusionMode::DistBasedScore { normalize, distance_metric } => {
-                self.dist_based_score_fusion(results, *normalize, distance_metric)
-            }
-            FusionMode::SimpleConcat => {
-                self.simple_concat_fusion(results)
-            }
+            FusionMode::DistBasedScore {
+                normalize,
+                distance_metric,
+            } => self.dist_based_score_fusion(results, *normalize, distance_metric),
+            FusionMode::SimpleConcat => self.simple_concat_fusion(results),
         }
     }
 
     /// Simple concatenation with deduplication.
     fn simple_concat_fusion(&self, results: Vec<Vec<ScoredNode>>) -> Vec<ScoredNode> {
         use std::collections::HashMap;
-        
+
         let mut node_map: HashMap<String, ScoredNode> = HashMap::new();
-        
+
         for result_list in results {
             for node in result_list {
                 let node_id = node.node.id.to_string();
                 node_map.entry(node_id).or_insert(node);
             }
         }
-        
+
         let mut final_results: Vec<_> = node_map.into_values().collect();
-        final_results.sort_by(|a, b| b.score.partial_cmp(&a.score).unwrap_or(std::cmp::Ordering::Equal));
+        final_results.sort_by(|a, b| {
+            b.score
+                .partial_cmp(&a.score)
+                .unwrap_or(std::cmp::Ordering::Equal)
+        });
         final_results
     }
 
@@ -308,7 +311,7 @@ impl QueryFusionRetriever {
             .enumerate()
             .map(|(idx, mut result_list)| {
                 let weight = self.config.retriever_weights[idx];
-                
+
                 for node in &mut result_list {
                     // Convert distance to similarity based on metric
                     let similarity = match distance_metric {
@@ -316,10 +319,10 @@ impl QueryFusionRetriever {
                         DistanceMetric::Euclidean => 1.0 / (1.0 + node.score), // Euclidean distance to similarity
                         DistanceMetric::DotProduct => node.score, // Dot product is already similarity
                     };
-                    
+
                     node.score = similarity * weight;
                 }
-                
+
                 result_list
             })
             .collect();
@@ -341,7 +344,7 @@ impl Retriever for QueryFusionRetriever {
 
         // Retrieve from all retrievers
         let results = self.retrieve_from_all(query).await?;
-        
+
         debug!(
             "Retrieved results from {} retrievers: {:?}",
             results.len(),

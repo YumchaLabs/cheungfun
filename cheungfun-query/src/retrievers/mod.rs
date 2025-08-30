@@ -16,5 +16,6 @@ pub use contextual_compression::{
 pub use graph_retriever::{GraphRetrievalConfig, GraphRetrievalStrategy, GraphRetriever};
 pub use hierarchical::{HierarchicalRetriever, HierarchicalRetrieverBuilder, StorageContext};
 pub use query_fusion::{
-    DistanceMetric, FusionMode, QueryFusionConfig, QueryFusionRetriever, QueryFusionRetrieverBuilder,
+    DistanceMetric, FusionMode, QueryFusionConfig, QueryFusionRetriever,
+    QueryFusionRetrieverBuilder,
 };

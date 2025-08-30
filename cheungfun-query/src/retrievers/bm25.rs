@@ -23,7 +23,7 @@ use tracing::{debug, info, instrument};
 pub struct BM25Params {
     /// Term frequency saturation parameter (typically 1.2)
     pub k1: f32,
-    
+
     /// Length normalization parameter (typically 0.75)
     pub b: f32,
 }
@@ -39,16 +39,16 @@ impl Default for BM25Params {
 pub struct BM25Config {
     /// BM25 algorithm parameters
     pub params: BM25Params,
-    
+
     /// Whether to perform case-sensitive matching
     pub case_sensitive: bool,
-    
+
     /// Minimum word length to consider
     pub min_word_length: usize,
-    
+
     /// Maximum number of results to return
     pub max_results: usize,
-    
+
     /// Minimum BM25 score threshold
     pub score_threshold: Option<f32>,
 }
@@ -70,7 +70,7 @@ impl Default for BM25Config {
 struct DocumentStats {
     /// Document length (number of terms)
     length: usize,
-    
+
     /// Term frequencies in the document
     term_frequencies: HashMap<String, usize>,
 }
@@ -80,13 +80,13 @@ struct DocumentStats {
 struct BM25Index {
     /// Document statistics for each document
     documents: HashMap<String, DocumentStats>,
-    
+
     /// Inverse document frequency for each term
     idf_scores: HashMap<String, f32>,
-    
+
     /// Average document length
     avg_doc_length: f32,
-    
+
     /// Total number of documents
     total_docs: usize,
 }
@@ -106,19 +106,19 @@ impl BM25Index {
     fn add_document(&mut self, doc_id: String, content: &str, config: &BM25Config) {
         let terms = Self::tokenize(content, config);
         let term_frequencies = Self::calculate_term_frequencies(&terms);
-        
+
         let doc_stats = DocumentStats {
             length: terms.len(),
             term_frequencies,
         };
-        
+
         self.documents.insert(doc_id, doc_stats);
         self.total_docs += 1;
-        
+
         // Update average document length
         let total_length: usize = self.documents.values().map(|doc| doc.length).sum();
         self.avg_doc_length = total_length as f32 / self.total_docs as f32;
-        
+
         // Recalculate IDF scores
         self.calculate_idf_scores();
     }
@@ -130,7 +130,7 @@ impl BM25Index {
         } else {
             text.to_lowercase()
         };
-        
+
         text.split_whitespace()
             .map(|word| {
                 // Remove punctuation
@@ -154,18 +154,19 @@ impl BM25Index {
     /// Calculate IDF scores for all terms.
     fn calculate_idf_scores(&mut self) {
         let mut term_doc_counts: HashMap<String, usize> = HashMap::new();
-        
+
         // Count documents containing each term
         for doc_stats in self.documents.values() {
             for term in doc_stats.term_frequencies.keys() {
                 *term_doc_counts.entry(term.clone()).or_insert(0) += 1;
             }
         }
-        
+
         // Calculate IDF scores
         self.idf_scores.clear();
         for (term, doc_count) in term_doc_counts {
-            let idf = ((self.total_docs as f32 - doc_count as f32 + 0.5) / (doc_count as f32 + 0.5)).ln();
+            let idf =
+                ((self.total_docs as f32 - doc_count as f32 + 0.5) / (doc_count as f32 + 0.5)).ln();
             self.idf_scores.insert(term, idf.max(0.0)); // Ensure non-negative IDF
         }
     }
@@ -181,33 +182,37 @@ impl BM25Index {
             Some(stats) => stats,
             None => return 0.0,
         };
-        
+
         let mut score = 0.0;
-        
+
         for term in query_terms {
             let tf = *doc_stats.term_frequencies.get(term).unwrap_or(&0) as f32;
             let idf = *self.idf_scores.get(term).unwrap_or(&0.0);
-            
+
             if tf > 0.0 {
-                let normalized_tf = (tf * (params.k1 + 1.0)) / 
-                    (tf + params.k1 * (1.0 - params.b + params.b * (doc_stats.length as f32 / self.avg_doc_length)));
-                
+                let normalized_tf = (tf * (params.k1 + 1.0))
+                    / (tf
+                        + params.k1
+                            * (1.0 - params.b
+                                + params.b * (doc_stats.length as f32 / self.avg_doc_length)));
+
                 score += idf * normalized_tf;
             }
         }
-        
+
         score
     }
 
     /// Search for documents matching the query.
     fn search(&self, query: &str, config: &BM25Config) -> Vec<(String, f32)> {
         let query_terms = Self::tokenize(query, config);
-        
+
         if query_terms.is_empty() {
             return Vec::new();
         }
-        
-        let mut results: Vec<(String, f32)> = self.documents
+
+        let mut results: Vec<(String, f32)> = self
+            .documents
             .keys()
             .map(|doc_id| {
                 let score = self.calculate_bm25_score(&query_terms, doc_id, &config.params);
@@ -221,15 +226,15 @@ impl BM25Index {
                 }
             })
             .collect();
-        
+
         // Sort by score (descending)
         results.sort_by(|a, b| b.1.partial_cmp(&a.1).unwrap_or(std::cmp::Ordering::Equal));
-        
+
         // Limit results
         if results.len() > config.max_results {
             results.truncate(config.max_results);
         }
-        
+
         results
     }
 }
@@ -262,10 +267,10 @@ impl BM25Index {
 pub struct BM25Retriever {
     /// BM25 index
     index: BM25Index,
-    
+
     /// Node storage (for returning full nodes)
     nodes: HashMap<String, Node>,
-    
+
     /// Configuration
     config: BM25Config,
 }
@@ -296,10 +301,11 @@ impl BM25Retriever {
     pub async fn add_nodes(&mut self, nodes: Vec<Node>) -> Result<()> {
         for node in nodes {
             let doc_id = node.id.to_string();
-            self.index.add_document(doc_id.clone(), &node.content, &self.config);
+            self.index
+                .add_document(doc_id.clone(), &node.content, &self.config);
             self.nodes.insert(doc_id, node);
         }
-        
+
         info!("Added {} nodes to BM25 index", self.nodes.len());
         Ok(())
     }
@@ -307,7 +313,8 @@ impl BM25Retriever {
     /// Add a single node to the index.
     pub async fn add_node(&mut self, node: Node) -> Result<()> {
         let doc_id = node.id.to_string();
-        self.index.add_document(doc_id.clone(), &node.content, &self.config);
+        self.index
+            .add_document(doc_id.clone(), &node.content, &self.config);
         self.nodes.insert(doc_id, node);
         Ok(())
     }
@@ -337,7 +344,7 @@ impl Retriever for BM25Retriever {
 
         // Search using BM25 index
         let search_results = self.index.search(&query.text, &self.config);
-        
+
         debug!("BM25 search found {} results", search_results.len());
 
         // Convert to ScoredNode results

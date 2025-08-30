@@ -9,6 +9,7 @@
 
 pub mod embedders;
 pub mod graph_store;
+pub mod keyword_stores;
 pub mod vector_stores;
 
 // Storage implementations
@@ -24,6 +25,7 @@ pub mod gpu;
 
 // Re-export commonly used types
 pub use graph_store::SimplePropertyGraphStore;
+pub use keyword_stores::InMemoryKeywordStore;
 pub use vector_stores::InMemoryVectorStore;
 
 // Feature-gated embedder exports

@@ -32,14 +32,9 @@ use std::{path::PathBuf, sync::Arc};
 #[path = "../shared/mod.rs"]
 mod shared;
 
-use shared::{
-    constants::*, setup_logging, ExampleError, ExampleResult,
-    PerformanceMetrics, Timer,
-};
+use shared::{constants::*, setup_logging, ExampleError, ExampleResult, PerformanceMetrics, Timer};
 
-use cheungfun_core::{
-    traits::{Embedder, IndexingPipeline},
-};
+use cheungfun_core::traits::{Embedder, IndexingPipeline};
 use cheungfun_indexing::{
     loaders::DirectoryLoader,
     node_parser::{config::SentenceSplitterConfig, text::SentenceSplitter},
@@ -52,7 +47,8 @@ use cheungfun_query::{
     generator::SiumaiGenerator,
     postprocessor::{
         KeywordFilter, KeywordFilterConfig, MetadataFilter, MetadataFilterConfig,
-        SentenceEmbeddingOptimizer, SentenceEmbeddingConfig, SimilarityFilter, SimilarityFilterConfig,
+        SentenceEmbeddingConfig, SentenceEmbeddingOptimizer, SimilarityFilter,
+        SimilarityFilterConfig,
     },
     retriever::VectorRetriever,
 };
@@ -194,10 +190,7 @@ impl LlamaIndexStyleDemo {
 
         // Method 1: Basic QueryEngine with postprocessors (LlamaIndex style)
         let query_engine_basic = QueryEngine::new(retriever.clone(), generator.clone())
-            .with_postprocessors(vec![
-                keyword_filter.clone(),
-                similarity_filter.clone(),
-            ]);
+            .with_postprocessors(vec![keyword_filter.clone(), similarity_filter.clone()]);
 
         // Method 2: Advanced configuration with all postprocessors
         let query_engine_advanced = QueryEngine::new(retriever.clone(), generator.clone())
@@ -262,9 +255,15 @@ impl LlamaIndexStyleDemo {
             let timer = Timer::new("Basic query");
             let response1 = self.query_engine_basic.query(query).await?;
             let time1 = timer.finish();
-            println!("   ✅ Response: {}", response1.content().chars().take(100).collect::<String>() + "...");
+            println!(
+                "   ✅ Response: {}",
+                response1.content().chars().take(100).collect::<String>() + "..."
+            );
             println!("   ⏱️  Time: {:.2}s", time1.as_secs_f64());
-            println!("   📊 Context nodes: {}", response1.response.source_nodes.len());
+            println!(
+                "   📊 Context nodes: {}",
+                response1.response.source_nodes.len()
+            );
             println!();
 
             // Test advanced approach
@@ -272,9 +271,15 @@ impl LlamaIndexStyleDemo {
             let timer = Timer::new("Advanced query");
             let response2 = self.query_engine_advanced.query(query).await?;
             let time2 = timer.finish();
-            println!("   ✅ Response: {}", response2.content().chars().take(100).collect::<String>() + "...");
+            println!(
+                "   ✅ Response: {}",
+                response2.content().chars().take(100).collect::<String>() + "..."
+            );
             println!("   ⏱️  Time: {:.2}s", time2.as_secs_f64());
-            println!("   📊 Context nodes: {}", response2.response.source_nodes.len());
+            println!(
+                "   📊 Context nodes: {}",
+                response2.response.source_nodes.len()
+            );
             println!();
 
             // Test builder approach
@@ -282,9 +287,15 @@ impl LlamaIndexStyleDemo {
             let timer = Timer::new("Builder query");
             let response3 = self.query_engine_builder.query(query).await?;
             let time3 = timer.finish();
-            println!("   ✅ Response: {}", response3.content().chars().take(100).collect::<String>() + "...");
+            println!(
+                "   ✅ Response: {}",
+                response3.content().chars().take(100).collect::<String>() + "..."
+            );
             println!("   ⏱️  Time: {:.2}s", time3.as_secs_f64());
-            println!("   📊 Context nodes: {}", response3.response.source_nodes.len());
+            println!(
+                "   📊 Context nodes: {}",
+                response3.response.source_nodes.len()
+            );
             println!();
 
             println!("{}", "═".repeat(60));
@@ -333,9 +344,15 @@ impl LlamaIndexStyleDemo {
                     println!();
                     println!("📊 Metadata:");
                     println!("   ⏱️  Processing time: {:.2}s", time.as_secs_f64());
-                    println!("   📄 Source nodes: {}", response.response.source_nodes.len());
+                    println!(
+                        "   📄 Source nodes: {}",
+                        response.response.source_nodes.len()
+                    );
                     if !response.response.source_nodes.is_empty() {
-                        println!("   🎯 Source node IDs: {}", response.response.source_nodes.len());
+                        println!(
+                            "   🎯 Source node IDs: {}",
+                            response.response.source_nodes.len()
+                        );
                     }
                 }
                 Err(e) => {
@@ -375,8 +392,9 @@ async fn create_embedder(provider: &str) -> ExampleResult<Arc<dyn Embedder>> {
     match provider {
         "fastembed" => {
             println!("🤖 Using FastEmbed for embeddings");
-            let embedder = FastEmbedder::new().await
-                .map_err(|e| ExampleError::Config(format!("FastEmbed initialization failed: {}", e)))?;
+            let embedder = FastEmbedder::new().await.map_err(|e| {
+                ExampleError::Config(format!("FastEmbed initialization failed: {}", e))
+            })?;
             Ok(Arc::new(embedder))
         }
         _ => Err(ExampleError::Config(format!(
