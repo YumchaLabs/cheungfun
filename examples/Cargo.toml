@@ -366,6 +366,12 @@ name = "test_embedding_config"
 path = "use_cases/test_embedding_config.rs"
 required-features = ["fastembed"]
 
+# === Cache and Pipeline Examples ===
+[[bin]]
+name = "ingestion_cache_demo"
+path = "ingestion_cache_demo.rs"
+required-features = ["basic"]
+
 # === Utility Examples ===
 [[bin]]
 name = "ast_splitter_test"
@@ -415,6 +421,11 @@ required-features = ["basic"]
 [[bin]]
 name = "markdown_parser"
 path = "utilities/markdown_parser_demo.rs"
+required-features = ["basic"]
+
+[[bin]]
+name = "typed_transform_example"
+path = "utilities/typed_transform_example.rs"
 required-features = ["basic"]
 
 [[bin]]

@@ -8,7 +8,7 @@ use std::sync::Arc;
 use crate::{
     config::{EmbedderConfig, IndexingPipelineConfig, VectorStoreConfig},
     factory::{EmbedderFactoryRegistry, VectorStoreFactoryRegistry},
-    traits::{Embedder, IndexingPipeline, Loader, Transform, VectorStore},
+    traits::{Embedder, IndexingPipeline, Loader, VectorStore},
     Result,
 };
 
@@ -38,8 +38,8 @@ pub struct IndexingPipelineBuilder {
     /// Loader component (optional).
     loader: Option<Arc<dyn Loader>>,
 
-    /// Transform component (optional).
-    transformer: Option<Arc<dyn Transform>>,
+    /// Transform component (optional) - temporarily disabled during refactoring.
+    // transformer: Option<Arc<dyn Transform>>,
 
     /// Embedder component or configuration.
     embedder: Option<EmbedderComponent>,
@@ -83,7 +83,7 @@ impl IndexingPipelineBuilder {
 
         Self {
             loader: None,
-            transformer: None,
+            // transformer: None,  // Temporarily disabled during refactoring
             embedder: Some(EmbedderComponent::Config(default_embedder)),
             vector_store: Some(VectorStoreComponent::Config(default_vector_store)),
             embedder_factory: None,
@@ -99,12 +99,12 @@ impl IndexingPipelineBuilder {
         self
     }
 
-    /// Set the transform component.
-    #[must_use]
-    pub fn with_transformer(mut self, transformer: Arc<dyn Transform>) -> Self {
-        self.transformer = Some(transformer);
-        self
-    }
+    /// Set the transform component - temporarily disabled during refactoring.
+    // #[must_use]
+    // pub fn with_transformer(mut self, transformer: Arc<dyn Transform>) -> Self {
+    //     self.transformer = Some(transformer);
+    //     self
+    // }
 
     /// Set the embedder instance directly.
     #[must_use]
@@ -305,7 +305,7 @@ impl IndexingPipelineBuilder {
     pub fn info(&self) -> BuilderInfo {
         BuilderInfo {
             has_loader: self.loader.is_some(),
-            has_transformer: self.transformer.is_some(),
+            has_transformer: false, // self.transformer.is_some(),  // Temporarily disabled
             has_embedder: self.embedder.is_some(),
             has_vector_store: self.vector_store.is_some(),
             has_embedder_factory: self.embedder_factory.is_some(),

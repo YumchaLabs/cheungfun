@@ -500,6 +500,45 @@ pub trait DocumentStore: Send + Sync + std::fmt::Debug {
     /// A mapping of document ID to content hash.
     async fn get_all_document_hashes(&self) -> Result<HashMap<String, String>>;
 
+    /// Set document hash for a specific document.
+    ///
+    /// # Arguments
+    ///
+    /// * `doc_id` - The document ID
+    /// * `doc_hash` - The content hash of the document
+    async fn set_document_hash(&self, doc_id: &str, doc_hash: &str) -> Result<()> {
+        // Default implementation does nothing
+        let _ = (doc_id, doc_hash);
+        Ok(())
+    }
+
+    /// Set multiple document hashes in batch.
+    ///
+    /// # Arguments
+    ///
+    /// * `doc_hashes` - Mapping of document ID to content hash
+    async fn set_document_hashes(&self, doc_hashes: HashMap<String, String>) -> Result<()> {
+        // Default implementation calls set_document_hash for each entry
+        for (doc_id, doc_hash) in doc_hashes {
+            self.set_document_hash(&doc_id, &doc_hash).await?;
+        }
+        Ok(())
+    }
+
+    /// Get document hash for a specific document.
+    ///
+    /// # Arguments
+    ///
+    /// * `doc_id` - The document ID
+    ///
+    /// # Returns
+    ///
+    /// The content hash if found, None otherwise.
+    async fn get_document_hash(&self, doc_id: &str) -> Result<Option<String>> {
+        let all_hashes = self.get_all_document_hashes().await?;
+        Ok(all_hashes.get(doc_id).cloned())
+    }
+
     /// Check if a document exists in the store.
     ///
     /// # Arguments

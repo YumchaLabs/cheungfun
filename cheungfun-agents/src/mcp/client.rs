@@ -134,6 +134,14 @@ impl McpClient {
     }
 
     /// Connect to an MCP server
+    ///
+    /// # Errors
+    ///
+    /// Returns an error if:
+    /// - The client is already connected to a server
+    /// - The server URL is invalid or unreachable
+    /// - The MCP handshake fails
+    /// - Authentication with the server fails
     pub async fn connect(&mut self, server_url: &str) -> Result<()> {
         info!("Connecting to MCP server: {}", server_url);
 
@@ -177,6 +185,17 @@ impl McpClient {
     }
 
     /// List available tools from the server
+    ///
+    /// # Errors
+    ///
+    /// Returns an error if:
+    /// - The client is not connected to the server
+    /// - Communication with the server fails
+    /// - The server returns an invalid response
+    ///
+    /// # Panics
+    ///
+    /// May panic if the internal tool list becomes corrupted during processing
     pub async fn list_tools(&mut self) -> Result<Vec<RmcpTool>> {
         if !self.connected {
             return Err(AgentError::mcp("Client not connected to server"));

@@ -1,12 +1,12 @@
 //! Modern API example demonstrating the unified Transform interface architecture.
 
 use cheungfun_core::{
-    traits::{Transform, TransformInput},
+    traits::{TypedTransform, TypedData, DocumentState, NodeState},
     Document,
 };
 use cheungfun_indexing::prelude::*;
 use std::collections::HashMap;
-use std::sync::Arc;
+
 
 #[tokio::main]
 async fn main() -> Result<(), Box<dyn std::error::Error>> {
@@ -24,20 +24,23 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     let token_splitter = TokenTextSplitter::from_defaults(400, 80)?;
     let code_splitter = CodeSplitter::from_defaults(ProgrammingLanguage::Rust, 20, 5, 800)?;
 
-    // Test sentence splitter using unified Transform interface
-    let input = TransformInput::Documents(documents.clone());
-    let nodes = sentence_splitter.transform(input).await?;
+    // Test sentence splitter using unified TypedTransform interface
+    let input = TypedData::from_documents(documents.clone());
+    let result = sentence_splitter.transform(input).await?;
+    let nodes = result.into_nodes();
     println!("   ✅ SentenceSplitter created {} nodes", nodes.len());
 
-    // Test token splitter using unified Transform interface
-    let input = TransformInput::Documents(documents.clone());
-    let nodes = token_splitter.transform(input).await?;
+    // Test token splitter using unified TypedTransform interface
+    let input = TypedData::from_documents(documents.clone());
+    let result = token_splitter.transform(input).await?;
+    let nodes = result.into_nodes();
     println!("   ✅ TokenTextSplitter created {} nodes", nodes.len());
 
-    // Test code splitter with Rust code using unified Transform interface
+    // Test code splitter with Rust code using unified TypedTransform interface
     let rust_doc = create_rust_code_document();
-    let input = TransformInput::Document(rust_doc);
-    let nodes = code_splitter.transform(input).await?;
+    let input = TypedData::from_documents(vec![rust_doc]);
+    let result = code_splitter.transform(input).await?;
+    let nodes = result.into_nodes();
     println!(
         "   ✅ CodeSplitter created {} nodes from Rust code",
         nodes.len()
@@ -47,8 +50,8 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     println!("\n🔄 Example 2: Unified Transform Interface");
     println!("------------------------------------------");
 
-    // All components now implement the same Transform trait
-    let transforms: Vec<Box<dyn Transform>> = vec![
+    // All components now implement the same TypedTransform trait
+    let transforms: Vec<Box<dyn TypedTransform<DocumentState, NodeState>>> = vec![
         Box::new(SentenceSplitter::from_defaults(400, 80)?),
         Box::new(TokenTextSplitter::from_defaults(300, 60)?),
         Box::new(CodeSplitter::from_defaults(
@@ -67,9 +70,10 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     println!("\n🔧 Example 3: Polymorphic Processing");
     println!("------------------------------------");
 
-    let test_input = TransformInput::Documents(documents.clone());
+    let test_input = TypedData::from_documents(documents.clone());
     for transform in transforms {
-        let nodes = transform.transform(test_input.clone()).await?;
+        let result = transform.transform(test_input.clone()).await?;
+        let nodes = result.into_nodes();
         println!("   📊 {}: {} nodes", transform.name(), nodes.len());
     }
 
@@ -78,10 +82,10 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     println!("-----------------------------------");
 
     let test_doc = create_test_document();
-    let test_input = TransformInput::Document(test_doc);
+    let test_input = TypedData::from_documents(vec![test_doc]);
 
     // Compare different transforms using unified interface
-    let transforms: Vec<(&str, Box<dyn Transform>)> = vec![
+    let transforms: Vec<(&str, Box<dyn TypedTransform<DocumentState, NodeState>>)> = vec![
         (
             "SentenceSplitter",
             Box::new(SentenceSplitter::from_defaults(200, 40)?),
@@ -93,7 +97,8 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     ];
 
     for (name, transform) in transforms {
-        let nodes = transform.transform(test_input.clone()).await?;
+        let result = transform.transform(test_input.clone()).await?;
+        let nodes = result.into_nodes();
         println!("   📈 {}: {} nodes", name, nodes.len());
 
         if !nodes.is_empty() {

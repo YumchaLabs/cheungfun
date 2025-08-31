@@ -356,7 +356,7 @@ mod tests {
             _query: &str,
         ) -> Result<Vec<ScoredNode>> {
             if self.should_fail {
-                return Err(cheungfun_core::CheungfunError::Processing(format!(
+                return Err(cheungfun_core::CheungfunError::pipeline(format!(
                     "{} failed",
                     self.name
                 )));
@@ -381,7 +381,11 @@ mod tests {
                     Node::new(
                         format!("Test content {}", i),
                         Uuid::new_v4(),
-                        cheungfun_core::ChunkInfo { chunk_index: i },
+                        cheungfun_core::ChunkInfo {
+                            start_char_idx: Some(0),
+                            end_char_idx: Some(20),
+                            chunk_index: i,
+                        },
                     ),
                     0.5 + (i as f32 * 0.1),
                 )

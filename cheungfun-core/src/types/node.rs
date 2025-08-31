@@ -126,7 +126,7 @@ pub struct Node {
 /// Information about a chunk's position in the original document.
 ///
 /// **Reference**: LlamaIndex TextNode start_char_idx/end_char_idx
-#[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Default)]
 pub struct ChunkInfo {
     /// Start position in original document (character offset).
     ///

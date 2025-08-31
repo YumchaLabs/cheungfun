@@ -50,7 +50,7 @@ use shared::{get_climate_test_queries, setup_logging, ExampleError, ExampleResul
 use cheungfun_core::{
     traits::{Embedder, IndexingPipeline, ResponseGenerator, VectorStore},
     types::{Query, SearchMode},
-    DistanceMetric, Node, ScoredNode,
+    DistanceMetric, ScoredNode,
 };
 use cheungfun_indexing::{
     loaders::DirectoryLoader, node_parser::text::SentenceSplitter,
@@ -225,16 +225,16 @@ async fn build_indexing_pipeline(
     // Build pipeline
     let pipeline = DefaultIndexingPipeline::builder()
         .with_loader(loader)
-        .with_transformer(splitter)
-        .with_transformer(metadata_extractor)
+        .with_document_processor(splitter)  // Documents -> Nodes
+        .with_node_processor(metadata_extractor)  // Nodes -> Nodes
         .with_embedder(embedder.clone())
         .with_vector_store(vector_store.clone())
         .build()?;
 
     // Run indexing
     let indexing_timer = Timer::new("Indexing");
-    let index_result = pipeline
-        .run()
+    let (_nodes, index_result) = pipeline
+        .run(None, None, true, true, None, true)
         .await
         .map_err(|e| ExampleError::Cheungfun(e))?;
     let indexing_time = indexing_timer.finish();
@@ -396,7 +396,7 @@ fn create_segment_from_chunks(chunks: Vec<(usize, ScoredNode)>) -> ExampleResult
 /// Run test queries using relevant segment extraction
 async fn run_test_queries(
     vector_store: &Arc<dyn VectorStore>,
-    embedder: Arc<dyn Embedder>,
+    _embedder: Arc<dyn Embedder>,
     args: &Args,
 ) -> ExampleResult<()> {
     let test_queries = get_climate_test_queries();

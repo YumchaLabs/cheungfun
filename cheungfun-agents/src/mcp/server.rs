@@ -80,6 +80,13 @@ impl McpServer {
     }
 
     /// Start the MCP server
+    ///
+    /// # Errors
+    ///
+    /// Returns an error if:
+    /// - The server is already running
+    /// - The bind address is invalid or already in use
+    /// - Failed to initialize the server components
     pub async fn start(&mut self, bind_address: &str) -> Result<()> {
         if self.running {
             return Err(AgentError::mcp("Server is already running"));
@@ -96,6 +103,12 @@ impl McpServer {
     }
 
     /// Stop the MCP server
+    ///
+    /// # Errors
+    ///
+    /// Returns an error if:
+    /// - The server is not currently running
+    /// - Failed to gracefully shutdown server components
     pub async fn stop(&mut self) -> Result<()> {
         if !self.running {
             return Err(AgentError::mcp("Server is not running"));

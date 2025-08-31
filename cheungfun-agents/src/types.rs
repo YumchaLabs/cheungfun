@@ -213,6 +213,7 @@ impl AgentMessage {
     }
 
     /// Add metadata to this message
+    #[must_use]
     pub fn with_metadata(mut self, key: impl Into<String>, value: serde_json::Value) -> Self {
         self.metadata.insert(key.into(), value);
         self

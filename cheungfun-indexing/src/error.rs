@@ -138,6 +138,35 @@ impl IndexingError {
         }
     }
 
+    /// Create a new processing error.
+    pub fn processing<S: Into<String>>(message: S) -> Self {
+        Self::DocumentParsing {
+            message: message.into(),
+        }
+    }
+
+    /// Create a new IO error.
+    pub fn io<S: Into<String>>(message: S) -> Self {
+        Self::Io(std::io::Error::new(
+            std::io::ErrorKind::Other,
+            message.into(),
+        ))
+    }
+
+    /// Create a new timeout error.
+    pub fn timeout<S: Into<String>>(message: S) -> Self {
+        Self::Pipeline {
+            message: message.into(),
+        }
+    }
+
+    /// Create a new storage error.
+    pub fn storage<S: Into<String>>(message: S) -> Self {
+        Self::Pipeline {
+            message: message.into(),
+        }
+    }
+
     /// Create a new file not found error.
     pub fn file_not_found<S: Into<String>>(path: S) -> Self {
         Self::FileNotFound { path: path.into() }

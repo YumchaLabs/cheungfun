@@ -6,7 +6,7 @@
 use async_trait::async_trait;
 use std::collections::HashMap;
 
-use crate::{QueryResponse, Result};
+use crate::{Document, Node, QueryResponse, Result};
 
 /// Indexing pipeline for processing documents into searchable nodes.
 ///
@@ -45,23 +45,48 @@ use crate::{QueryResponse, Result};
 /// ```
 #[async_trait]
 pub trait IndexingPipeline: Send + Sync {
-    /// Run the complete indexing pipeline.
+    /// Run the indexing pipeline with optional runtime documents.
     ///
-    /// This method executes all steps of the indexing process:
-    /// 1. Load documents from sources
+    /// This method executes the complete indexing workflow, matching LlamaIndex's
+    /// IngestionPipeline interface:
+    /// 1. Load documents from sources OR use provided documents
     /// 2. Transform documents into nodes
     /// 3. Generate embeddings for nodes
     /// 4. Store nodes in vector database
     ///
+    /// # Arguments
+    ///
+    /// * `documents` - Optional documents to process. If None, uses configured loader.
+    /// * `nodes` - Optional pre-processed nodes to transform. If provided, skips document loading.
+    /// * `show_progress` - Whether to show progress indicators during processing.
+    /// * `store_doc_text` - Whether to store document text in the docstore.
+    /// * `num_workers` - Number of parallel workers for processing (None = auto).
+    /// * `in_place` - Whether to modify nodes in place or create new ones.
+    ///
     /// # Returns
     ///
-    /// Statistics about the indexing operation including number of
-    /// documents processed, nodes created, and any errors encountered.
+    /// Returns the processed nodes and indexing statistics.
     ///
     /// # Errors
     ///
     /// Returns an error if any critical step in the pipeline fails.
-    async fn run(&self) -> Result<IndexingStats>;
+    async fn run(
+        &self,
+        documents: Option<Vec<Document>>,
+        nodes: Option<Vec<Node>>,
+        show_progress: bool,
+        store_doc_text: bool,
+        num_workers: Option<usize>,
+        in_place: bool,
+    ) -> Result<(Vec<Node>, IndexingStats)>;
+
+    /// Run the indexing pipeline with default parameters (backward compatibility).
+    ///
+    /// This is equivalent to calling `run(None, None, false, true, None, true)`.
+    async fn run_default(&self) -> Result<IndexingStats> {
+        let (_, stats) = self.run(None, None, false, true, None, true).await?;
+        Ok(stats)
+    }
 
     /// Run pipeline with progress reporting.
     ///
@@ -70,11 +95,32 @@ pub trait IndexingPipeline: Send + Sync {
     ///
     /// # Arguments
     ///
+    /// * `documents` - Optional documents to process
+    /// * `nodes` - Optional pre-processed nodes to transform
+    /// * `store_doc_text` - Whether to store document text in the docstore
+    /// * `num_workers` - Number of parallel workers for processing
+    /// * `in_place` - Whether to modify nodes in place
     /// * `progress_callback` - Function called with progress updates
     async fn run_with_progress(
         &self,
-        progress_callback: Box<dyn Fn(IndexingProgress) + Send + Sync>,
-    ) -> Result<IndexingStats>;
+        documents: Option<Vec<Document>>,
+        nodes: Option<Vec<Node>>,
+        store_doc_text: bool,
+        num_workers: Option<usize>,
+        in_place: bool,
+        _progress_callback: Box<dyn Fn(IndexingProgress) + Send + Sync>,
+    ) -> Result<(Vec<Node>, IndexingStats)> {
+        // Default implementation calls run with show_progress = true
+        self.run(
+            documents,
+            nodes,
+            true,
+            store_doc_text,
+            num_workers,
+            in_place,
+        )
+        .await
+    }
 
     /// Validate pipeline configuration before running.
     ///

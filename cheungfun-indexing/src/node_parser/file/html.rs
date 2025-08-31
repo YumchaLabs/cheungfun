@@ -3,14 +3,14 @@
 //! This module provides HTML-specific document parsing that extracts text
 //! from HTML tags while preserving structure and metadata.
 
-use crate::node_parser::{utils::build_nodes_from_splits, NodeParser};
+use crate::node_parser::NodeParser;
 use async_trait::async_trait;
 use cheungfun_core::{
-    traits::{Transform, TransformInput},
+    traits::{DocumentState, NodeState, TypedData, TypedTransform},
     Document, Node, Result as CoreResult,
 };
 use scraper::{Html, Selector};
-use tracing::{debug, warn};
+use tracing::debug;
 
 /// HTML node parser that extracts text from HTML documents.
 ///
@@ -185,28 +185,29 @@ impl NodeParser for HTMLNodeParser {
     }
 }
 
+// ============================================================================
+// Type-Safe Transform Implementation
+// ============================================================================
+
 #[async_trait]
-impl Transform for HTMLNodeParser {
-    async fn transform(&self, input: TransformInput) -> CoreResult<Vec<Node>> {
-        match input {
-            TransformInput::Documents(documents) => self.parse_nodes(&documents, false).await,
-            TransformInput::Document(document) => self.parse_nodes(&[document], false).await,
-            TransformInput::Node(node) => {
-                // Convert single node back to document and re-parse
-                let document = Document::new(&node.content);
-                self.parse_nodes(&[document], false).await
-            }
-            TransformInput::Nodes(nodes) => {
-                // Convert nodes back to documents and re-parse
-                let documents: Vec<Document> = nodes
-                    .into_iter()
-                    .map(|node| Document::new(&node.content))
-                    .collect();
-                self.parse_nodes(&documents, false).await
-            }
-        }
+impl TypedTransform<DocumentState, NodeState> for HTMLNodeParser {
+    async fn transform(&self, input: TypedData<DocumentState>) -> CoreResult<TypedData<NodeState>> {
+        let documents = input.documents();
+        let nodes = self.parse_nodes(documents, false).await?;
+        Ok(TypedData::from_nodes(nodes))
+    }
+
+    fn name(&self) -> &'static str {
+        "HTMLNodeParser"
+    }
+
+    fn description(&self) -> &'static str {
+        "Extracts text from HTML documents using CSS selectors while preserving structure metadata"
     }
 }
+
+// Legacy Transform implementation has been removed.
+// HTMLNodeParser now only uses the type-safe TypedTransform system.
 
 /// Configuration for HTML node parser.
 #[derive(Debug, Clone)]

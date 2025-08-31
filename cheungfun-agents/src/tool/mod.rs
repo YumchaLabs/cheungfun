@@ -77,6 +77,14 @@ pub trait Tool: Send + Sync + std::fmt::Debug {
     }
 
     /// Validate tool arguments against the schema
+    ///
+    /// # Errors
+    ///
+    /// Returns an error if:
+    /// - The arguments are null when required parameters exist
+    /// - Required parameters are missing from the arguments
+    /// - Parameter types don't match the schema
+    /// - Parameter values are outside allowed ranges or constraints
     fn validate_arguments(&self, arguments: &serde_json::Value) -> Result<()> {
         // Basic validation - can be overridden for more sophisticated validation
         if arguments.is_null() {
@@ -156,6 +164,7 @@ impl ToolResult {
     }
 
     /// Add metadata to the result
+    #[must_use]
     pub fn with_metadata(mut self, key: impl Into<String>, value: serde_json::Value) -> Self {
         self.metadata.insert(key.into(), value);
         self
@@ -191,12 +200,14 @@ impl ToolContext {
     }
 
     /// Add a variable to the context
+    #[must_use]
     pub fn with_variable(mut self, key: impl Into<String>, value: serde_json::Value) -> Self {
         self.variables.insert(key.into(), value);
         self
     }
 
     /// Add data to the context
+    #[must_use]
     pub fn with_data(mut self, key: impl Into<String>, value: serde_json::Value) -> Self {
         self.data.insert(key.into(), value);
         self
@@ -215,6 +226,13 @@ impl ToolContext {
     }
 
     /// Get a typed variable from the context
+    ///
+    /// # Errors
+    ///
+    /// Returns an error if:
+    /// - The variable key is not found in the context
+    /// - The variable value cannot be deserialized to the target type
+    /// - The JSON deserialization fails
     pub fn get_typed_variable<T>(&self, key: &str) -> Result<T>
     where
         T: for<'de> Deserialize<'de>,

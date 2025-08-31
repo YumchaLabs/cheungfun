@@ -33,7 +33,9 @@
 #![warn(clippy::all, clippy::pedantic)]
 #![allow(clippy::module_name_repetitions)]
 
+pub mod cache;
 pub mod error;
+
 pub mod loaders;
 pub mod node_parser;
 pub mod parsers;
@@ -74,11 +76,24 @@ pub mod prelude {
     // Re-export parsers
     pub use crate::parsers::{AstAnalysis, AstParser, AstParserConfig};
 
-    // Re-export pipeline
-    pub use crate::pipeline::{DefaultIndexingPipeline, PipelineConfig};
+    // Re-export pipelines
+    pub use crate::pipeline::{
+        DefaultIndexingPipeline, IngestionConfig, IngestionPipeline, IngestionStats,
+        PipelineConfig, PipelineFactory,
+    };
+
+    // Re-export cache
+    pub use crate::cache::{
+        CacheBackend, CacheEntry, CacheStats, IngestionCache, SimpleCacheBackend,
+        TransformationHasher,
+    };
 
     // Re-export transformers
-    pub use crate::transformers::{MetadataConfig, MetadataExtractor};
+    pub use crate::transformers::{
+        KeywordExtractor, KeywordExtractorBuilder, KeywordExtractorConfig, MetadataConfig,
+        MetadataExtractor, SummaryExtractor, SummaryExtractorBuilder, SummaryExtractorConfig,
+        SummaryType, TitleExtractor, TitleExtractorBuilder, TitleExtractorConfig,
+    };
 
     // Re-export unified utilities
     pub use crate::utils::{file, metadata, text};

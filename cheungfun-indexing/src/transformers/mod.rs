@@ -4,14 +4,22 @@
 //! for various document processing tasks.
 
 pub mod entity_extractor;
+pub mod keyword_extractor;
 pub mod llm_extractor;
 pub mod metadata_extractor;
+pub mod summary_extractor;
+pub mod title_extractor;
 
 pub use entity_extractor::{
     EntityExtractionConfig, EntityExtractor, ExtractedEntity, ExtractedRelationship,
 };
+pub use keyword_extractor::{KeywordExtractor, KeywordExtractorBuilder, KeywordExtractorConfig};
 pub use llm_extractor::{LlmExtractionConfig, LlmExtractor};
 pub use metadata_extractor::MetadataExtractor;
+pub use summary_extractor::{
+    SummaryExtractor, SummaryExtractorBuilder, SummaryExtractorConfig, SummaryType,
+};
+pub use title_extractor::{TitleExtractor, TitleExtractorBuilder, TitleExtractorConfig};
 
 /// Configuration for metadata extraction.
 #[derive(Debug, Clone)]

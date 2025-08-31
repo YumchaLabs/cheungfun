@@ -16,6 +16,7 @@ pub mod pipeline;
 pub mod retriever;
 pub mod storage;
 pub mod transformer;
+pub mod typed_pipeline;
 
 // Re-export all traits for convenience
 pub use cache::*;
@@ -29,3 +30,4 @@ pub use pipeline::*;
 pub use retriever::*;
 pub use storage::*;
 pub use transformer::*;
+pub use typed_pipeline::*;

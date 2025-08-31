@@ -572,14 +572,14 @@ async fn create_query_engine_for_chunk_size(
 
     let pipeline = DefaultIndexingPipeline::builder()
         .with_loader(loader)
-        .with_transformer(splitter)
-        .with_transformer(metadata_extractor)
+        .with_document_processor(splitter)  // Documents -> Nodes
+        .with_node_processor(metadata_extractor)  // Nodes -> Nodes
         .with_embedder(embedder.clone())
         .with_vector_store(vector_store.clone())
         .build()?;
 
     // Run indexing pipeline
-    let _indexing_stats = pipeline.run().await?;
+    let (_nodes, _indexing_stats) = pipeline.run(None, None, true, true, None, true).await?;
 
     // Create query engine
     let retriever = Arc::new(VectorRetriever::new(vector_store, embedder));

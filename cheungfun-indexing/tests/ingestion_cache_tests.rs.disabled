@@ -1,0 +1,347 @@
+//! Comprehensive tests for IngestionCache.
+//!
+//! These tests cover cache operations, hash generation, persistence,
+//! and integration with transformations.
+
+use cheungfun_core::{
+    traits::{Transform, TransformInput},
+    types::{ChunkInfo, Node},
+};
+use cheungfun_indexing::{
+    cache::{CacheEntry, IngestionCache, SimpleCacheBackend, TransformationHasher},
+    node_parser::text::SentenceSplitter,
+};
+use std::{collections::HashMap, sync::Arc, time::Duration};
+use tempfile::tempdir;
+use uuid::Uuid;
+
+/// Create sample nodes for testing.
+fn create_test_nodes(count: usize) -> Vec<Node> {
+    (0..count)
+        .map(|i| {
+            Node::new(
+                format!("Test content {}", i),
+                Uuid::new_v4(),
+                ChunkInfo {
+                    start_offset: i * 100,
+                    end_offset: (i + 1) * 100,
+                    chunk_index: i,
+                },
+            )
+        })
+        .collect()
+}
+
+#[tokio::test]
+async fn test_cache_entry_creation() {
+    let nodes = create_test_nodes(3);
+
+    // Test basic entry creation
+    let entry = CacheEntry::new(nodes.clone());
+    assert_eq!(entry.nodes.len(), 3);
+    assert!(!entry.is_expired());
+    assert!(entry.ttl.is_none());
+
+    // Test entry with TTL
+    let entry_with_ttl = CacheEntry::with_ttl(nodes.clone(), Duration::from_secs(3600));
+    assert!(entry_with_ttl.ttl.is_some());
+    assert!(!entry_with_ttl.is_expired());
+
+    // Test entry with metadata
+    let mut metadata = HashMap::new();
+    metadata.insert("transform".to_string(), "SentenceSplitter".to_string());
+    let entry_with_metadata = CacheEntry::with_metadata(nodes, metadata.clone());
+    assert_eq!(entry_with_metadata.metadata, metadata);
+}
+
+#[tokio::test]
+async fn test_cache_entry_expiration() {
+    let nodes = create_test_nodes(1);
+
+    // Create entry with very short TTL
+    let entry = CacheEntry::with_ttl(nodes, Duration::from_millis(1));
+
+    // Wait for expiration
+    tokio::time::sleep(Duration::from_millis(10)).await;
+
+    assert!(entry.is_expired());
+}
+
+#[tokio::test]
+async fn test_simple_cache_backend() {
+    let backend = SimpleCacheBackend::new();
+    let nodes = create_test_nodes(2);
+    let entry = CacheEntry::new(nodes.clone());
+
+    // Test put and get
+    backend.put("test_key", entry.clone(), None).await.unwrap();
+    let retrieved = backend.get("test_key", None).await.unwrap();
+    assert!(retrieved.is_some());
+    assert_eq!(retrieved.unwrap().nodes.len(), 2);
+
+    // Test get non-existent key
+    let missing = backend.get("missing_key", None).await.unwrap();
+    assert!(missing.is_none());
+
+    // Test delete
+    let deleted = backend.delete("test_key", None).await.unwrap();
+    assert!(deleted);
+
+    let after_delete = backend.get("test_key", None).await.unwrap();
+    assert!(after_delete.is_none());
+}
+
+#[tokio::test]
+async fn test_cache_collections() {
+    let backend = SimpleCacheBackend::new();
+    let nodes = create_test_nodes(1);
+    let entry = CacheEntry::new(nodes);
+
+    // Put in different collections
+    backend
+        .put("key1", entry.clone(), Some("collection1"))
+        .await
+        .unwrap();
+    backend
+        .put("key1", entry.clone(), Some("collection2"))
+        .await
+        .unwrap();
+
+    // Verify they're separate
+    let from_col1 = backend.get("key1", Some("collection1")).await.unwrap();
+    let from_col2 = backend.get("key1", Some("collection2")).await.unwrap();
+
+    assert!(from_col1.is_some());
+    assert!(from_col2.is_some());
+
+    // Clear one collection
+    backend.clear(Some("collection1")).await.unwrap();
+
+    let after_clear_col1 = backend.get("key1", Some("collection1")).await.unwrap();
+    let after_clear_col2 = backend.get("key1", Some("collection2")).await.unwrap();
+
+    assert!(after_clear_col1.is_none());
+    assert!(after_clear_col2.is_some());
+}
+
+#[tokio::test]
+async fn test_ingestion_cache_basic_operations() {
+    let backend = Arc::new(SimpleCacheBackend::new());
+    let cache = IngestionCache::new(backend);
+    let nodes = create_test_nodes(3);
+
+    // Test put and get
+    cache.put("test_key", nodes.clone(), None).await.unwrap();
+    let retrieved = cache.get("test_key", None).await.unwrap();
+
+    assert!(retrieved.is_some());
+    assert_eq!(retrieved.unwrap().len(), 3);
+
+    // Test delete
+    let deleted = cache.delete("test_key", None).await.unwrap();
+    assert!(deleted);
+
+    let after_delete = cache.get("test_key", None).await.unwrap();
+    assert!(after_delete.is_none());
+}
+
+#[tokio::test]
+async fn test_ingestion_cache_with_ttl() {
+    let backend = Arc::new(SimpleCacheBackend::new());
+    let cache = IngestionCache::with_ttl(backend, Duration::from_millis(50));
+    let nodes = create_test_nodes(1);
+
+    // Put with TTL
+    cache.put("ttl_key", nodes, None).await.unwrap();
+
+    // Should be available immediately
+    let immediate = cache.get("ttl_key", None).await.unwrap();
+    assert!(immediate.is_some());
+
+    // Wait for expiration
+    tokio::time::sleep(Duration::from_millis(100)).await;
+
+    // Should be expired and cleaned up
+    let expired = cache.get("ttl_key", None).await.unwrap();
+    assert!(expired.is_none());
+}
+
+#[tokio::test]
+async fn test_cache_statistics() {
+    let cache = IngestionCache::simple();
+    let nodes = create_test_nodes(1);
+
+    // Initially empty
+    let initial_stats = cache.stats(None).await.unwrap();
+    assert_eq!(initial_stats.total_entries, 0);
+    assert_eq!(initial_stats.active_entries, 0);
+
+    // Add some entries
+    cache.put("key1", nodes.clone(), None).await.unwrap();
+    cache.put("key2", nodes.clone(), None).await.unwrap();
+
+    let stats = cache.stats(None).await.unwrap();
+    assert_eq!(stats.total_entries, 2);
+    assert_eq!(stats.active_entries, 2);
+    assert_eq!(stats.efficiency(), 1.0);
+}
+
+#[tokio::test]
+async fn test_cache_persistence() {
+    let temp_dir = tempdir().unwrap();
+    let cache_file = temp_dir.path().join("test_cache.json");
+
+    // Create cache and add data
+    {
+        let cache = IngestionCache::simple();
+        let nodes = create_test_nodes(2);
+
+        cache.put("persistent_key", nodes, None).await.unwrap();
+        cache.persist(&cache_file).await.unwrap();
+    }
+
+    // Load from file
+    {
+        let loaded_cache = IngestionCache::from_persist_path(&cache_file)
+            .await
+            .unwrap();
+        let retrieved = loaded_cache.get("persistent_key", None).await.unwrap();
+
+        assert!(retrieved.is_some());
+        assert_eq!(retrieved.unwrap().len(), 2);
+    }
+}
+
+#[tokio::test]
+async fn test_transformation_hasher() {
+    let nodes = create_test_nodes(2);
+    let splitter = SentenceSplitter::from_defaults(100, 20).unwrap();
+
+    // Test hash generation
+    let hash1 = TransformationHasher::hash(&nodes, &splitter);
+    let hash2 = TransformationHasher::hash(&nodes, &splitter);
+
+    // Same inputs should produce same hash
+    assert_eq!(hash1, hash2);
+    assert!(!hash1.is_empty());
+
+    // Different nodes should produce different hash
+    let different_nodes = create_test_nodes(3);
+    let hash3 = TransformationHasher::hash(&different_nodes, &splitter);
+    assert_ne!(hash1, hash3);
+}
+
+#[tokio::test]
+async fn test_transformation_hasher_with_config() {
+    let nodes = create_test_nodes(1);
+
+    let mut config1 = HashMap::new();
+    config1.insert(
+        "chunk_size".to_string(),
+        serde_json::Value::Number(100.into()),
+    );
+
+    let mut config2 = HashMap::new();
+    config2.insert(
+        "chunk_size".to_string(),
+        serde_json::Value::Number(200.into()),
+    );
+
+    let hash1 = TransformationHasher::hash_with_config(&nodes, "SentenceSplitter", &config1);
+    let hash2 = TransformationHasher::hash_with_config(&nodes, "SentenceSplitter", &config2);
+
+    // Different configs should produce different hashes
+    assert_ne!(hash1, hash2);
+}
+
+#[tokio::test]
+async fn test_content_hash() {
+    let content1 = "This is test content";
+    let content2 = "This is different content";
+
+    let hash1 = TransformationHasher::content_hash(content1);
+    let hash2 = TransformationHasher::content_hash(content1);
+    let hash3 = TransformationHasher::content_hash(content2);
+
+    // Same content should produce same hash
+    assert_eq!(hash1, hash2);
+
+    // Different content should produce different hash
+    assert_ne!(hash1, hash3);
+}
+
+#[tokio::test]
+async fn test_cache_integration_with_transformation() {
+    let cache = IngestionCache::simple();
+    let nodes = create_test_nodes(3);
+    let splitter = SentenceSplitter::from_defaults(50, 10).unwrap();
+
+    // Generate hash for transformation
+    let transform_hash = TransformationHasher::hash(&nodes, &splitter);
+
+    // First run - should miss cache
+    let cached_result = cache.get(&transform_hash, None).await.unwrap();
+    assert!(cached_result.is_none());
+
+    // Run transformation and cache result
+    let result = splitter
+        .transform(TransformInput::Nodes(nodes.clone()))
+        .await
+        .unwrap();
+    cache
+        .put(&transform_hash, result.clone(), None)
+        .await
+        .unwrap();
+
+    // Second run - should hit cache
+    let cached_result = cache.get(&transform_hash, None).await.unwrap();
+    assert!(cached_result.is_some());
+
+    let cached_nodes = cached_result.unwrap();
+    assert_eq!(cached_nodes.len(), result.len());
+}
+
+#[tokio::test]
+async fn test_cache_clear_operations() {
+    let cache = IngestionCache::simple();
+    let nodes = create_test_nodes(1);
+
+    // Add entries to different collections
+    cache.put("key1", nodes.clone(), None).await.unwrap();
+    cache
+        .put("key2", nodes.clone(), Some("custom"))
+        .await
+        .unwrap();
+
+    // Clear default collection
+    cache.clear(None).await.unwrap();
+
+    // Default collection should be empty
+    let default_keys = cache.get_all_keys(None).await.unwrap();
+    assert!(default_keys.is_empty());
+
+    // Custom collection should still have data
+    let custom_keys = cache.get_all_keys(Some("custom")).await.unwrap();
+    assert_eq!(custom_keys.len(), 1);
+}
+
+#[test]
+fn test_cache_stats_efficiency() {
+    use cheungfun_indexing::cache::CacheStats;
+
+    // Test efficiency calculation
+    let stats1 = CacheStats {
+        total_entries: 10,
+        expired_entries: 2,
+        active_entries: 8,
+    };
+    assert_eq!(stats1.efficiency(), 0.8);
+
+    // Test empty cache
+    let stats2 = CacheStats {
+        total_entries: 0,
+        expired_entries: 0,
+        active_entries: 0,
+    };
+    assert_eq!(stats2.efficiency(), 1.0);
+}

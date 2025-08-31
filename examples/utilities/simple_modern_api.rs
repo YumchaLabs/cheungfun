@@ -1,7 +1,7 @@
 //! Simple modern API example demonstrating the unified Transform interface.
 
 use cheungfun_core::{
-    traits::{Transform, TransformInput},
+    traits::{TypedTransform, TypedData, DocumentState, NodeState},
     Document,
 };
 use cheungfun_indexing::loaders::ProgrammingLanguage;
@@ -10,6 +10,8 @@ use cheungfun_indexing::node_parser::{
     NodeParser,
 };
 use std::collections::HashMap;
+
+
 
 #[tokio::main]
 async fn main() -> Result<(), Box<dyn std::error::Error>> {
@@ -29,12 +31,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         serde_json::Value::String("test".to_string()),
     );
 
-    let document = Document {
-        id: uuid::Uuid::new_v4(),
-        content: sample_text.to_string(),
-        metadata,
-        embedding: None,
-    };
+    let document = Document::new(sample_text);
 
     let documents = vec![document];
 
@@ -43,8 +40,9 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     println!("----------------------------------------------------");
 
     let sentence_splitter = SentenceSplitter::from_defaults(200, 40)?;
-    let input = TransformInput::Documents(documents.clone());
-    let nodes = sentence_splitter.transform(input).await?;
+    let input = TypedData::from_documents(documents.clone());
+    let result = sentence_splitter.transform(input).await?;
+    let nodes = result.into_nodes();
 
     println!("   ✅ Created {} nodes", nodes.len());
     for (i, node) in nodes.iter().enumerate() {
@@ -60,8 +58,9 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     println!("-----------------------------------------------------");
 
     let token_splitter = TokenTextSplitter::from_defaults(150, 30)?;
-    let input = TransformInput::Documents(documents.clone());
-    let nodes = token_splitter.transform(input).await?;
+    let input = TypedData::from_documents(documents.clone());
+    let result = token_splitter.transform(input).await?;
+    let nodes = result.into_nodes();
 
     println!("   ✅ Created {} nodes", nodes.len());
     for (i, node) in nodes.iter().enumerate() {
@@ -113,17 +112,13 @@ fn main() {
         serde_json::Value::String("user.rs".to_string()),
     );
 
-    let code_document = Document {
-        id: uuid::Uuid::new_v4(),
-        content: rust_code.to_string(),
-        metadata: code_metadata,
-        embedding: None,
-    };
+    let code_document = Document::new(rust_code);
 
     let code_splitter = CodeSplitter::from_defaults(ProgrammingLanguage::Rust, 15, 3, 500)?;
 
-    let input = TransformInput::Document(code_document);
-    let nodes = code_splitter.transform(input).await?;
+    let input = TypedData::from_documents(vec![code_document]);
+    let result = code_splitter.transform(input).await?;
+    let nodes = result.into_nodes();
 
     println!("   ✅ Created {} nodes from Rust code", nodes.len());
     for (i, node) in nodes.iter().enumerate() {
@@ -149,13 +144,7 @@ fn main() {
         serde_json::Value::String("comparison".to_string()),
     );
 
-    let test_document = Document {
-        id: uuid::Uuid::new_v4(),
-        content: test_text.to_string(),
-        metadata: test_metadata,
-        embedding: None,
-    };
-
+    let test_document = Document::new(test_text);
     let test_docs = vec![test_document];
 
     // Test different chunk sizes
@@ -188,15 +177,16 @@ fn main() {
     println!("--------------------------------------------------");
 
     // Create a vector of different transform components
-    let transforms: Vec<Box<dyn Transform>> = vec![
+    let transforms: Vec<Box<dyn TypedTransform<DocumentState, NodeState>>> = vec![
         Box::new(SentenceSplitter::from_defaults(200, 40)?),
         Box::new(TokenTextSplitter::from_defaults(180, 35)?),
     ];
 
     // Process the same input with different transforms
-    let input = TransformInput::Documents(test_docs.clone());
+    let input = TypedData::from_documents(test_docs.clone());
     for (i, transform) in transforms.iter().enumerate() {
-        let nodes = transform.transform(input.clone()).await?;
+        let result = transform.transform(input.clone()).await?;
+        let nodes = result.into_nodes();
         println!(
             "   🔧 Transform {}: {} ({} nodes)",
             i + 1,
@@ -215,7 +205,7 @@ fn main() {
     println!("✅ Demonstrated polymorphic transform usage");
     println!("\n📚 Key Benefits of Unified Interface:");
     println!("   • Single interface for all transformations");
-    println!("   • Type-safe TransformInput enum");
+    println!("   • Type-safe TypedData system");
     println!("   • Polymorphic transform processing");
     println!("   • Consistent async API across all components");
     println!("   • Better composability and pipeline integration");

@@ -43,6 +43,9 @@ serde = { workspace = true }
 serde_json = { workspace = true }
 uuid = { workspace = true, features = ["v5"] }
 
+# Cryptography
+sha2 = "0.10"
+
 # Streaming and futures
 futures = { workspace = true }
 futures-util = { workspace = true }

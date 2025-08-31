@@ -6,10 +6,9 @@
 
 use crate::postprocessor::{DocumentCompressor, NodePostprocessor};
 use async_trait::async_trait;
-use cheungfun_core::{ChunkInfo, Query, Result, Retriever, ScoredNode};
-use std::{collections::HashMap, sync::Arc};
+use cheungfun_core::{Query, Result, Retriever, ScoredNode};
+use std::sync::Arc;
 use tracing::{debug, info};
-use uuid::Uuid;
 
 /// Contextual compression retriever.
 ///

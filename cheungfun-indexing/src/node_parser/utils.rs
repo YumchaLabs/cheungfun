@@ -9,7 +9,6 @@ use cheungfun_core::{
     relationships::{NodeRelationship, RelatedNodeInfo},
     ChunkInfo, Document, Node, Result as CoreResult,
 };
-use std::collections::HashMap;
 use tracing::{debug, warn};
 use unicode_segmentation::UnicodeSegmentation;
 use uuid::Uuid;

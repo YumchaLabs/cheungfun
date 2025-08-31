@@ -143,25 +143,32 @@ async fn main() -> ExampleResult<()> {
 
     let pipeline = DefaultIndexingPipeline::builder()
         .with_loader(loader)
-        .with_transformer(splitter)
-        .with_transformer(metadata_extractor)
+        .with_document_processor(splitter)  // Documents -> Nodes
+        .with_node_processor(metadata_extractor)  // Nodes -> Nodes
         .with_embedder(embedder.clone())
         .with_vector_store(vector_store.clone())
         .build()?;
 
     // Run indexing pipeline with progress reporting
-    let indexing_stats = pipeline
-        .run_with_progress(Box::new(|progress| {
-            if let Some(percentage) = progress.percentage() {
-                println!(
-                    "📊 {}: {:.1}% ({}/{})",
-                    progress.stage,
-                    percentage,
-                    progress.processed,
-                    progress.total.unwrap_or(0)
-                );
-            }
-        }))
+    let (_nodes, indexing_stats) = pipeline
+        .run_with_progress(
+            None,  // documents (will use loader)
+            None,  // nodes
+            true,  // store_doc_text
+            None,  // num_workers (use default)
+            true,  // in_place
+            Box::new(|progress| {
+                if let Some(percentage) = progress.percentage() {
+                    println!(
+                        "📊 {}: {:.1}% ({}/{})",
+                        progress.stage,
+                        percentage,
+                        progress.processed,
+                        progress.total.unwrap_or(0)
+                    );
+                }
+            })
+        )
         .await?;
 
     timer.finish();

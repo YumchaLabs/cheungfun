@@ -185,17 +185,15 @@ mod tests {
         content: &str,
         metadata: HashMap<String, serde_json::Value>,
     ) -> ScoredNode {
+        let chunk_info = ChunkInfo {
+            start_char_idx: Some(0),
+            end_char_idx: Some(content.len()),
+            chunk_index: 0,
+        };
+        let mut node = Node::new(content.to_string(), Uuid::new_v4(), chunk_info);
+        node.metadata = metadata;
         ScoredNode {
-            node: Node {
-                id: Uuid::new_v4(),
-                content: content.to_string(),
-                metadata,
-                chunk_info: Some(ChunkInfo {
-                    chunk_id: Uuid::new_v4(),
-                    start_char_idx: Some(0),
-                    end_char_idx: Some(content.len()),
-                }),
-            },
+            node,
             score: 0.8,
         }
     }

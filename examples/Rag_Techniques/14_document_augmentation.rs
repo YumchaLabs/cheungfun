@@ -300,13 +300,13 @@ async fn build_augmented_pipeline(
     // Build initial pipeline to get chunks
     let initial_pipeline = DefaultIndexingPipeline::builder()
         .with_loader(loader)
-        .with_transformer(splitter)
-        .with_transformer(metadata_extractor)
+        .with_document_processor(splitter)  // Documents -> Nodes
+        .with_node_processor(metadata_extractor)  // Nodes -> Nodes
         .build()?;
 
     // Run initial processing to get chunks
-    let _initial_result = initial_pipeline
-        .run()
+    let (_nodes, _initial_result) = initial_pipeline
+        .run(None, None, true, true, None, true)
         .await
         .map_err(|e| ExampleError::Cheungfun(e))?;
 
@@ -636,15 +636,15 @@ async fn build_standard_pipeline(
     // Build standard pipeline
     let pipeline = DefaultIndexingPipeline::builder()
         .with_loader(loader)
-        .with_transformer(splitter)
-        .with_transformer(metadata_extractor)
+        .with_document_processor(splitter)  // Documents -> Nodes
+        .with_node_processor(metadata_extractor)  // Nodes -> Nodes
         .with_embedder(embedder.clone())
         .with_vector_store(vector_store.clone())
         .build()?;
 
     // Run indexing
-    let index_result = pipeline
-        .run()
+    let (_nodes, index_result) = pipeline
+        .run(None, None, true, true, None, true)
         .await
         .map_err(|e| ExampleError::Cheungfun(e))?;
     println!("✅ Standard indexing completed");

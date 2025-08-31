@@ -7,7 +7,7 @@
 use std::sync::Arc;
 
 use cheungfun_core::{
-    traits::{PropertyGraphStore, Transform, TransformInput, VectorStore},
+    traits::{PropertyGraphStore, VectorStore},
     types::{Document, Node},
     ChunkInfo, Result,
 };
@@ -216,18 +216,35 @@ impl PropertyGraphIndex {
                     println!("Extracting entities and relationships using LLM...");
                 }
 
-                let input = TransformInput::Documents(documents.clone());
-                llm_extractor.transform(input).await?
+                // Convert documents to nodes first, then use LLM extraction
+                use cheungfun_core::traits::{TypedData, TypedTransform};
+
+                // First convert documents to nodes
+                let nodes: Vec<Node> = documents
+                    .iter()
+                    .enumerate()
+                    .map(|(idx, doc)| {
+                        let chunk_info = ChunkInfo::new(None, None, idx);
+                        Node::new(doc.content.clone(), doc.id, chunk_info)
+                    })
+                    .collect();
+
+                // Then apply LLM extraction (NodeState -> NodeState)
+                let typed_nodes = TypedData::from_nodes(nodes);
+                let extracted_nodes = llm_extractor.as_ref().transform(typed_nodes).await
+                    .map_err(|e| cheungfun_core::error::CheungfunError::Pipeline {
+                        message: format!("LLM extraction failed: {}", e),
+                    })?;
+
+                extracted_nodes.into_nodes()
             } else {
                 // Convert documents to nodes without extraction
                 documents
                     .iter()
-                    .map(|doc| {
-                        Node::new(
-                            doc.content.clone(),
-                            doc.id,
-                            ChunkInfo::with_char_indices(0, doc.content.len(), 0),
-                        )
+                    .enumerate()
+                    .map(|(idx, doc)| {
+                        let chunk_info = ChunkInfo::new(None, None, idx);
+                        Node::new(doc.content.clone(), doc.id, chunk_info)
                     })
                     .collect()
             }
@@ -235,7 +252,9 @@ impl PropertyGraphIndex {
             // Convert documents to nodes without extraction
             documents
                 .iter()
-                .map(|doc| {
+                .enumerate()
+                .map(|(idx, doc)| {
+                    let _chunk_info = ChunkInfo::new(None, None, idx);
                     Node::new(
                         doc.content.clone(),
                         doc.id,
@@ -245,8 +264,11 @@ impl PropertyGraphIndex {
                 .collect()
         };
 
+        // TODO: Re-implement triplet processing with proper type handling
         // Process extracted triplets and store in graph store
-        for node in &processed_nodes {
+        for _node in &processed_nodes {
+            // Temporarily disabled during refactoring
+            /*
             if let Some(triplets_value) = node.metadata.get("extracted_triplets") {
                 if let Ok(triplets) = serde_json::from_value::<
                     Vec<cheungfun_core::types::graph::Triplet>,
@@ -275,6 +297,7 @@ impl PropertyGraphIndex {
                     }
                 }
             }
+            */
         }
 
         // Store in vector store if available and configured

@@ -236,9 +236,9 @@ impl QueryEngine {
     /// * `processor` - The postprocessor to add
     pub fn add_postprocessor(mut self, processor: Arc<dyn NodePostprocessor>) -> Self {
         match &mut self.postprocessors {
-            Some(chain) => {
+            Some(_chain) => {
                 // We need to create a new chain since PostprocessorChain doesn't have add_processor as mut
-                let mut processors = vec![processor];
+                let processors = vec![processor];
                 // Note: This is a limitation - we can't easily add to existing chain
                 // In a real implementation, we might want to make PostprocessorChain more flexible
                 self.postprocessors = Some(PostprocessorChain::new(processors));

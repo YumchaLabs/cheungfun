@@ -169,17 +169,13 @@ mod tests {
     use uuid::Uuid;
 
     fn create_test_node(content: &str) -> ScoredNode {
+        let chunk_info = ChunkInfo {
+            start_char_idx: Some(0),
+            end_char_idx: Some(content.len()),
+            chunk_index: 0,
+        };
         ScoredNode {
-            node: Node {
-                id: Uuid::new_v4(),
-                content: content.to_string(),
-                metadata: std::collections::HashMap::new(),
-                chunk_info: Some(ChunkInfo {
-                    chunk_id: Uuid::new_v4(),
-                    start_char_idx: Some(0),
-                    end_char_idx: Some(content.len()),
-                }),
-            },
+            node: Node::new(content.to_string(), Uuid::new_v4(), chunk_info),
             score: 0.8,
         }
     }

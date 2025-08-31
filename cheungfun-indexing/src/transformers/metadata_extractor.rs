@@ -1,8 +1,8 @@
 //! Metadata extraction transformer for enriching nodes.
 
 use async_trait::async_trait;
-use cheungfun_core::traits::{Transform, TransformInput};
-use cheungfun_core::{CheungfunError, Node, Result as CoreResult};
+use cheungfun_core::traits::{NodeState, TypedData, TypedTransform};
+use cheungfun_core::{Node, Result as CoreResult};
 use regex::Regex;
 use std::collections::HashMap;
 use tracing::{debug, warn};
@@ -365,35 +365,35 @@ impl Default for MetadataExtractor {
     }
 }
 
+// ============================================================================
+// Type-Safe Transform Implementation
+// ============================================================================
+
 #[async_trait]
-impl Transform for MetadataExtractor {
-    async fn transform(&self, input: TransformInput) -> CoreResult<Vec<Node>> {
-        match input {
-            TransformInput::Node(node) => {
-                let transformed_node = self.transform_node_internal(node).await?;
-                Ok(vec![transformed_node])
-            }
-            TransformInput::Nodes(nodes) => {
-                let mut transformed_nodes = Vec::with_capacity(nodes.len());
-                for node in nodes {
-                    let transformed_node = self.transform_node_internal(node).await?;
-                    transformed_nodes.push(transformed_node);
-                }
-                Ok(transformed_nodes)
-            }
-            TransformInput::Document(_) | TransformInput::Documents(_) => {
-                // MetadataExtractor only processes nodes, not documents
-                Err(CheungfunError::Validation {
-                    message: "MetadataExtractor only accepts nodes as input".into(),
-                })
-            }
+impl TypedTransform<NodeState, NodeState> for MetadataExtractor {
+    async fn transform(&self, input: TypedData<NodeState>) -> CoreResult<TypedData<NodeState>> {
+        let nodes = input.nodes();
+        let mut transformed_nodes = Vec::with_capacity(nodes.len());
+
+        for node in nodes {
+            let transformed_node = self.transform_node_internal(node.clone()).await?;
+            transformed_nodes.push(transformed_node);
         }
+
+        Ok(TypedData::from_nodes(transformed_nodes))
     }
 
     fn name(&self) -> &'static str {
         "MetadataExtractor"
     }
+
+    fn description(&self) -> &'static str {
+        "Enriches nodes with extracted metadata including titles, statistics, and language information"
+    }
 }
+
+// Legacy Transform implementation has been removed.
+// MetadataExtractor now only uses the type-safe TypedTransform system.
 
 impl MetadataExtractor {
     /// Internal method to transform a single node (extracted from the old NodeTransformer implementation).

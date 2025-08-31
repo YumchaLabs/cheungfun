@@ -15,7 +15,7 @@
 //! ```
 
 use cheungfun_core::{
-    traits::{Transform, TransformInput},
+    traits::{TypedTransform, TypedData, DocumentState, NodeState},
     Document,
 };
 use cheungfun_indexing::prelude::*;
@@ -42,19 +42,21 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
 
     // Create different transform components
     let sentence_splitter = SentenceSplitter::from_defaults(300, 75)?;
-    let token_splitter = TokenTextSplitter::from_defaults(250, 50)?;
+    let _token_splitter = TokenTextSplitter::from_defaults(250, 50)?;
     let metadata_extractor = MetadataExtractor::new();
 
-    // Test sentence splitter using unified Transform interface
+    // Test sentence splitter using unified TypedTransform interface
     println!("🔧 Testing SentenceSplitter...");
-    let input = TransformInput::Documents(documents.clone());
-    let nodes = sentence_splitter.transform(input).await?;
+    let input = TypedData::from_documents(documents.clone());
+    let result = sentence_splitter.transform(input).await?;
+    let nodes = result.into_nodes();
     println!("   ✅ Created {} nodes", nodes.len());
 
     // Test metadata extractor on the nodes
     println!("🔧 Testing MetadataExtractor...");
-    let input = TransformInput::Nodes(nodes);
-    let enriched_nodes = metadata_extractor.transform(input).await?;
+    let input = TypedData::from_nodes(nodes);
+    let result = metadata_extractor.transform(input).await?;
+    let enriched_nodes = result.into_nodes();
     println!(
         "   ✅ Enriched {} nodes with metadata",
         enriched_nodes.len()
@@ -65,14 +67,15 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     println!("-----------------------------------");
 
     // Create a vector of different transforms
-    let transforms: Vec<Box<dyn Transform>> = vec![
+    let transforms: Vec<Box<dyn TypedTransform<DocumentState, NodeState>>> = vec![
         Box::new(SentenceSplitter::from_defaults(400, 80)?),
         Box::new(TokenTextSplitter::from_defaults(300, 60)?),
     ];
 
-    let test_input = TransformInput::Documents(documents.clone());
+    let test_input = TypedData::from_documents(documents.clone());
     for transform in transforms {
-        let nodes = transform.transform(test_input.clone()).await?;
+        let result = transform.transform(test_input.clone()).await?;
+        let nodes = result.into_nodes();
         println!("   📊 {}: {} nodes", transform.name(), nodes.len());
 
         if !nodes.is_empty() {
@@ -88,11 +91,11 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     // Create a temporary directory with sample files
     let temp_dir = create_temp_directory_with_files()?;
 
-    // Build pipeline using unified Transform interface
+    // Build pipeline using unified TypedTransform interface
     let pipeline = DefaultIndexingPipeline::builder()
         .with_loader(Arc::new(DirectoryLoader::new(temp_dir.path())?))
         .with_transformer(Arc::new(SentenceSplitter::from_defaults(500, 100)?))
-        .with_transformer(Arc::new(MetadataExtractor::new()))
+        .with_node_transformer(Arc::new(MetadataExtractor::new()))
         .build()?;
 
     println!("   ✅ Pipeline built successfully");

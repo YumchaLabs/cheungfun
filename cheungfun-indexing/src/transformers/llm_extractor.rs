@@ -7,13 +7,14 @@
 
 use crate::error::{IndexingError, Result as IndexingResult};
 use cheungfun_core::{
-    traits::{Transform, TransformInput},
-    types::{ChunkInfo, EntityNode, Node, Relation, Triplet},
+    traits::{NodeState, TypedData, TypedTransform},
+    types::{EntityNode, Node, Relation, Triplet},
+    Result as CoreResult,
 };
 use serde::{Deserialize, Serialize};
 use siumai::prelude::*;
 use std::{collections::HashMap, sync::Arc};
-use tracing::{debug, info, warn};
+use tracing::{debug, warn};
 
 /// Default prompt template for knowledge triplet extraction.
 /// Based on LlamaIndex's DEFAULT_KG_TRIPLET_EXTRACT_PROMPT.
@@ -553,99 +554,62 @@ impl LlmExtractor {
     }
 }
 
+// ============================================================================
+// Type-Safe Transform Implementation
+// ============================================================================
+
 #[async_trait::async_trait]
-impl Transform for LlmExtractor {
-    async fn transform(&self, input: TransformInput) -> cheungfun_core::Result<Vec<Node>> {
-        match input {
-            TransformInput::Documents(documents) => {
-                info!("Starting LLM extraction for {} documents", documents.len());
+impl TypedTransform<NodeState, NodeState> for LlmExtractor {
+    async fn transform(&self, input: TypedData<NodeState>) -> CoreResult<TypedData<NodeState>> {
+        let nodes = input.nodes().to_vec();
+        let mut processed_nodes = Vec::with_capacity(nodes.len());
 
-                let mut all_nodes = Vec::new();
-
-                for document in documents {
-                    // Create a text node from the document
-                    let chunk_info = ChunkInfo::with_char_indices(0, document.content.len(), 0);
-                    let mut node = Node::new(document.content.clone(), document.id, chunk_info);
-                    node.metadata = document.metadata.clone();
-
-                    // Extract triplets
-                    let triplets = self.process_node(&node).await?;
-
-                    if !triplets.is_empty() {
-                        // Store triplets in node metadata
-                        let mut metadata = node.metadata.clone();
-                        metadata.insert(
-                            "extracted_triplets".to_string(),
-                            serde_json::to_value(&triplets)?,
-                        );
-
-                        let mut enhanced_node = Node::new(
-                            node.content.clone(),
-                            node.source_document_id,
-                            node.chunk_info.clone(),
-                        );
-                        enhanced_node.metadata = metadata;
-
-                        all_nodes.push(enhanced_node);
-                    } else {
-                        all_nodes.push(node);
-                    }
+        for node in nodes {
+            let triplets = self.process_node(&node).await.map_err(|e| {
+                cheungfun_core::CheungfunError::Pipeline {
+                    message: format!("LLM extraction failed: {}", e),
                 }
+            })?;
 
-                info!("LLM extraction completed for {} nodes", all_nodes.len());
-                Ok(all_nodes)
-            }
-            TransformInput::Nodes(nodes) => {
-                info!("Starting LLM extraction for {} nodes", nodes.len());
-
-                let mut enhanced_nodes = Vec::new();
-
-                for node in nodes {
-                    let triplets = self.process_node(&node).await?;
-
-                    if !triplets.is_empty() {
-                        // Store triplets in node metadata
-                        let mut metadata = node.metadata.clone();
-                        metadata.insert(
-                            "extracted_triplets".to_string(),
-                            serde_json::to_value(&triplets)?,
-                        );
-
-                        let mut enhanced_node = Node::new(
-                            node.content.clone(),
-                            node.source_document_id,
-                            node.chunk_info.clone(),
-                        );
-                        enhanced_node.metadata = metadata;
-
-                        enhanced_nodes.push(enhanced_node);
-                    } else {
-                        enhanced_nodes.push(node);
-                    }
-                }
-
-                info!(
-                    "LLM extraction completed for {} nodes",
-                    enhanced_nodes.len()
+            if !triplets.is_empty() {
+                // Store triplets in node metadata
+                let mut metadata = node.metadata.clone();
+                metadata.insert(
+                    "extracted_triplets".to_string(),
+                    serde_json::to_value(&triplets).map_err(|e| {
+                        cheungfun_core::CheungfunError::Pipeline {
+                            message: format!("Failed to serialize triplets: {}", e),
+                        }
+                    })?,
                 );
-                Ok(enhanced_nodes)
-            }
-            TransformInput::Document(document) => {
-                // Handle single document
-                let documents = vec![document];
-                let input = TransformInput::Documents(documents);
-                self.transform(input).await
-            }
-            TransformInput::Node(node) => {
-                // Handle single node
-                let nodes = vec![node];
-                let input = TransformInput::Nodes(nodes);
-                self.transform(input).await
+
+                let mut enhanced_node = Node::new(
+                    node.content.clone(),
+                    node.source_document_id,
+                    node.chunk_info.clone(),
+                );
+                enhanced_node.metadata = metadata;
+                processed_nodes.push(enhanced_node);
+            } else {
+                processed_nodes.push(node);
             }
         }
+
+        Ok(TypedData::from_nodes(processed_nodes))
     }
 
     fn name(&self) -> &'static str {
         "LlmExtractor"
     }
+
+    fn description(&self) -> &'static str {
+        "Extracts knowledge triplets and entities from text using large language models"
+    }
 }
+
+// ============================================================================
+// Legacy Transform Implementation (Backward Compatibility)
+// ============================================================================
+
+// Legacy Transform implementation has been removed.
+// LlmExtractor now only uses the type-safe TypedTransform system.

@@ -2,6 +2,7 @@
 
 use async_trait::async_trait;
 use cheungfun_core::{
+    deduplication::DocumentHasher,
     traits::{DocumentStore, DocumentStoreStats, KVStore},
     CheungfunError, Document, Result,
 };
@@ -38,6 +39,10 @@ pub struct KVDocumentStore {
     kv_store: Arc<dyn KVStore>,
     /// Collection name for document storage.
     collection: String,
+    /// Collection name for document hashes.
+    hash_collection: String,
+    /// Document hasher for content-based deduplication.
+    hasher: DocumentHasher,
 }
 
 impl KVDocumentStore {
@@ -49,11 +54,38 @@ impl KVDocumentStore {
     /// * `collection` - Optional collection name (defaults to "documents")
     pub fn new(kv_store: Arc<dyn KVStore>, collection: Option<String>) -> Self {
         let collection = collection.unwrap_or_else(|| "documents".to_string());
+        let hash_collection = format!("{}_hashes", collection);
         info!("Created KV document store with collection '{}'", collection);
 
         Self {
             kv_store,
             collection,
+            hash_collection,
+            hasher: DocumentHasher::new(),
+        }
+    }
+
+    /// Create a new KV-based document store with custom hasher.
+    ///
+    /// # Arguments
+    ///
+    /// * `kv_store` - The underlying KV store implementation
+    /// * `collection` - Optional collection name (defaults to "documents")
+    /// * `hasher` - Custom document hasher
+    pub fn with_hasher(
+        kv_store: Arc<dyn KVStore>,
+        collection: Option<String>,
+        hasher: DocumentHasher,
+    ) -> Self {
+        let collection = collection.unwrap_or_else(|| "documents".to_string());
+        let hash_collection = format!("{}_hashes", collection);
+        info!("Created KV document store with collection '{}'", collection);
+
+        Self {
+            kv_store,
+            collection,
+            hash_collection,
+            hasher,
         }
     }
 
@@ -111,22 +143,30 @@ impl DocumentStore for KVDocumentStore {
 
         let mut doc_ids = Vec::with_capacity(docs.len());
         let mut kv_pairs = Vec::with_capacity(docs.len());
+        let mut hash_pairs = Vec::with_capacity(docs.len());
 
-        // Prepare all documents for batch insertion
+        // Prepare all documents and their hashes for batch insertion
         for doc in docs {
             let doc_id = doc.id.to_string();
             let doc_value = self.document_to_value(&doc)?;
+            let doc_hash = self.hasher.calculate_hash(&doc);
+
             kv_pairs.push((doc_id.clone(), doc_value));
+            hash_pairs.push((doc_id.clone(), Value::String(doc_hash)));
             doc_ids.push(doc_id);
         }
 
-        // Use batch operation for better performance
+        // Use batch operations for better performance
         self.kv_store.put_all(kv_pairs, &self.collection).await?;
+        self.kv_store
+            .put_all(hash_pairs, &self.hash_collection)
+            .await?;
 
         debug!(
-            "Added {} documents to collection '{}'",
+            "Added {} documents and hashes to collections '{}' and '{}'",
             doc_ids.len(),
-            self.collection
+            self.collection,
+            self.hash_collection
         );
         Ok(doc_ids)
     }
@@ -169,17 +209,18 @@ impl DocumentStore for KVDocumentStore {
     }
 
     async fn delete_document(&self, doc_id: &str) -> Result<()> {
-        let deleted = self.kv_store.delete(doc_id, &self.collection).await?;
+        let doc_deleted = self.kv_store.delete(doc_id, &self.collection).await?;
+        let hash_deleted = self.kv_store.delete(doc_id, &self.hash_collection).await?;
 
-        if deleted {
+        if doc_deleted || hash_deleted {
             debug!(
-                "Deleted document '{}' from collection '{}'",
-                doc_id, self.collection
+                "Deleted document '{}' from collections '{}' and '{}'",
+                doc_id, self.collection, self.hash_collection
             );
         } else {
             debug!(
-                "Document '{}' not found for deletion in collection '{}'",
-                doc_id, self.collection
+                "Document '{}' not found for deletion in collections '{}' and '{}'",
+                doc_id, self.collection, self.hash_collection
             );
         }
 
@@ -187,23 +228,68 @@ impl DocumentStore for KVDocumentStore {
     }
 
     async fn get_all_document_hashes(&self) -> Result<HashMap<String, String>> {
-        // For simplicity, we'll use document ID as both key and hash
-        // In a real implementation, you might want to compute actual content hashes
-        let all_data = self.kv_store.get_all(&self.collection).await?;
+        let all_hash_data = self.kv_store.get_all(&self.hash_collection).await?;
         let mut hashes = HashMap::new();
 
-        for (doc_id, _) in all_data {
-            // Use a simple hash based on document ID for now
-            // In production, you'd want to hash the actual content
-            hashes.insert(doc_id.clone(), format!("hash_{}", doc_id));
+        for (doc_id, value) in all_hash_data {
+            if let Some(hash_str) = value.as_str() {
+                hashes.insert(doc_id, hash_str.to_string());
+            }
         }
 
         debug!(
             "Retrieved {} document hashes from collection '{}'",
             hashes.len(),
-            self.collection
+            self.hash_collection
         );
         Ok(hashes)
+    }
+
+    async fn set_document_hash(&self, doc_id: &str, doc_hash: &str) -> Result<()> {
+        self.kv_store
+            .put(
+                doc_id,
+                Value::String(doc_hash.to_string()),
+                &self.hash_collection,
+            )
+            .await?;
+
+        debug!(
+            "Set hash for document '{}' in collection '{}'",
+            doc_id, self.hash_collection
+        );
+        Ok(())
+    }
+
+    async fn set_document_hashes(&self, doc_hashes: HashMap<String, String>) -> Result<()> {
+        let kv_pairs: Vec<(String, Value)> = doc_hashes
+            .into_iter()
+            .map(|(doc_id, hash)| (doc_id, Value::String(hash)))
+            .collect();
+
+        let pairs_count = kv_pairs.len();
+        self.kv_store
+            .put_all(kv_pairs, &self.hash_collection)
+            .await?;
+
+        debug!(
+            "Set {} document hashes in collection '{}'",
+            pairs_count, self.hash_collection
+        );
+        Ok(())
+    }
+
+    async fn get_document_hash(&self, doc_id: &str) -> Result<Option<String>> {
+        match self.kv_store.get(doc_id, &self.hash_collection).await? {
+            Some(value) => {
+                if let Some(hash_str) = value.as_str() {
+                    Ok(Some(hash_str.to_string()))
+                } else {
+                    Ok(None)
+                }
+            }
+            None => Ok(None),
+        }
     }
 
     async fn document_exists(&self, doc_id: &str) -> Result<bool> {
@@ -226,9 +312,12 @@ impl DocumentStore for KVDocumentStore {
 
     async fn clear(&self) -> Result<()> {
         self.kv_store.delete_collection(&self.collection).await?;
+        self.kv_store
+            .delete_collection(&self.hash_collection)
+            .await?;
         info!(
-            "Cleared all documents from collection '{}'",
-            self.collection
+            "Cleared all documents from collections '{}' and '{}'",
+            self.collection, self.hash_collection
         );
         Ok(())
     }

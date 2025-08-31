@@ -111,7 +111,7 @@ pub trait CallbackHandler: Send + Sync {
     fn name(&self) -> &str;
 
     /// Check if this handler is interested in a specific event type.
-    fn handles_event_type(&self, event_type: &CallbackEventType) -> bool {
+    fn handles_event_type(&self, _event_type: &CallbackEventType) -> bool {
         // By default, handle all event types
         true
     }
@@ -338,7 +338,7 @@ impl EventContext {
     }
 
     /// Emit the start event.
-    pub async fn start(mut self) -> Self {
+    pub async fn start(self) -> Self {
         if let Err(e) = self.manager.emit_event(self.start_payload.clone()).await {
             error!("Failed to emit start event: {}", e);
         }

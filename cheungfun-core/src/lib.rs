@@ -47,6 +47,7 @@ pub mod prelude;
 pub mod builder;
 pub mod cache;
 pub mod config;
+pub mod deduplication;
 pub mod error;
 pub mod factory;
 pub mod multilingual;

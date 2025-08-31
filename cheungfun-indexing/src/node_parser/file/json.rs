@@ -3,14 +3,14 @@
 //! This module provides JSON-specific document parsing that extracts structured
 //! data from JSON documents and creates nodes with hierarchical metadata.
 
-use crate::node_parser::{utils::build_nodes_from_splits, NodeParser};
+use crate::node_parser::NodeParser;
 use async_trait::async_trait;
 use cheungfun_core::{
-    traits::{Transform, TransformInput},
+    traits::{DocumentState, NodeState, TypedData, TypedTransform},
     Document, Node, Result as CoreResult,
 };
 use serde_json::{Map, Value};
-use tracing::{debug, warn};
+use tracing::debug;
 
 /// JSON node parser that extracts structured data from JSON documents.
 ///
@@ -213,28 +213,29 @@ impl NodeParser for JSONNodeParser {
     }
 }
 
+// ============================================================================
+// Type-Safe Transform Implementation
+// ============================================================================
+
 #[async_trait]
-impl Transform for JSONNodeParser {
-    async fn transform(&self, input: TransformInput) -> CoreResult<Vec<Node>> {
-        match input {
-            TransformInput::Documents(documents) => self.parse_nodes(&documents, false).await,
-            TransformInput::Document(document) => self.parse_nodes(&[document], false).await,
-            TransformInput::Node(node) => {
-                // Convert single node back to document and re-parse
-                let document = Document::new(&node.content);
-                self.parse_nodes(&[document], false).await
-            }
-            TransformInput::Nodes(nodes) => {
-                // Convert nodes back to documents and re-parse
-                let documents: Vec<Document> = nodes
-                    .into_iter()
-                    .map(|node| Document::new(&node.content))
-                    .collect();
-                self.parse_nodes(&documents, false).await
-            }
-        }
+impl TypedTransform<DocumentState, NodeState> for JSONNodeParser {
+    async fn transform(&self, input: TypedData<DocumentState>) -> CoreResult<TypedData<NodeState>> {
+        let documents = input.documents();
+        let nodes = self.parse_nodes(documents, false).await?;
+        Ok(TypedData::from_nodes(nodes))
+    }
+
+    fn name(&self) -> &'static str {
+        "JSONNodeParser"
+    }
+
+    fn description(&self) -> &'static str {
+        "Extracts structured data from JSON documents while preserving hierarchical metadata"
     }
 }
+
+// Legacy Transform implementation has been removed.
+// JSONNodeParser now only uses the type-safe TypedTransform system.
 
 /// Configuration for JSON node parser.
 #[derive(Debug, Clone)]

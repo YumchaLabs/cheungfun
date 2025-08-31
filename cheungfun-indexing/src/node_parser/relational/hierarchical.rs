@@ -7,8 +7,8 @@
 use crate::node_parser::{config::HierarchicalConfig, NodeParser, TextSplitter};
 use async_trait::async_trait;
 use cheungfun_core::{
-    relationships::{utils::add_parent_child_relationship, NodeRelationship, RelatedNodeInfo},
-    traits::{Transform, TransformInput},
+    relationships::{NodeRelationship, RelatedNodeInfo},
+    traits::{DocumentState, NodeState, TypedData, TypedTransform},
     Document, Node, Result as CoreResult,
 };
 use std::collections::HashMap;
@@ -250,28 +250,29 @@ impl NodeParser for HierarchicalNodeParser {
     }
 }
 
+// ============================================================================
+// Type-Safe Transform Implementation
+// ============================================================================
+
 #[async_trait]
-impl Transform for HierarchicalNodeParser {
-    async fn transform(&self, input: TransformInput) -> CoreResult<Vec<Node>> {
-        match input {
-            TransformInput::Documents(documents) => self.parse_nodes(&documents, false).await,
-            TransformInput::Document(document) => self.parse_nodes(&[document], false).await,
-            TransformInput::Node(node) => {
-                // Convert single node back to document and re-parse hierarchically
-                let document = Document::new(&node.content);
-                self.parse_nodes(&[document], false).await
-            }
-            TransformInput::Nodes(nodes) => {
-                // Convert nodes back to documents and re-parse hierarchically
-                let documents: Vec<Document> = nodes
-                    .into_iter()
-                    .map(|node| Document::new(&node.content))
-                    .collect();
-                self.parse_nodes(&documents, false).await
-            }
-        }
+impl TypedTransform<DocumentState, NodeState> for HierarchicalNodeParser {
+    async fn transform(&self, input: TypedData<DocumentState>) -> CoreResult<TypedData<NodeState>> {
+        let documents = input.documents();
+        let nodes = self.parse_nodes(documents, false).await?;
+        Ok(TypedData::from_nodes(nodes))
+    }
+
+    fn name(&self) -> &'static str {
+        "HierarchicalNodeParser"
+    }
+
+    fn description(&self) -> &'static str {
+        "Creates hierarchical nodes with parent-child relationships for advanced retrieval patterns"
     }
 }
+
+// Legacy Transform implementation has been removed.
+// HierarchicalNodeParser now only uses the type-safe TypedTransform system.
 
 /// Utility functions for working with hierarchical nodes.
 

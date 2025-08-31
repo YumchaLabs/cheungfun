@@ -5,15 +5,13 @@
 //! development, testing, and small-scale applications.
 
 use async_trait::async_trait;
-use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 use std::sync::{Arc, RwLock};
 
 use cheungfun_core::{
     traits::{GraphStoreStats, PropertyGraphStore},
     types::{
-        ChunkNode, EntityNode, GraphQuery, LabelledNode, LabelledNodeType, LabelledPropertyGraph,
-        Query, Relation, Triplet,
+        ChunkNode, EntityNode, LabelledNode, LabelledNodeType, LabelledPropertyGraph, Relation, Triplet,
     },
     Result,
 };
@@ -274,8 +272,8 @@ impl PropertyGraphStore for SimplePropertyGraphStore {
 
     async fn get(
         &self,
-        properties: Option<HashMap<String, serde_json::Value>>,
-        ids: Option<Vec<String>>,
+        _properties: Option<HashMap<String, serde_json::Value>>,
+        _ids: Option<Vec<String>>,
     ) -> Result<Vec<Box<dyn LabelledNode>>> {
         // This method also has the trait object issue
         // We'll need to redesign the trait to avoid this problem
@@ -286,8 +284,8 @@ impl PropertyGraphStore for SimplePropertyGraphStore {
 
     async fn get_rel_map(
         &self,
-        entity_ids: Vec<String>,
-        depth: usize,
+        _entity_ids: Vec<String>,
+        _depth: usize,
     ) -> Result<Vec<Vec<Box<dyn LabelledNode>>>> {
         // This method also has the trait object issue
         Err(cheungfun_core::CheungfunError::Internal {
@@ -298,8 +296,8 @@ impl PropertyGraphStore for SimplePropertyGraphStore {
 
     async fn delete(
         &self,
-        entity_ids: Option<Vec<String>>,
-        relation_ids: Option<Vec<String>>,
+        _entity_ids: Option<Vec<String>>,
+        _relation_ids: Option<Vec<String>>,
     ) -> Result<()> {
         // Same mutability issue
         Err(cheungfun_core::CheungfunError::Internal {

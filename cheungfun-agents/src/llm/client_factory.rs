@@ -122,7 +122,7 @@ impl LlmClientFactory {
 
     /// Create Google client (TODO: Enable when siumai supports Google)
     #[allow(dead_code)]
-    async fn create_google_client(&self, _config: &LlmConfig) -> Result<Arc<dyn ChatCapability>> {
+    fn create_google_client(&self, _config: &LlmConfig) -> Result<Arc<dyn ChatCapability>> {
         Err(AgentError::unsupported_provider(
             "Google (not yet supported)",
         ))

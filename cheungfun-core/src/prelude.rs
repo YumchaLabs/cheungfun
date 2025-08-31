@@ -51,7 +51,7 @@ pub use crate::traits::{
     IndexingStats, Loader, LoaderConfig, LoadingStats, ModelFeature, ModelInfo, PipelineStatus,
     QueryOptions, QueryPipeline, QueryStats, ResponseGenerator, RetrievalConfig,
     RetrievalExplanation, RetrievalStats, RetrievalStep, Retriever, SparseEmbedder, StorageStats,
-    StreamingLoader, Transform, TransformConfig, TransformInput, TransformStats, VectorStore,
+    StreamingLoader, TransformConfig, TransformStats, VectorStore,
 };
 
 // Re-export configuration types
@@ -69,3 +69,6 @@ pub use crate::factory::{
 pub use crate::builder::{
     BuilderInfo, IndexingPipelineBuilder, QueryBuilderInfo, QueryPipelineBuilder,
 };
+
+// Re-export deduplication types
+pub use crate::deduplication::{DocstoreStrategy, DocumentDeduplicator, DocumentHasher};

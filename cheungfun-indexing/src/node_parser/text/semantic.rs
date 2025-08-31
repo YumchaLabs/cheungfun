@@ -11,8 +11,7 @@ use crate::node_parser::{
 };
 use async_trait::async_trait;
 use cheungfun_core::{
-    traits::{Embedder, Transform, TransformInput},
-    CheungfunError, Document, Node, Result as CoreResult,
+    traits::{DocumentState, Embedder, NodeState, TypedData, TypedTransform}, Document, Node, Result as CoreResult,
 };
 use std::sync::Arc;
 use tracing::{debug, warn};
@@ -421,31 +420,33 @@ impl NodeParser for SemanticSplitter {
     }
 }
 
+// ============================================================================
+// Type-Safe Transform Implementation
+// ============================================================================
+
 #[async_trait]
-impl Transform for SemanticSplitter {
-    async fn transform(&self, input: TransformInput) -> CoreResult<Vec<Node>> {
-        match input {
-            TransformInput::Document(document) => {
-                // Use the existing NodeParser implementation
-                NodeParser::parse_nodes(self, &[document], false).await
-            }
-            TransformInput::Documents(documents) => {
-                // Use the existing NodeParser implementation for batch processing
-                NodeParser::parse_nodes(self, &documents, false).await
-            }
-            TransformInput::Node(_) | TransformInput::Nodes(_) => {
-                // SemanticSplitter only processes documents, not nodes
-                Err(CheungfunError::Validation {
-                    message: "SemanticSplitter only accepts documents as input".into(),
-                })
-            }
-        }
+impl TypedTransform<DocumentState, NodeState> for SemanticSplitter {
+    async fn transform(&self, input: TypedData<DocumentState>) -> CoreResult<TypedData<NodeState>> {
+        let documents = input.documents();
+        let nodes = NodeParser::parse_nodes(self, documents, false).await?;
+        Ok(TypedData::from_nodes(nodes))
     }
 
     fn name(&self) -> &'static str {
         "SemanticSplitter"
     }
+
+    fn description(&self) -> &'static str {
+        "Semantic-based text splitter that uses embeddings to group semantically related sentences"
+    }
 }
+
+// ============================================================================
+// Legacy Transform Implementation (Backward Compatibility)
+// ============================================================================
+
+// Legacy Transform implementation has been removed.
+// SemanticSplitter now only uses the type-safe TypedTransform system.
 
 #[cfg(test)]
 mod tests {

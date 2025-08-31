@@ -5,9 +5,8 @@
 
 use super::{NodePostprocessor, SimilarityFilterConfig};
 use async_trait::async_trait;
-use cheungfun_core::{ChunkInfo, Result, ScoredNode};
+use cheungfun_core::{Result, ScoredNode};
 use tracing::debug;
-use uuid::Uuid;
 
 /// Similarity-based node filter.
 ///

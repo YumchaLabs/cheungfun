@@ -4,7 +4,7 @@
 //! Compare sentence-based, token-based, and semantic splitting approaches.
 
 use cheungfun_core::{
-    traits::{Transform, TransformInput},
+    traits::{TypedTransform, TypedData, DocumentState, NodeState},
     Document,
 };
 use cheungfun_indexing::{

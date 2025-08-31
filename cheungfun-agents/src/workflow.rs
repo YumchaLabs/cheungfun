@@ -66,6 +66,7 @@ impl SimpleWorkflowStep {
     }
 
     /// Set step description
+    #[must_use]
     pub fn with_description(mut self, description: impl Into<String>) -> Self {
         self.description = Some(description.into());
         self
@@ -79,6 +80,7 @@ impl SimpleWorkflowStep {
     }
 
     /// Add a single dependency
+    #[must_use]
     pub fn depends_on(mut self, step_id: impl Into<String>) -> Self {
         self.dependencies.push(step_id.into());
         self
@@ -93,6 +95,7 @@ impl SimpleWorkflowStep {
     }
 
     /// Add configuration
+    #[must_use]
     pub fn with_config(mut self, key: impl Into<String>, value: serde_json::Value) -> Self {
         self.config.insert(key.into(), value);
         self
@@ -134,6 +137,7 @@ impl SimpleWorkflow {
     }
 
     /// Set workflow description
+    #[must_use]
     pub fn with_description(mut self, description: impl Into<String>) -> Self {
         self.description = Some(description.into());
         self

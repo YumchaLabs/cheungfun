@@ -15,7 +15,7 @@ use crate::node_parser::{
 use crate::parsers::{AstParser, AstParserConfig};
 use async_trait::async_trait;
 use cheungfun_core::{
-    traits::{Transform, TransformInput},
+    traits::{DocumentState, NodeState, TypedData, TypedTransform},
     CheungfunError, Document, Node, Result as CoreResult,
 };
 use std::sync::Arc;
@@ -339,7 +339,7 @@ impl CodeSplitter {
         }
 
         // Fallback to our structure-aware approach
-        let ast_config = AstParserConfig {
+        let _ast_config = AstParserConfig {
             include_function_bodies: true,
             max_depth: Some(10),
             extract_functions: true,
@@ -661,8 +661,8 @@ impl CodeSplitter {
     fn should_split_chunk(
         &self,
         chunk: &str,
-        start_line: usize,
-        all_lines: &[&str],
+        _start_line: usize,
+        _all_lines: &[&str],
     ) -> CoreResult<bool> {
         // Simple heuristics for code structure
         if !self.config.respect_function_boundaries && !self.config.respect_class_boundaries {
@@ -671,7 +671,7 @@ impl CodeSplitter {
 
         // Check if chunk ends in the middle of a function or class
         let lines_in_chunk: Vec<&str> = chunk.lines().collect();
-        if let Some(last_line) = lines_in_chunk.last() {
+        if let Some(_last_line) = lines_in_chunk.last() {
             // Look for opening braces without closing braces
             let open_braces = chunk.matches('{').count();
             let close_braces = chunk.matches('}').count();
@@ -745,7 +745,7 @@ impl NodeParser for CodeSplitter {
     async fn parse_nodes(
         &self,
         documents: &[Document],
-        show_progress: bool,
+        _show_progress: bool,
     ) -> CoreResult<Vec<Node>> {
         let mut all_nodes = Vec::new();
 
@@ -813,31 +813,29 @@ impl MetadataAwareTextSplitter for CodeSplitter {
     }
 }
 
+// ============================================================================
+// Type-Safe Transform Implementation
+// ============================================================================
+
 #[async_trait]
-impl Transform for CodeSplitter {
-    async fn transform(&self, input: TransformInput) -> CoreResult<Vec<Node>> {
-        match input {
-            TransformInput::Document(document) => {
-                // Use the existing NodeParser implementation
-                NodeParser::parse_nodes(self, &[document], false).await
-            }
-            TransformInput::Documents(documents) => {
-                // Use the existing NodeParser implementation for batch processing
-                NodeParser::parse_nodes(self, &documents, false).await
-            }
-            TransformInput::Node(_) | TransformInput::Nodes(_) => {
-                // CodeSplitter only processes documents, not nodes
-                Err(CheungfunError::Validation {
-                    message: "CodeSplitter only accepts documents as input".into(),
-                })
-            }
-        }
+impl TypedTransform<DocumentState, NodeState> for CodeSplitter {
+    async fn transform(&self, input: TypedData<DocumentState>) -> CoreResult<TypedData<NodeState>> {
+        let documents = input.documents();
+        let nodes = NodeParser::parse_nodes(self, documents, false).await?;
+        Ok(TypedData::from_nodes(nodes))
     }
 
     fn name(&self) -> &'static str {
         "CodeSplitter"
     }
+
+    fn description(&self) -> &'static str {
+        "AST-enhanced code splitter that combines line-based splitting with syntactic analysis"
+    }
 }
+
+// Legacy Transform implementation has been removed.
+// CodeSplitter now only uses the type-safe TypedTransform system.
 
 impl CodeSplitter {
     /// Create a tree-sitter parser for the configured language

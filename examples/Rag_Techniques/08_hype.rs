@@ -46,12 +46,12 @@ use shared::{
 use std::{path::PathBuf, sync::Arc};
 
 use cheungfun_core::{
-    traits::{Embedder, IndexingPipeline, VectorStore},
+    traits::{Embedder, IndexingPipeline},
     DistanceMetric,
 };
 use cheungfun_indexing::{
     loaders::DirectoryLoader,
-    node_parser::{config::SentenceSplitterConfig, text::SentenceSplitter},
+    node_parser::text::SentenceSplitter,
     pipeline::DefaultIndexingPipeline,
     transformers::MetadataExtractor,
 };
@@ -172,34 +172,41 @@ async fn main() -> ExampleResult<()> {
 
     let pipeline = DefaultIndexingPipeline::builder()
         .with_loader(loader)
-        .with_transformer(splitter)
-        .with_transformer(metadata_extractor)
+        .with_document_processor(splitter)  // Documents -> Nodes
+        .with_node_processor(metadata_extractor)  // Nodes -> Nodes
         .with_embedder(embedder.clone())
         .with_vector_store(vector_store.clone())
         .build()?;
 
     // Run indexing pipeline with progress reporting
-    let indexing_stats = pipeline
-        .run_with_progress(Box::new(|progress| {
-            if let Some(percentage) = progress.percentage() {
-                println!(
-                    "📊 {}: {:.1}% ({}/{})",
-                    progress.stage,
-                    percentage,
-                    progress.processed,
-                    progress.total.unwrap_or(0)
-                );
-            } else {
-                println!(
-                    "📊 {}: {} items processed",
-                    progress.stage, progress.processed
-                );
-            }
+    let (_nodes, indexing_stats) = pipeline
+        .run_with_progress(
+            None,  // documents (will use loader)
+            None,  // nodes
+            true,  // store_doc_text
+            None,  // num_workers (use default)
+            true,  // in_place
+            Box::new(|progress| {
+                if let Some(percentage) = progress.percentage() {
+                    println!(
+                        "📊 {}: {:.1}% ({}/{})",
+                        progress.stage,
+                        percentage,
+                        progress.processed,
+                        progress.total.unwrap_or(0)
+                    );
+                } else {
+                    println!(
+                        "📊 {}: {} items processed",
+                        progress.stage, progress.processed
+                    );
+                }
 
-            if let Some(current_item) = &progress.current_item {
-                println!("   └─ {}", current_item);
-            }
-        }))
+                if let Some(current_item) = &progress.current_item {
+                    println!("   └─ {}", current_item);
+                }
+            })
+        )
         .await?;
     let indexing_time = timer.finish();
 

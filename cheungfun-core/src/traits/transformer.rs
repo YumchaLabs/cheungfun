@@ -4,174 +4,161 @@
 //! TransformComponent design pattern. All processing components (document splitters,
 //! metadata extractors, etc.) implement the same Transform trait for maximum
 //! flexibility and composability.
+//!
+//! ## Type-Safe Pipeline System
+//!
+//! The new type-safe pipeline system provides compile-time guarantees for component
+//! compatibility while maintaining full backward compatibility with the existing
+//! Transform trait.
 
 use async_trait::async_trait;
+use std::marker::PhantomData;
 
 use crate::{Document, Node, Result};
 
-/// Unified input type for transformations.
+// ============================================================================
+// Type-Safe Pipeline System
+// ============================================================================
+
+/// Marker trait for input types in the type-safe pipeline system.
+pub trait InputType: Send + Sync + 'static {}
+
+/// Marker trait for output types in the type-safe pipeline system.
+pub trait OutputType: Send + Sync + 'static {}
+
+/// Document state marker - indicates data contains documents.
+#[derive(Debug, Clone, Copy)]
+pub struct DocumentState;
+
+/// Node state marker - indicates data contains nodes.
+#[derive(Debug, Clone, Copy)]
+pub struct NodeState;
+
+impl InputType for DocumentState {}
+impl InputType for NodeState {}
+impl OutputType for DocumentState {}
+impl OutputType for NodeState {}
+
+/// Type-safe data container that carries compile-time type information.
 ///
-/// This enum allows transformations to accept either documents or nodes,
-/// providing flexibility for different types of processing components.
+/// This container ensures that data transformations are type-safe at compile time,
+/// preventing invalid pipeline compositions while maintaining runtime efficiency.
 #[derive(Debug, Clone)]
-pub enum TransformInput {
-    /// Document input for document-to-nodes transformations (e.g., text splitters).
-    Document(Document),
-    /// Node input for node-to-node transformations (e.g., metadata extractors).
-    Node(Node),
-    /// Batch of documents for efficient batch processing.
-    Documents(Vec<Document>),
-    /// Batch of nodes for efficient batch processing.
-    Nodes(Vec<Node>),
+pub struct TypedData<T>
+where
+    T: InputType + OutputType,
+{
+    documents: Option<Vec<Document>>,
+    nodes: Option<Vec<Node>>,
+    _phantom: PhantomData<T>,
 }
 
-impl TransformInput {
-    /// Create a document input.
-    pub fn document(document: Document) -> Self {
-        Self::Document(document)
+impl TypedData<DocumentState> {
+    /// Create typed data from documents.
+    pub fn from_documents(documents: Vec<Document>) -> Self {
+        Self {
+            documents: Some(documents),
+            nodes: None,
+            _phantom: PhantomData,
+        }
     }
 
-    /// Create a node input.
-    pub fn node(node: Node) -> Self {
-        Self::Node(node)
+    /// Get reference to documents.
+    pub fn documents(&self) -> &[Document] {
+        self.documents
+            .as_ref()
+            .expect("DocumentState should contain documents")
     }
 
-    /// Create a batch of documents input.
-    pub fn documents(documents: Vec<Document>) -> Self {
-        Self::Documents(documents)
-    }
-
-    /// Create a batch of nodes input.
-    pub fn nodes(nodes: Vec<Node>) -> Self {
-        Self::Nodes(nodes)
+    /// Take ownership of documents.
+    pub fn into_documents(self) -> Vec<Document> {
+        self.documents
+            .expect("DocumentState should contain documents")
     }
 }
 
-/// Unified transformation trait for all processing components.
+impl TypedData<NodeState> {
+    /// Create typed data from nodes.
+    pub fn from_nodes(nodes: Vec<Node>) -> Self {
+        Self {
+            documents: None,
+            nodes: Some(nodes),
+            _phantom: PhantomData,
+        }
+    }
+
+    /// Get reference to nodes.
+    pub fn nodes(&self) -> &[Node] {
+        self.nodes.as_ref().expect("NodeState should contain nodes")
+    }
+
+    /// Take ownership of nodes.
+    pub fn into_nodes(self) -> Vec<Node> {
+        self.nodes.expect("NodeState should contain nodes")
+    }
+}
+
+/// Type-safe transformation trait for compile-time pipeline validation.
 ///
-/// This trait provides a single interface for all types of transformations,
-/// whether they process documents into nodes or nodes into nodes. This design
-/// follows LlamaIndex's TransformComponent pattern for maximum flexibility.
+/// This trait provides compile-time guarantees that components are compatible
+/// with each other in a pipeline. The type parameters ensure that only valid
+/// combinations can be constructed.
+///
+/// # Type Parameters
+///
+/// * `I` - Input type (DocumentState or NodeState)
+/// * `O` - Output type (currently always NodeState)
 ///
 /// # Examples
 ///
 /// ```rust,no_run
-/// use cheungfun_core::traits::{Transform, TransformInput};
-/// use cheungfun_core::{Document, Node, Result, CheungfunError};
+/// use cheungfun_core::traits::{TypedTransform, TypedData, DocumentState, NodeState};
+/// use cheungfun_core::{Document, Node, Result};
 /// use async_trait::async_trait;
 ///
 /// #[derive(Debug)]
-/// struct SentenceSplitter {
-///     chunk_size: usize,
-///     overlap: usize,
-/// }
+/// struct SentenceSplitter;
 ///
 /// #[async_trait]
-/// impl Transform for SentenceSplitter {
-///     async fn transform(&self, input: TransformInput) -> Result<Vec<Node>> {
-///         match input {
-///             TransformInput::Document(doc) => {
-///                 // Split document into sentence-based chunks
-///                 // Implementation here...
-///                 Ok(vec![])
-///             }
-///             _ => Err(CheungfunError::pipeline(
-///                 "SentenceSplitter only accepts documents"
-///             ))
-///         }
+/// impl TypedTransform<DocumentState, NodeState> for SentenceSplitter {
+///     async fn transform(&self, input: TypedData<DocumentState>) -> Result<TypedData<NodeState>> {
+///         let documents = input.documents();
+///         // Split documents into nodes...
+///         let nodes = vec![]; // Implementation here
+///         Ok(TypedData::from_nodes(nodes))
+///     }
+///
+///     fn name(&self) -> &'static str {
+///         "SentenceSplitter"
 ///     }
 /// }
 /// ```
 #[async_trait]
-pub trait Transform: Send + Sync + std::fmt::Debug {
-    /// Transform input into nodes.
-    ///
-    /// This is the core transformation method that all components must implement.
-    /// The input can be documents, nodes, or batches thereof, allowing maximum
-    /// flexibility for different types of processing components.
-    ///
-    /// # Arguments
-    ///
-    /// * `input` - The input to transform (documents or nodes)
-    ///
-    /// # Returns
-    ///
-    /// A vector of nodes created from the input. An empty vector
-    /// indicates that the input should be skipped.
-    ///
-    /// # Errors
-    ///
-    /// Returns an error if the transformation fails due to invalid
-    /// input, processing errors, or unsupported input types.
-    async fn transform(&self, input: TransformInput) -> Result<Vec<Node>>;
+pub trait TypedTransform<I, O = NodeState>: Send + Sync + std::fmt::Debug
+where
+    I: InputType + OutputType,
+    O: InputType + OutputType,
+{
+    /// Execute type-safe transformation.
+    async fn transform(&self, input: TypedData<I>) -> Result<TypedData<O>>;
 
-    /// Transform multiple inputs in batch for better performance.
-    ///
-    /// The default implementation processes inputs one by one, but
-    /// implementations can override this for batch optimization.
-    ///
-    /// # Arguments
-    ///
-    /// * `inputs` - Vector of inputs to transform
-    ///
-    /// # Returns
-    ///
-    /// A vector containing all nodes from all inputs.
-    async fn transform_batch(&self, inputs: Vec<TransformInput>) -> Result<Vec<Node>> {
-        let mut all_nodes = Vec::new();
-        for input in inputs {
-            let nodes = self.transform(input).await?;
-            all_nodes.extend(nodes);
-        }
-        Ok(all_nodes)
-    }
+    /// Get component name.
+    fn name(&self) -> &'static str;
 
-    /// Get a human-readable name for this transformer.
-    fn name(&self) -> &'static str {
-        std::any::type_name::<Self>()
-    }
-
-    /// Validate that the transformer can process the given input.
-    ///
-    /// This method can be used to check if an input is compatible
-    /// with this transformer before attempting transformation.
-    async fn can_transform(&self, _input: &TransformInput) -> bool {
-        // Default implementation accepts all inputs
-        true
-    }
-
-    /// Get configuration information about this transformer.
-    fn config(&self) -> std::collections::HashMap<String, serde_json::Value> {
-        // Default implementation returns empty config
-        std::collections::HashMap::new()
+    /// Get component description.
+    fn description(&self) -> &'static str {
+        "Transform component"
     }
 }
 
-// Convenience functions for creating TransformInput
+// Note: Legacy Transform system has been removed in favor of the type-safe
+// TypedTransform system. All components now use TypedTransform for compile-time
+// type safety and better error prevention.
 
-impl From<Document> for TransformInput {
-    fn from(document: Document) -> Self {
-        Self::Document(document)
-    }
-}
+// Legacy Transform trait has been removed. All components now use the type-safe
+// TypedTransform system for compile-time type safety and better error prevention.
 
-impl From<Node> for TransformInput {
-    fn from(node: Node) -> Self {
-        Self::Node(node)
-    }
-}
-
-impl From<Vec<Document>> for TransformInput {
-    fn from(documents: Vec<Document>) -> Self {
-        Self::Documents(documents)
-    }
-}
-
-impl From<Vec<Node>> for TransformInput {
-    fn from(nodes: Vec<Node>) -> Self {
-        Self::Nodes(nodes)
-    }
-}
+// All legacy Transform system code has been removed.
 
 /// Configuration for transformation operations.
 #[derive(Debug, Clone)]

@@ -16,8 +16,7 @@ use crate::node_parser::{
 };
 use async_trait::async_trait;
 use cheungfun_core::{
-    traits::{Transform, TransformInput},
-    CheungfunError, Document, Node, Result as CoreResult,
+    traits::{DocumentState, NodeState, TypedData, TypedTransform}, Document, Node, Result as CoreResult,
 };
 use std::sync::Arc;
 use tracing::debug;
@@ -341,31 +340,29 @@ impl MetadataAwareTextSplitter for SentenceSplitter {
     }
 }
 
+// ============================================================================
+// Type-Safe Transform Implementation
+// ============================================================================
+
 #[async_trait]
-impl Transform for SentenceSplitter {
-    async fn transform(&self, input: TransformInput) -> CoreResult<Vec<Node>> {
-        match input {
-            TransformInput::Document(document) => {
-                // Use the existing NodeParser implementation
-                NodeParser::parse_nodes(self, &[document], false).await
-            }
-            TransformInput::Documents(documents) => {
-                // Use the existing NodeParser implementation for batch processing
-                NodeParser::parse_nodes(self, &documents, false).await
-            }
-            TransformInput::Node(_) | TransformInput::Nodes(_) => {
-                // SentenceSplitter only processes documents, not nodes
-                Err(CheungfunError::Validation {
-                    message: "SentenceSplitter only accepts documents as input".into(),
-                })
-            }
-        }
+impl TypedTransform<DocumentState, NodeState> for SentenceSplitter {
+    async fn transform(&self, input: TypedData<DocumentState>) -> CoreResult<TypedData<NodeState>> {
+        let documents = input.documents();
+        let nodes = NodeParser::parse_nodes(self, documents, false).await?;
+        Ok(TypedData::from_nodes(nodes))
     }
 
     fn name(&self) -> &'static str {
         "SentenceSplitter"
     }
+
+    fn description(&self) -> &'static str {
+        "Splits documents into sentence-based chunks with configurable size and overlap"
+    }
 }
+
+// Legacy Transform implementation has been removed.
+// SentenceSplitter now only uses the type-safe TypedTransform system.
 
 #[cfg(test)]
 mod tests {
