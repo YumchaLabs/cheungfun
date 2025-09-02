@@ -300,8 +300,8 @@ async fn build_augmented_pipeline(
     // Build initial pipeline to get chunks
     let initial_pipeline = DefaultIndexingPipeline::builder()
         .with_loader(loader)
-        .with_document_processor(splitter)  // Documents -> Nodes
-        .with_node_processor(metadata_extractor)  // Nodes -> Nodes
+        .with_document_processor(splitter) // Documents -> Nodes
+        .with_node_processor(metadata_extractor) // Nodes -> Nodes
         .build()?;
 
     // Run initial processing to get chunks
@@ -636,8 +636,8 @@ async fn build_standard_pipeline(
     // Build standard pipeline
     let pipeline = DefaultIndexingPipeline::builder()
         .with_loader(loader)
-        .with_document_processor(splitter)  // Documents -> Nodes
-        .with_node_processor(metadata_extractor)  // Nodes -> Nodes
+        .with_document_processor(splitter) // Documents -> Nodes
+        .with_node_processor(metadata_extractor) // Nodes -> Nodes
         .with_embedder(embedder.clone())
         .with_vector_store(vector_store.clone())
         .build()?;

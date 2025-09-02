@@ -95,7 +95,14 @@ pub struct IngestionPipeline {
     /// Project name.
     pub project_name: String,
     /// Transformation components to apply (using TypedTransform system).
-    pub transformations: Vec<Arc<dyn cheungfun_core::traits::TypedTransform<cheungfun_core::traits::NodeState, cheungfun_core::traits::NodeState>>>,
+    pub transformations: Vec<
+        Arc<
+            dyn cheungfun_core::traits::TypedTransform<
+                cheungfun_core::traits::NodeState,
+                cheungfun_core::traits::NodeState,
+            >,
+        >,
+    >,
     /// Optional documents to process (can be overridden at runtime).
     pub documents: Option<Vec<Document>>,
     /// Optional vector store for direct storage.
@@ -350,10 +357,11 @@ impl IngestionPipeline {
             }
 
             // Apply the transformation
-            current_data = transform.transform(current_data).await
-                .map_err(|e| cheungfun_core::error::CheungfunError::Pipeline {
+            current_data = transform.transform(current_data).await.map_err(|e| {
+                cheungfun_core::error::CheungfunError::Pipeline {
                     message: format!("Transformation '{}' failed: {}", transform.name(), e),
-                })?;
+                }
+            })?;
 
             if self.config.show_progress {
                 info!(
@@ -390,7 +398,14 @@ impl IngestionPipeline {
 pub struct IngestionPipelineBuilder {
     name: Option<String>,
     project_name: Option<String>,
-    transformations: Vec<Arc<dyn cheungfun_core::traits::TypedTransform<cheungfun_core::traits::NodeState, cheungfun_core::traits::NodeState>>>,
+    transformations: Vec<
+        Arc<
+            dyn cheungfun_core::traits::TypedTransform<
+                cheungfun_core::traits::NodeState,
+                cheungfun_core::traits::NodeState,
+            >,
+        >,
+    >,
     documents: Option<Vec<Document>>,
     vector_store: Option<Arc<dyn VectorStore>>,
     docstore: Option<Arc<dyn DocumentStore>>,
@@ -434,13 +449,31 @@ impl IngestionPipelineBuilder {
     }
 
     /// Set the transformations using TypedTransform system.
-    pub fn with_transformations(mut self, transformations: Vec<Arc<dyn cheungfun_core::traits::TypedTransform<cheungfun_core::traits::NodeState, cheungfun_core::traits::NodeState>>>) -> Self {
+    pub fn with_transformations(
+        mut self,
+        transformations: Vec<
+            Arc<
+                dyn cheungfun_core::traits::TypedTransform<
+                    cheungfun_core::traits::NodeState,
+                    cheungfun_core::traits::NodeState,
+                >,
+            >,
+        >,
+    ) -> Self {
         self.transformations = transformations;
         self
     }
 
     /// Add a single transformation using TypedTransform system.
-    pub fn with_transformation(mut self, transformation: Arc<dyn cheungfun_core::traits::TypedTransform<cheungfun_core::traits::NodeState, cheungfun_core::traits::NodeState>>) -> Self {
+    pub fn with_transformation(
+        mut self,
+        transformation: Arc<
+            dyn cheungfun_core::traits::TypedTransform<
+                cheungfun_core::traits::NodeState,
+                cheungfun_core::traits::NodeState,
+            >,
+        >,
+    ) -> Self {
         self.transformations.push(transformation);
         self
     }

@@ -387,8 +387,8 @@ async fn create_query_engine(
 
     let pipeline = DefaultIndexingPipeline::builder()
         .with_loader(loader)
-        .with_document_processor(splitter)  // Documents -> Nodes
-        .with_node_processor(metadata_extractor)  // Nodes -> Nodes
+        .with_document_processor(splitter) // Documents -> Nodes
+        .with_node_processor(metadata_extractor) // Nodes -> Nodes
         .with_embedder(embedder.clone())
         .with_vector_store(vector_store.clone())
         .build()?;
@@ -396,11 +396,11 @@ async fn create_query_engine(
     // Run indexing pipeline with progress reporting
     let (_nodes, indexing_stats) = pipeline
         .run_with_progress(
-            None,  // documents (will use loader)
-            None,  // nodes
-            true,  // store_doc_text
-            None,  // num_workers (use default)
-            true,  // in_place
+            None, // documents (will use loader)
+            None, // nodes
+            true, // store_doc_text
+            None, // num_workers (use default)
+            true, // in_place
             Box::new(|progress| {
                 if let Some(percentage) = progress.percentage() {
                     println!(
@@ -420,7 +420,7 @@ async fn create_query_engine(
                 if let Some(current_item) = &progress.current_item {
                     println!("   └─ {}", current_item);
                 }
-            })
+            }),
         )
         .await?;
 

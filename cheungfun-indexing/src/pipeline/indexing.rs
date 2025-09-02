@@ -8,10 +8,7 @@ use async_trait::async_trait;
 use cheungfun_core::{
     cache::UnifiedCache,
     deduplication::{DocstoreStrategy, DocumentDeduplicator},
-    traits::{
-        DocumentStore, Embedder, IndexingPipeline, Loader, StorageContext,
-        VectorStore,
-    },
+    traits::{DocumentStore, Embedder, IndexingPipeline, Loader, StorageContext, VectorStore},
     Document, IndexingProgress, IndexingStats, Node, Result as CoreResult,
 };
 use futures::stream::{self, StreamExt};
@@ -99,8 +96,22 @@ pub struct DefaultIndexingPipeline {
     /// Document loader.
     loader: Arc<dyn Loader>,
     /// Transformation pipeline using TypedTransform system.
-    document_processors: Vec<Arc<dyn cheungfun_core::traits::TypedTransform<cheungfun_core::traits::DocumentState, cheungfun_core::traits::NodeState>>>,
-    node_processors: Vec<Arc<dyn cheungfun_core::traits::TypedTransform<cheungfun_core::traits::NodeState, cheungfun_core::traits::NodeState>>>,
+    document_processors: Vec<
+        Arc<
+            dyn cheungfun_core::traits::TypedTransform<
+                cheungfun_core::traits::DocumentState,
+                cheungfun_core::traits::NodeState,
+            >,
+        >,
+    >,
+    node_processors: Vec<
+        Arc<
+            dyn cheungfun_core::traits::TypedTransform<
+                cheungfun_core::traits::NodeState,
+                cheungfun_core::traits::NodeState,
+            >,
+        >,
+    >,
     /// Optional embedder for generating vector representations.
     embedder: Option<Arc<dyn Embedder>>,
     /// Optional vector store for persistence.
@@ -267,11 +278,17 @@ impl IndexingPipeline for DefaultIndexingPipeline {
         // Validate that we have a way to convert documents to nodes
         // Either through document processors or by having nodes as input
         if !self.document_processors.is_empty() {
-            debug!("✅ Pipeline has {} document processors", self.document_processors.len());
+            debug!(
+                "✅ Pipeline has {} document processors",
+                self.document_processors.len()
+            );
         }
 
         if !self.node_processors.is_empty() {
-            debug!("✅ Pipeline has {} node processors", self.node_processors.len());
+            debug!(
+                "✅ Pipeline has {} node processors",
+                self.node_processors.len()
+            );
         }
 
         Ok(())
@@ -467,7 +484,9 @@ impl DefaultIndexingPipeline {
             );
 
             // Document processors convert DocumentState to NodeState
-            let node_data = processor.transform(current_document_data).await
+            let node_data = processor
+                .transform(current_document_data)
+                .await
                 .map_err(|e| cheungfun_core::error::CheungfunError::Pipeline {
                     message: format!("Document processor '{}' failed: {}", processor.name(), e),
                 })?;
@@ -480,14 +499,17 @@ impl DefaultIndexingPipeline {
 
             // Warn about additional document processors (they can't be applied after conversion to nodes)
             if self.document_processors.len() > 1 {
-                debug!("⚠️ Skipping {} additional document processors as we already have nodes",
-                       self.document_processors.len() - 1);
+                debug!(
+                    "⚠️ Skipping {} additional document processors as we already have nodes",
+                    self.document_processors.len() - 1
+                );
             }
 
             node_data
         } else {
             // If no document processors, convert documents to nodes directly
-            let nodes: Vec<Node> = current_document_data.into_documents()
+            let nodes: Vec<Node> = current_document_data
+                .into_documents()
                 .into_iter()
                 .enumerate()
                 .map(|(idx, doc)| {
@@ -507,10 +529,11 @@ impl DefaultIndexingPipeline {
                 processor.name()
             );
 
-            current_node_data = processor.transform(current_node_data).await
-                .map_err(|e| cheungfun_core::error::CheungfunError::Pipeline {
+            current_node_data = processor.transform(current_node_data).await.map_err(|e| {
+                cheungfun_core::error::CheungfunError::Pipeline {
                     message: format!("Node processor '{}' failed: {}", processor.name(), e),
-                })?;
+                }
+            })?;
 
             debug!(
                 "✅ Completed node processor '{}': {} nodes",
@@ -695,8 +718,22 @@ impl DefaultIndexingPipeline {
 #[derive(Debug, Default)]
 pub struct PipelineBuilder {
     loader: Option<Arc<dyn Loader>>,
-    document_processors: Vec<Arc<dyn cheungfun_core::traits::TypedTransform<cheungfun_core::traits::DocumentState, cheungfun_core::traits::NodeState>>>,
-    node_processors: Vec<Arc<dyn cheungfun_core::traits::TypedTransform<cheungfun_core::traits::NodeState, cheungfun_core::traits::NodeState>>>,
+    document_processors: Vec<
+        Arc<
+            dyn cheungfun_core::traits::TypedTransform<
+                cheungfun_core::traits::DocumentState,
+                cheungfun_core::traits::NodeState,
+            >,
+        >,
+    >,
+    node_processors: Vec<
+        Arc<
+            dyn cheungfun_core::traits::TypedTransform<
+                cheungfun_core::traits::NodeState,
+                cheungfun_core::traits::NodeState,
+            >,
+        >,
+    >,
     embedder: Option<Arc<dyn Embedder>>,
     vector_store: Option<Arc<dyn VectorStore>>,
     storage_context: Option<Arc<StorageContext>>,
@@ -720,7 +757,12 @@ impl PipelineBuilder {
     /// Add a document processor (Documents -> Nodes) to the pipeline.
     pub fn with_document_processor(
         mut self,
-        processor: Arc<dyn cheungfun_core::traits::TypedTransform<cheungfun_core::traits::DocumentState, cheungfun_core::traits::NodeState>>
+        processor: Arc<
+            dyn cheungfun_core::traits::TypedTransform<
+                cheungfun_core::traits::DocumentState,
+                cheungfun_core::traits::NodeState,
+            >,
+        >,
     ) -> Self {
         self.document_processors.push(processor);
         self
@@ -729,7 +771,12 @@ impl PipelineBuilder {
     /// Add a node processor (Nodes -> Nodes) to the pipeline.
     pub fn with_node_processor(
         mut self,
-        processor: Arc<dyn cheungfun_core::traits::TypedTransform<cheungfun_core::traits::NodeState, cheungfun_core::traits::NodeState>>
+        processor: Arc<
+            dyn cheungfun_core::traits::TypedTransform<
+                cheungfun_core::traits::NodeState,
+                cheungfun_core::traits::NodeState,
+            >,
+        >,
     ) -> Self {
         self.node_processors.push(processor);
         self
@@ -739,7 +786,10 @@ impl PipelineBuilder {
     /// This method is deprecated. Use `with_document_processor` instead.
     pub fn with_transformer<T>(mut self, transformer: Arc<T>) -> Self
     where
-        T: cheungfun_core::traits::TypedTransform<cheungfun_core::traits::DocumentState, cheungfun_core::traits::NodeState> + 'static
+        T: cheungfun_core::traits::TypedTransform<
+                cheungfun_core::traits::DocumentState,
+                cheungfun_core::traits::NodeState,
+            > + 'static,
     {
         self.document_processors.push(transformer);
         self
@@ -749,7 +799,10 @@ impl PipelineBuilder {
     /// This method is deprecated. Use `with_node_processor` instead.
     pub fn with_node_transformer<T>(mut self, transformer: Arc<T>) -> Self
     where
-        T: cheungfun_core::traits::TypedTransform<cheungfun_core::traits::NodeState, cheungfun_core::traits::NodeState> + 'static
+        T: cheungfun_core::traits::TypedTransform<
+                cheungfun_core::traits::NodeState,
+                cheungfun_core::traits::NodeState,
+            > + 'static,
     {
         self.node_processors.push(transformer);
         self

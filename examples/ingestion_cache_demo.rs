@@ -10,7 +10,7 @@ use tracing::{info, Level};
 use tracing_subscriber;
 
 use cheungfun_core::{
-    traits::{TypedTransform, TypedData},
+    traits::{TypedData, TypedTransform},
     types::{ChunkInfo, Document, Node},
 };
 use cheungfun_indexing::{

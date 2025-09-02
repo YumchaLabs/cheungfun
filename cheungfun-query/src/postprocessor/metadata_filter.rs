@@ -192,10 +192,7 @@ mod tests {
         };
         let mut node = Node::new(content.to_string(), Uuid::new_v4(), chunk_info);
         node.metadata = metadata;
-        ScoredNode {
-            node,
-            score: 0.8,
-        }
+        ScoredNode { node, score: 0.8 }
     }
 
     #[tokio::test]

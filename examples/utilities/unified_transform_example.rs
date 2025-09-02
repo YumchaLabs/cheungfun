@@ -15,7 +15,7 @@
 //! ```
 
 use cheungfun_core::{
-    traits::{TypedTransform, TypedData, DocumentState, NodeState},
+    traits::{DocumentState, NodeState, TypedData, TypedTransform},
     Document,
 };
 use cheungfun_indexing::prelude::*;

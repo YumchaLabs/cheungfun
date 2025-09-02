@@ -316,8 +316,8 @@ async fn build_feedback_rag_pipeline(
     // Build indexing pipeline
     let pipeline = DefaultIndexingPipeline::builder()
         .with_loader(loader)
-        .with_document_processor(splitter)  // Documents -> Nodes
-        .with_node_processor(metadata_extractor)  // Nodes -> Nodes
+        .with_document_processor(splitter) // Documents -> Nodes
+        .with_node_processor(metadata_extractor) // Nodes -> Nodes
         .with_embedder(embedder.clone())
         .with_vector_store(vector_store.clone())
         .build()?;

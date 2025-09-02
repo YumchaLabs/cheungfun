@@ -210,13 +210,16 @@ async fn build_hierarchical_levels(
 
         let pipeline = DefaultIndexingPipeline::builder()
             .with_loader(loader)
-            .with_document_processor(splitter)  // Documents -> Nodes
-            .with_node_processor(metadata_extractor)  // Nodes -> Nodes
+            .with_document_processor(splitter) // Documents -> Nodes
+            .with_node_processor(metadata_extractor) // Nodes -> Nodes
             .with_embedder(embedder.clone())
             .with_vector_store(vector_store.clone())
             .build()?;
 
-        let (_nodes, index_result) = pipeline.run(None, None, true, true, None, true).await.map_err(ExampleError::Cheungfun)?;
+        let (_nodes, index_result) = pipeline
+            .run(None, None, true, true, None, true)
+            .await
+            .map_err(ExampleError::Cheungfun)?;
         let indexing_time = timer.finish();
 
         println!(
@@ -424,13 +427,16 @@ async fn build_flat_pipeline(
 
     let pipeline = DefaultIndexingPipeline::builder()
         .with_loader(loader)
-        .with_document_processor(splitter)  // Documents -> Nodes
-        .with_node_processor(metadata_extractor)  // Nodes -> Nodes
+        .with_document_processor(splitter) // Documents -> Nodes
+        .with_node_processor(metadata_extractor) // Nodes -> Nodes
         .with_embedder(embedder.clone())
         .with_vector_store(vector_store.clone())
         .build()?;
 
-    let (_nodes, index_result) = pipeline.run(None, None, true, true, None, true).await.map_err(ExampleError::Cheungfun)?;
+    let (_nodes, index_result) = pipeline
+        .run(None, None, true, true, None, true)
+        .await
+        .map_err(ExampleError::Cheungfun)?;
     println!("✅ Flat indexing: {} nodes", index_result.nodes_created);
 
     let siumai_client = create_siumai_client().await?;

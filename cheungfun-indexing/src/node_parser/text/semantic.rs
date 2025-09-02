@@ -11,7 +11,8 @@ use crate::node_parser::{
 };
 use async_trait::async_trait;
 use cheungfun_core::{
-    traits::{DocumentState, Embedder, NodeState, TypedData, TypedTransform}, Document, Node, Result as CoreResult,
+    traits::{DocumentState, Embedder, NodeState, TypedData, TypedTransform},
+    Document, Node, Result as CoreResult,
 };
 use std::sync::Arc;
 use tracing::{debug, warn};

@@ -231,7 +231,10 @@ impl PropertyGraphIndex {
 
                 // Then apply LLM extraction (NodeState -> NodeState)
                 let typed_nodes = TypedData::from_nodes(nodes);
-                let extracted_nodes = llm_extractor.as_ref().transform(typed_nodes).await
+                let extracted_nodes = llm_extractor
+                    .as_ref()
+                    .transform(typed_nodes)
+                    .await
                     .map_err(|e| cheungfun_core::error::CheungfunError::Pipeline {
                         message: format!("LLM extraction failed: {}", e),
                     })?;

@@ -15,7 +15,7 @@
 //! ```
 
 use cheungfun_core::{
-    traits::{TypedTransform, TypedData, NodeState},
+    traits::{NodeState, TypedData, TypedTransform},
     Document,
 };
 use cheungfun_indexing::prelude::*;
@@ -37,7 +37,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     // Demonstrate type-safe document processing
     await_document_processing_example(&documents).await?;
 
-    // Demonstrate type-safe node processing  
+    // Demonstrate type-safe node processing
     await_node_processing_example(&documents).await?;
 
     // Demonstrate compile-time type safety
@@ -57,13 +57,15 @@ fn create_sample_documents() -> Vec<Document> {
 }
 
 /// Demonstrate type-safe document processing
-async fn await_document_processing_example(documents: &[Document]) -> Result<(), Box<dyn std::error::Error>> {
+async fn await_document_processing_example(
+    documents: &[Document],
+) -> Result<(), Box<dyn std::error::Error>> {
     println!("\n📝 Document Processing Example");
     println!("------------------------------");
 
     // Create a sentence splitter (Documents -> Nodes)
     let splitter = SentenceSplitter::from_defaults(100, 20)?;
-    
+
     // Create typed input from documents
     let typed_input = TypedData::from_documents(documents.to_vec());
     println!("📥 Input: {} documents", typed_input.documents().len());
@@ -71,9 +73,9 @@ async fn await_document_processing_example(documents: &[Document]) -> Result<(),
     // Apply transformation with compile-time type safety
     let typed_output = splitter.transform(typed_input).await?;
     let nodes = typed_output.nodes();
-    
+
     println!("📤 Output: {} nodes", nodes.len());
-    
+
     // Display first few nodes
     for (i, node) in nodes.iter().take(3).enumerate() {
         println!("  Node {}: {} chars", i + 1, node.content.len());
@@ -83,7 +85,9 @@ async fn await_document_processing_example(documents: &[Document]) -> Result<(),
 }
 
 /// Demonstrate type-safe node processing
-async fn await_node_processing_example(documents: &[Document]) -> Result<(), Box<dyn std::error::Error>> {
+async fn await_node_processing_example(
+    documents: &[Document],
+) -> Result<(), Box<dyn std::error::Error>> {
     println!("\n🔧 Node Processing Example");
     println!("--------------------------");
 
@@ -98,7 +102,7 @@ async fn await_node_processing_example(documents: &[Document]) -> Result<(), Box
     let final_nodes = enhanced_nodes.nodes();
 
     println!("📤 Enhanced {} nodes with metadata", final_nodes.len());
-    
+
     // Display metadata for first node
     if let Some(first_node) = final_nodes.first() {
         println!("  First node metadata:");
@@ -118,11 +122,11 @@ async fn demonstrate_compile_time_safety() -> Result<(), Box<dyn std::error::Err
     println!("✅ The following code compiles successfully:");
     println!("   Documents -> SentenceSplitter -> Nodes");
     println!("   Nodes -> MetadataExtractor -> Nodes");
-    
+
     println!("\n❌ The following would cause compile errors:");
     println!("   // Nodes -> SentenceSplitter  // Error: SentenceSplitter expects Documents");
     println!("   // Documents -> MetadataExtractor  // Error: MetadataExtractor expects Nodes");
-    
+
     println!("\n🎯 Benefits:");
     println!("   • Type errors caught at compile time");
     println!("   • Zero runtime overhead");
@@ -146,7 +150,10 @@ impl CustomNodeProcessor {
 
 #[async_trait::async_trait]
 impl TypedTransform<NodeState, NodeState> for CustomNodeProcessor {
-    async fn transform(&self, input: TypedData<NodeState>) -> cheungfun_core::Result<TypedData<NodeState>> {
+    async fn transform(
+        &self,
+        input: TypedData<NodeState>,
+    ) -> cheungfun_core::Result<TypedData<NodeState>> {
         let nodes = input.nodes();
         let processed_nodes = nodes
             .iter()
@@ -156,7 +163,7 @@ impl TypedTransform<NodeState, NodeState> for CustomNodeProcessor {
                 new_node
             })
             .collect();
-        
+
         Ok(TypedData::from_nodes(processed_nodes))
     }
 
@@ -176,12 +183,12 @@ mod tests {
     #[tokio::test]
     async fn test_typed_transform_system() {
         let documents = create_sample_documents();
-        
+
         // Test document processing
         let splitter = SentenceSplitter::from_defaults(100, 20).unwrap();
         let typed_input = TypedData::from_documents(documents);
         let result = splitter.transform(typed_input).await;
-        
+
         assert!(result.is_ok());
         let nodes = result.unwrap().nodes();
         assert!(!nodes.is_empty());
@@ -190,17 +197,17 @@ mod tests {
     #[tokio::test]
     async fn test_custom_processor() {
         let documents = create_sample_documents();
-        
+
         // Convert to nodes first
         let splitter = SentenceSplitter::from_defaults(100, 20).unwrap();
         let typed_input = TypedData::from_documents(documents);
         let nodes_data = splitter.transform(typed_input).await.unwrap();
-        
+
         // Apply custom processor
         let custom_processor = CustomNodeProcessor::new("PROCESSED".to_string());
         let result = custom_processor.transform(nodes_data).await.unwrap();
         let processed_nodes = result.nodes();
-        
+
         // Verify prefix was added
         for node in processed_nodes.iter() {
             assert!(node.content.starts_with("PROCESSED:"));

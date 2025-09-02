@@ -267,15 +267,18 @@ async fn build_semantic_pipeline(
     // Build pipeline with semantic splitter
     let pipeline = DefaultIndexingPipeline::builder()
         .with_loader(loader)
-        .with_document_processor(semantic_splitter)  // Documents -> Nodes
-        .with_node_processor(metadata_extractor)  // Nodes -> Nodes
+        .with_document_processor(semantic_splitter) // Documents -> Nodes
+        .with_node_processor(metadata_extractor) // Nodes -> Nodes
         .with_embedder(embedder.clone())
         .with_vector_store(vector_store.clone())
         .build()?;
 
     // Run indexing
     let indexing_timer = Timer::new("Semantic indexing");
-    let (_nodes, index_result) = pipeline.run(None, None, true, true, None, true).await.map_err(ExampleError::Cheungfun)?;
+    let (_nodes, index_result) = pipeline
+        .run(None, None, true, true, None, true)
+        .await
+        .map_err(ExampleError::Cheungfun)?;
     let indexing_time = indexing_timer.finish();
 
     println!(
@@ -377,14 +380,17 @@ async fn build_traditional_pipeline(
     // Build pipeline with traditional splitter
     let pipeline = DefaultIndexingPipeline::builder()
         .with_loader(loader)
-        .with_document_processor(traditional_splitter)  // Documents -> Nodes
-        .with_node_processor(metadata_extractor)  // Nodes -> Nodes
+        .with_document_processor(traditional_splitter) // Documents -> Nodes
+        .with_node_processor(metadata_extractor) // Nodes -> Nodes
         .with_embedder(embedder.clone())
         .with_vector_store(vector_store.clone())
         .build()?;
 
     // Run indexing
-    let (_nodes, index_result) = pipeline.run(None, None, true, true, None, true).await.map_err(ExampleError::Cheungfun)?;
+    let (_nodes, index_result) = pipeline
+        .run(None, None, true, true, None, true)
+        .await
+        .map_err(ExampleError::Cheungfun)?;
     println!("✅ Traditional indexing completed");
     println!("📊 Indexed {} nodes", index_result.nodes_created);
 

@@ -1,7 +1,7 @@
 //! Simple modern API example demonstrating the unified Transform interface.
 
 use cheungfun_core::{
-    traits::{TypedTransform, TypedData, DocumentState, NodeState},
+    traits::{DocumentState, NodeState, TypedData, TypedTransform},
     Document,
 };
 use cheungfun_indexing::loaders::ProgrammingLanguage;
@@ -10,8 +10,6 @@ use cheungfun_indexing::node_parser::{
     NodeParser,
 };
 use std::collections::HashMap;
-
-
 
 #[tokio::main]
 async fn main() -> Result<(), Box<dyn std::error::Error>> {

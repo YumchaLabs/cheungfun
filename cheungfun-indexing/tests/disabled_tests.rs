@@ -19,7 +19,7 @@ fn placeholder_test() {
 /*
 TODO: Update these test files to use new TypedTransform API:
 - title_extractor_tests.rs
-- keyword_extractor_tests.rs  
+- keyword_extractor_tests.rs
 - summary_extractor_tests.rs
 - integration_tests.rs
 - ingestion_cache_tests.rs

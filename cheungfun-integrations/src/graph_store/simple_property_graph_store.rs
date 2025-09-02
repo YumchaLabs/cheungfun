@@ -11,7 +11,8 @@ use std::sync::{Arc, RwLock};
 use cheungfun_core::{
     traits::{GraphStoreStats, PropertyGraphStore},
     types::{
-        ChunkNode, EntityNode, LabelledNode, LabelledNodeType, LabelledPropertyGraph, Relation, Triplet,
+        ChunkNode, EntityNode, LabelledNode, LabelledNodeType, LabelledPropertyGraph, Relation,
+        Triplet,
     },
     Result,
 };
